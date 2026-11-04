@@ -4,9 +4,9 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Fase 9 (Polish dan rilis) — Selesai
+## Lingkup eksekusi saat ini: Penyelesaian Sisa Fase 1 — Selesai
 
-Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 sampai Fase 9 (seluruh rilis v0.1.0) selesai.
+Fase 1 selesai kecuali P1-05 yang menunggu keputusan pemilik terkait kontras warna token CSS. P1-10 dan P1-11 telah diverifikasi dan selesai. Seluruh Fase 2 sampai Fase 9 selesai.
 
 Fase 1 (referensi status):
 
@@ -19,8 +19,8 @@ Fase 1 (referensi status):
 - [x] P1-07 Server Fastify: env Zod, pino, error berkode, healthz/readyz, rate limit
 - [x] P1-08 Registry game (server dan web)
 - [x] P1-09 Template game + `tools/new-game`
-- [ ] P1-10 Docker + compose (profil lan/public) + `.env.example` — **berkas siap, belum dijalankan**: Docker/Podman/WSL tidak tersedia di mesin ini
-- [ ] P1-11 CI GitHub Actions + pemeriksa awalan tabel migrasi — **sebagian**: `check:migrations` lolos, pipeline belum pernah berjalan (belum ada repo git/remote)
+- [x] P1-10 Docker + compose (profil lan/public) + `.env.example` — **selesai**: image server dan web berhasil di-build, container `db`, `server`, dan `web` (Nginx) berhasil dijalankan via Compose profil lan dan healthy, endpoint `/healthz` dan `/readyz` sukses menjawab 200 via Nginx.
+- [x] P1-11 CI GitHub Actions + pemeriksa awalan tabel migrasi — **selesai**: skrip verifikasi ci lolos lokal dan pipeline GitHub Actions terkonfirmasi sukses (`conclusion: success`) pada remote `main`.
 - [x] P1-12 PWA dasar
 
 Fase 2 (auth pemain):

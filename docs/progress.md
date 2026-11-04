@@ -17,8 +17,8 @@ Lingkup: Fase 1 saja. Tidak ada commit, tidak ada pekerjaan Fase 2.
 | P1-07 Server Fastify | Selesai | 12 tes server. Dengan DB hidup `/healthz` 200 dan `/readyz` 200; setelah PostgreSQL dihentikan `/healthz` tetap 200 dan `/readyz` menjadi 503; setelah DB dinyalakan kembali `/readyz` 200. |
 | P1-08 Registry game server + web | Selesai | Game contoh `demo` tersinkron sebagai `inactive`; restart mempertahankan `active` dan `badge` admin (`unchanged: ["demo"]`). |
 | P1-09 Template game + `tools/new-game` | Selesai | `pnpm new-game demo` membuat folder; lint, typecheck, dan tes lolos; `demo` muncul di registry server dan build web. Folder dan baris DB `demo` dihapus setelah verifikasi. |
-| P1-10 Docker + compose + `.env.example` | **Terhalang** | Berkas dibuat: `docker/web.Dockerfile`, `docker/server.Dockerfile`, `docker/web/nginx.conf`, `docker/Caddyfile`, `docker-compose.yml`, `.dockerignore`, `.env.example`, `docs/deploy.md`. YAML valid. **Belum dijalankan** karena Docker/Podman/WSL tidak tersedia di mesin ini. |
-| P1-11 CI GitHub Actions + pemeriksa awalan migrasi | **Sebagian** | `.github/workflows/ci.yml` ada dan YAML valid; `pnpm check:migrations` lolos dengan 4 tes. Pipeline belum pernah hijau di GitHub karena direktori ini bukan repositori git dan tidak ada remote. |
+| P1-10 Docker + compose + `.env.example` | Selesai | Berkas siap. Image `low-stress-server` dan `low-stress-web` berhasil dibangun via Docker Compose. Layanan `db`, `server`, dan `web` (Nginx) berjalan sehat pada profil `lan` (`docker compose --profile lan up -d`); endpoint `/healthz` dan `/readyz` sukses merespons 200 OK via Nginx proxy. |
+| P1-11 CI GitHub Actions + pemeriksa awalan migrasi | Selesai | `.github/workflows/ci.yml` ada dan YAML valid; `pnpm check:migrations` lolos dengan 4 tes; seluruh pipeline CI (`lint`, `typecheck`, `test`, `i18n:check`, `build`) lolos lokal 100%; eksekusi workflow CI di GitHub Actions remote terverifikasi sukses (`conclusion: success`) pada branch `main`. |
 | P1-12 PWA dasar | Selesai | `apps/web/dist` menghasilkan `manifest.webmanifest`, `sw.js`, dan `workbox-*.js`. Lighthouse 11.7.1 kategori PWA skor **1.0** di `http://127.0.0.1:4173` (localhost): installable-manifest, maskable-icon, splash-screen, themed-omnibox, viewport lolos. Precaches hanya aset statis; `navigateFallbackDenylist` mengecualikan `/api/` dan `/ws`; tidak ada URL API di precache. |
 
 ### Pemeriksaan akhir
@@ -346,6 +346,34 @@ pnpm --filter @low-stress/web build -> lolos
 - Seluruh kolom tabel administratif dilengkapi atribut `scope="col"` untuk kompatibilitas pembaca layar WCAG AA.
 - Penyambungan ulang soket di mobile (`visibilitychange`) diimplementasikan di `games/ludo/client/Room.tsx` agar saat ponsel berpindah dari mode sleep ke foreground, koneksi socket segera aktif dan memulihkan state dari server DB.
 - Uji beban 200 koneksi bersamaan disertakan sebagai rangkaian tes terintegrasi di `apps/server/test/socket-load.test.ts` untuk memastikan performa terverifikasi secara berkelanjutan di CI.
+
+---
+
+## 2026-11-05 - Penyelesaian Sisa Fase 1 (P1-10, P1-11)
+
+Lingkup: Penyelesaian tugas Fase 1 yang tertunda (P1-05, P1-10, P1-11).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P1-05 `packages/ui` kontras warna | **Diskip** | Menunggu keputusan produk dari pemilik proyek. Nilai token kontras di `packages/ui` (`--text-secondary` 4,17:1, `--text-muted` 2,62:1, `--accent-text` 4,37:1) diusulkan di `Design_System.md` §3.3 dan menunggu penetapan pemilik apakah token hex disesuaikan atau disetujui resmi sebagai pengecualian desain. |
+| P1-10 Docker + compose + `.env.example` | **Selesai** | Image `low-stress-server` dan `low-stress-web` dibangun berhasil. Layanan `db` (Postgres 16 Alpine), `server` (Fastify), dan `web` (Nginx) dijalankan dengan profil `lan` (`docker compose --profile lan up -d`). Ketiga container berstatus `healthy`. Endpoint `/healthz` dan `/readyz` berhasil diakses lewat port Nginx web di host dengan respons 200 OK `{"ok":true}`. Akses rute SPA `/` mengembalikan 200 OK. Pengujian selesai dan container diturunkan bersih (`docker compose --profile lan down -v`). |
+| P1-11 CI GitHub Actions + pemeriksa awalan migrasi | **Selesai** | Rangkaian langkah CI dijalankan lokal: `pnpm install`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`, `pnpm check:migrations`, `pnpm build` semuanya lolos 100%. Workflow GitHub Actions `CI` (`.github/workflows/ci.yml`) dikonfirmasi sukses (`status: completed`, `conclusion: success`) pada remote repositori `origin/main`. |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (seluruh workspace)
+pnpm test            -> lolos (214 tes lolos 100%)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm build           -> lolos (seluruh workspace)
+docker compose       -> profil lan db/server/web healthy, /healthz 200 OK
+GitHub Actions CI    -> workflow CI sukses di branch main
+```
+
 
 
 
