@@ -1,0 +1,1 @@
+ALTER TABLE "game_scores" ADD COLUMN "best_play" integer;

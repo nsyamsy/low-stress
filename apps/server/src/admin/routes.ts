@@ -17,13 +17,16 @@ import { listAdminGames, updateAdminGame } from "../games/service";
 import { updateGameSchema } from "../games/validation";
 import {
   bulkUpdateUsers,
+  deleteGameRun,
   deleteUserByAdmin,
   getAdminDashboard,
   getAdminSettings,
   listAuditLogs,
+  listGameRuns,
   listUsers,
   loginAdmin,
   logoutAdmin,
+  resetLeaderboard,
   updateAdminSettings,
   updateUserStatus,
 } from "./service";
@@ -31,6 +34,8 @@ import {
   adminAuditQuerySchema,
   adminBulkUserActionSchema,
   adminLoginBodySchema,
+  adminResetLeaderboardSchema,
+  adminRunsQuerySchema,
   adminSmtpTestSchema,
   adminUpdateSettingsSchema,
   adminUserActionSchema,
@@ -277,6 +282,66 @@ export async function registerAdminRoutes(
       }
 
       return updateAdminGame(db, request.admin!.id, id, parseResult.data);
+    },
+  );
+
+  // GET /api/admin/runs (API_Spec §6)
+  app.get(
+    "/api/admin/runs",
+    { preHandler: [requireAdminAuth] },
+    async (request) => {
+      const parseResult = adminRunsQuerySchema.safeParse(request.query);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+
+      return listGameRuns(db, parseResult.data);
+    },
+  );
+
+  // GET /api/admin/games/:id/runs (alias terarah)
+  app.get(
+    "/api/admin/games/:id/runs",
+    { preHandler: [requireAdminAuth] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const parseResult = adminRunsQuerySchema.safeParse(request.query);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+
+      return listGameRuns(db, { ...parseResult.data, gameId: id });
+    },
+  );
+
+  // DELETE /api/admin/runs/:id (API_Spec §6)
+  app.delete(
+    "/api/admin/runs/:id",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      await deleteGameRun(db, request.admin!.id, id);
+      return reply.status(204).send();
+    },
+  );
+
+  // POST /api/admin/leaderboard/:gameId/reset (API_Spec §6)
+  app.post(
+    "/api/admin/leaderboard/:gameId/reset",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request) => {
+      const { gameId } = request.params as { gameId: string };
+      const parseResult = adminResetLeaderboardSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+
+      return resetLeaderboard(
+        db,
+        request.admin!.id,
+        gameId,
+        parseResult.data.period,
+      );
     },
   );
 }

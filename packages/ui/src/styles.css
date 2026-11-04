@@ -643,6 +643,25 @@ body {
   padding-bottom: var(--space-3);
 }
 
+.ls-nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ls-nav-link {
+  font-size: var(--font-sm);
+  font-weight: var(--font-bold);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.ls-nav-link:hover,
+.ls-nav-link--active {
+  color: var(--primary);
+}
+
 .ls-app-main {
   padding-top: var(--space-6);
   padding-bottom: var(--space-12);
@@ -1105,6 +1124,28 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* --------------------------- Memory Match ----------------------------- */
+
+.ls-memory-layout {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 768px) {
+  .ls-memory-layout {
+    grid-template-columns: 300px 420px;
+    justify-content: center;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ls-memory-layout {
+    grid-template-columns: 300px 420px minmax(240px, 1fr);
+    justify-content: stretch;
+  }
 }
 
 /* ------------------------------ Motion -------------------------------- */

@@ -302,5 +302,28 @@
     "4": "Thursday",
     "5": "Friday",
     "6": "Saturday"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "Top player rankings",
+    "selectGame": "Select Game",
+    "periodWeek": "This week",
+    "periodMonth": "This month",
+    "periodAll": "All time",
+    "colRank": "Rank",
+    "colPlayer": "Player",
+    "colScore": "Score",
+    "colPlays": "Plays",
+    "playsCount": "{{count}}× plays",
+    "bestPlayInfo": "Highscore on play {{best}} of {{total}}",
+    "you": "(you)",
+    "empty": "No scores yet. Be the first!",
+    "wibNote": "All times in Western Indonesia Time (WIB)"
+  },
+  "errors": {
+    "SCORE_INVALID": "Invalid score",
+    "SCORE_RATE_LIMITED": "Submitting too fast. Please wait a moment.",
+    "GAME_CLOSED": "Game is currently closed",
+    "GAME_MAINTENANCE": "Game is under maintenance"
   }
 }

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
 import type { Database } from "@low-stress/db";
 import {
   admins,
@@ -27,6 +27,8 @@ import {
   deleteSession,
 } from "../auth/session";
 import type { LoadedGame } from "../registry/games";
+import { getLeaderboardBounds, recomputeGameScore } from "../games/scores";
+import type { AdminRunsQueryInput } from "./validation";
 
 export interface AuditLogEntry {
   adminId: string | null;
@@ -727,4 +729,186 @@ export async function getAdminDashboard(db: Database): Promise<{
       createdAt: u.createdAt.toISOString(),
     })),
   };
+}
+
+/**
+ * Daftar run game untuk moderasi admin (API_Spec §6, ROADMAP P5-05 & P8-05).
+ * Mendukung filter menurut game dan penanda `flagged`.
+ */
+export async function listGameRuns(
+  db: Database,
+  query: AdminRunsQueryInput,
+): Promise<{
+  items: Array<{
+    id: string;
+    gameId: string;
+    score: number;
+    durationMs: number;
+    flagged: boolean;
+    createdAt: string;
+    user: {
+      id: string;
+      username: string;
+      displayName: string;
+    };
+  }>;
+  page: number;
+  pageSize: number;
+  total: number;
+}> {
+  const conditions = [];
+
+  if (query.gameId) {
+    conditions.push(eq(gameRuns.gameId, query.gameId));
+  }
+
+  if (query.flagged !== undefined) {
+    conditions.push(eq(gameRuns.flagged, query.flagged));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const countResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(gameRuns)
+    .where(whereClause);
+  const total = countResult[0]?.count ?? 0;
+
+  const offset = (query.page - 1) * query.pageSize;
+
+  const rows = await db
+    .select({
+      id: gameRuns.id,
+      gameId: gameRuns.gameId,
+      score: gameRuns.score,
+      durationMs: gameRuns.durationMs,
+      flagged: gameRuns.flagged,
+      createdAt: gameRuns.createdAt,
+      userId: users.id,
+      username: users.username,
+      displayName: users.displayName,
+    })
+    .from(gameRuns)
+    .innerJoin(users, eq(gameRuns.userId, users.id))
+    .where(whereClause)
+    .orderBy(desc(gameRuns.createdAt))
+    .limit(query.pageSize)
+    .offset(offset);
+
+  return {
+    items: rows.map((r) => ({
+      id: r.id,
+      gameId: r.gameId,
+      score: r.score,
+      durationMs: r.durationMs,
+      flagged: r.flagged,
+      createdAt: r.createdAt.toISOString(),
+      user: {
+        id: r.userId,
+        username: r.username,
+        displayName: r.displayName,
+      },
+    })),
+    page: query.page,
+    pageSize: query.pageSize,
+    total,
+  };
+}
+
+/**
+ * Menghapus suatu run dan menghitung ulang `game_scores` pemain (API_Spec §6).
+ * Dicatat dalam audit log.
+ */
+export async function deleteGameRun(
+  db: Database,
+  adminId: string,
+  runId: string,
+): Promise<void> {
+  const [run] = await db
+    .select()
+    .from(gameRuns)
+    .where(eq(gameRuns.id, runId))
+    .limit(1);
+
+  if (!run) {
+    throw new AppError("NOT_FOUND", 404);
+  }
+
+  await db.delete(gameRuns).where(eq(gameRuns.id, runId));
+
+  // Hitung ulang game_scores pemain
+  await recomputeGameScore(db, run.userId, run.gameId);
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "run.delete",
+    targetType: "game_run",
+    targetId: runId,
+    detail: {
+      gameId: run.gameId,
+      userId: run.userId,
+      score: run.score,
+      durationMs: run.durationMs,
+      flagged: run.flagged,
+    },
+  });
+}
+
+/**
+ * Reset leaderboard untuk periode tertentu (week / month) (API_Spec §6).
+ * Menghapus run pada periode berjalan dan menghitung ulang skor pemain.
+ */
+export async function resetLeaderboard(
+  db: Database,
+  adminId: string,
+  gameId: string,
+  period: "week" | "month",
+): Promise<{ deletedCount: number }> {
+  const bounds = await getLeaderboardBounds(db, period);
+  const start = new Date(bounds.periodStart);
+  const end = new Date(bounds.periodEnd);
+
+  const runsToDelete = await db
+    .select({
+      id: gameRuns.id,
+      userId: gameRuns.userId,
+    })
+    .from(gameRuns)
+    .where(
+      and(
+        eq(gameRuns.gameId, gameId),
+        gte(gameRuns.createdAt, start),
+        lt(gameRuns.createdAt, end),
+      ),
+    );
+
+  if (runsToDelete.length > 0) {
+    await db
+      .delete(gameRuns)
+      .where(
+        and(
+          eq(gameRuns.gameId, gameId),
+          gte(gameRuns.createdAt, start),
+          lt(gameRuns.createdAt, end),
+        ),
+      );
+
+    const affectedUserIds = [...new Set(runsToDelete.map((r) => r.userId))];
+    for (const uid of affectedUserIds) {
+      await recomputeGameScore(db, uid, gameId);
+    }
+  }
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "leaderboard.reset",
+    targetType: "game",
+    targetId: gameId,
+    detail: {
+      period,
+      deletedCount: runsToDelete.length,
+    },
+  });
+
+  return { deletedCount: runsToDelete.length };
 }

@@ -302,5 +302,28 @@
     "4": "Kamis",
     "5": "Jumat",
     "6": "Sabtu"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "Peringkat pemain terbaik",
+    "selectGame": "Pilih Game",
+    "periodWeek": "Minggu ini",
+    "periodMonth": "Bulan ini",
+    "periodAll": "Sepanjang waktu",
+    "colRank": "Peringkat",
+    "colPlayer": "Pemain",
+    "colScore": "Skor",
+    "colPlays": "Dimainkan",
+    "playsCount": "{{count}}× main",
+    "bestPlayInfo": "Rekor di play ke-{{best}} dari {{total}}",
+    "you": "(kamu)",
+    "empty": "Belum ada skor. Jadilah yang pertama!",
+    "wibNote": "Semua waktu dalam Waktu Indonesia Barat (WIB)"
+  },
+  "errors": {
+    "SCORE_INVALID": "Skor tidak valid",
+    "SCORE_RATE_LIMITED": "Terlalu cepat mengirim skor. Tunggu sebentar.",
+    "GAME_CLOSED": "Game sedang ditutup",
+    "GAME_MAINTENANCE": "Game sedang dalam perbaikan"
   }
 }

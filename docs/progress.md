@@ -183,5 +183,22 @@ pnpm --filter @low-stress/web build -> lolos (Vite build + 17 entri precache PWA
 - Tampilan fisik kartu game pada game konkret (Flappy Bird, Memory Match, Ludo yang baru akan di-porting pada Fase 5–7).
 - Interaksi sentuh pengguna pada perangkat ponsel nyata.
 
+---
+
+## 2026-11-04 - Fase 5 (P5-01..P5-05)
+
+Lingkup: Fase 5 (Memory Match dan Leaderboard).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P5-01 Skor generik: `game_scores`, `game_runs`, `recordScore`, `plausibleRun` per manifest | Selesai | Kolom `best_play` ditambahkan ke `game_scores` lewat migrasi `0001_past_king_bedlam.sql`. Engine skor generik di `apps/server/src/games/scores.ts`: fungsi `recordScore` mengelola upsert ke `game_scores` (`best_score = GREATEST`, penambahan `plays`, pencatatan `best_play`, dan `best_reached_at`), aturan tie-break "yang lebih awal menang" (skor seri mempertahankan `best_play` dan timestamp `best_reached_at` terdahulu), serta pencatatan setiap run ke `game_runs` (run Flappy Bird dengan skor < 1 diabaikan sesuai Porting_Guide §6). Validasi kewajaran `plausibleRun` dan kalkulasi skor `calculateMemoryMatchScore` diuji lengkap. 10 tes unit di `apps/server/test/scores.test.ts`. |
+| P5-02 Leaderboard weekly/monthly/all time dalam WIB | Selesai | Fungsi `getLeaderboard` & `getLeaderboardBounds` di `apps/server/src/games/scores.ts` dan endpoint `GET /api/games/:id/leaderboard`. Periode `all` memakai `game_scores` dengan ranking `ORDER BY best_score DESC, best_reached_at ASC`; periode `week` dan `month` diagregasi dari `game_runs` dengan `date_trunc` di zona `Asia/Jakarta` (WIB). Menyajikan top 10 (`entries`), baris pemain sendiri di luar top 10 (`me`), serta `mine` selalu. Sensor nama tampilan (`censorProfanity`). Tes unit memverifikasi batas Senin 00:00 WIB untuk mingguan dan tanggal 1 00:00 WIB untuk bulanan secara presisi. 4 tes unit di `apps/server/test/scores.test.ts`. |
+| P5-03 Port Memory Match ke `games/memory-match` dengan tampilan asli | Selesai | Paket game `games/memory-match` dibuat (`@low-stress/game-memory-match`) dengan struktur terisolasi. Papan 16 kartu (8 pasangan unik dengan ikon lucide dan palet asli Porting_Guide §3), flip delay 450ms, match lock 200ms, input lock. Modul `client/sound.ts` memuat `SoundEngine` Web Audio tanpa berkas eksternal (flip, match C Major chord, misMatch sawtooth, victory arpeggio). Modul lazy client di `client/index.tsx` dengan layout tiga kolom (leaderboard, papan 4x4, aturan). Manifest dengan konfigurasi scoring dan verifikasi rumus. Skor dikirim ke server lewat `props.onScore` / `POST /api/games/memory-match/scores`. Teruji 5 tes unit komponen web di `apps/web/test/memory-match.test.tsx` dan integrasi skor ke server. |
+| P5-04 UI Leaderboard (Screens §8) | Selesai | Halaman Leaderboard (`/leaderboard` di `LeaderboardPage.tsx`) dengan pemilihan game (chip interaktif), tab periode (Minggu ini, Bulan ini, Sepanjang waktu), kartu `GameLeaderboard` responsif, podium mahkota/medali, avatar inisial, penandaan pemain sendiri `(kamu)` dengan gaya `--bg-inset` dan highlight `isMe: true`. Navigasi Beranda dan Leaderboard terintegrasi di header shell. E2E teruji: pemain mengirim skor baru -> skor seketika muncul di leaderboard dan baris pemain tersorot `isMe: true`. 4 tes komponen web di `apps/web/test/leaderboard-ui.test.tsx` dan 1 tes E2E di `apps/server/test/leaderboard-e2e.test.ts`. |
+| P5-05 Batas laju kirim skor dan penandaan run janggal (`flagged`) | Selesai | Rate limiting submission skor (jeda minimal 3 detik antar kirim per pemain & game, batas frekuensi `maxSubmitRatePerMin` per menit sesuai manifest) yang menolak pelanggaran dengan `429 SCORE_RATE_LIMITED`. Deteksi run tidak wajar / mencurigakan (`isSuspiciousRun`) menandai run sebagai `flagged: true` di `game_runs` tanpa memperbarui rekor `game_scores` ataupun leaderboard publik. Endpoint admin untuk moderasi run: `GET /api/admin/runs` (dengan filter `gameId`, `flagged=true/false`, pagination), alias `GET /api/admin/games/:id/runs`, `DELETE /api/admin/runs/:id` yang menghapus run dan menghitung ulang skor pemain via `recomputeGameScore` serta mencatat aksi di `audit_log`, dan `POST /api/admin/leaderboard/:gameId/reset` untuk reset leaderboard mingguan/bulanan. Teruji 6 tes unit/integrasi di `apps/server/test/admin-runs.test.ts`. |
+
+
 
 

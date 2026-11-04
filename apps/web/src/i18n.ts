@@ -51,6 +51,25 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 });
 
+// Otomatis muat namespace i18n per game: game.<id> (Agents.md §5.1)
+const gameLocaleModules = import.meta.glob<Record<string, unknown>>(
+  "../../../games/*/locales/*.json",
+  { eager: true },
+);
+
+for (const [path, mod] of Object.entries(gameLocaleModules)) {
+  const match = /\/games\/([^/]+)\/locales\/([^/]+)\.json$/.exec(path);
+  if (match) {
+    const [, gameId, lang] = match;
+    if (gameId && lang) {
+      const ns = `game.${gameId}`;
+      const content = (mod.default ?? mod) as Record<string, unknown>;
+      i18n.addResourceBundle(lang, ns, content, true, true);
+      i18n.addResourceBundle(lang, "translation", { [ns]: content }, true, true);
+    }
+  }
+}
+
 export function changeLocale(preference: LocalePreference): void {
   try {
     if (typeof window !== "undefined" && window.localStorage) {

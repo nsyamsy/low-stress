@@ -1,0 +1,22 @@
+{
+  "title": "Memory Match",
+  "badge": "Memory Match",
+  "subtitle": "Match all card pairs as quickly as possible.",
+  "time": "Time",
+  "moves": "Moves",
+  "pairs": "Pairs",
+  "mute": "Mute audio",
+  "unmute": "Unmute audio",
+  "reset": "Restart game",
+  "newRecord": "New record",
+  "allMatched": "All matched",
+  "completedDesc": "Completed in {{time}} with {{moves}} moves",
+  "finalScore": "Final score",
+  "best": "Best",
+  "playAgain": "Play again",
+  "howTo": "How to play",
+  "rulesPairs": "Flip two cards to find matching pairs.",
+  "rulesScore": "Finish faster with fewer moves for a higher score. Consecutive match combos give bonus points.",
+  "rulesAudio": "Audio is synthesized directly in the browser and can be muted at any time.",
+  "leaderboardNote": "Your best score will be automatically recorded on the weekly, monthly, and all-time leaderboards."
+}

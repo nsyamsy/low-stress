@@ -4,9 +4,9 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Selesai Fase 4 (Gerbang game)
+## Lingkup eksekusi saat ini: Fase 5 (Memory Match dan leaderboard)
 
-Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai. Fase 4 (P4-01 sampai P4-04) selesai.
+Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai. Fase 4 (P4-01 sampai P4-04) selesai. Fase 5 dalam pengerjaan.
 
 Fase 1 (referensi status):
 
@@ -52,9 +52,16 @@ Fase 4 (Gerbang game):
 - [x] P4-03 Halaman beranda dan kartu game (Screens §5), halaman "game ditutup". E2E: admin menutup game → pemain melihat kartu terkunci.
 - [x] P4-04 Gerbang API (`/api/games/:id/*`) memakai status dan jadwal. Semua rute game menolak di luar jadwal dengan `GAME_CLOSED`.
 
+Fase 5 (Memory Match dan leaderboard):
+
+- [x] P5-01 Skor generik: `game_scores`, `game_runs`, `recordScore`, `plausibleRun` per manifest (Porting_Guide §3). Tes unit: rekor, urutan seri (yang lebih awal menang), `plays`, `best_play`.
+- [x] P5-02 Leaderboard weekly/monthly/all time dalam WIB (Porting_Guide §6). Tes batas minggu Senin 00:00 dan bulan tanggal 1 WIB.
+- [x] P5-03 Port Memory Match ke `games/memory-match` dengan tampilan asli (Porting_Guide §3). Visual dan suara setara aslinya; skor tersimpan.
+- [x] P5-04 UI Leaderboard (Screens §8) dengan tab periode dan pilihan game. E2E: skor baru muncul di papan; baris sendiri tersorot.
+- [x] P5-05 Batas laju kirim skor dan penandaan run janggal (`flagged`). Run tak wajar ditandai dan terlihat di admin.
+
 ## Antrean berikutnya (belum diinstruksikan)
 
-- [ ] Fase 5 — Memory Match dan leaderboard (P5-01..P5-05)
 - [ ] Fase 6 — Flappy Bird (P6-01..P6-04)
 - [ ] Fase 7 — Ludo (P7-01..P7-09)
 - [ ] Fase 8 — Chat, sensor, moderasi (P8-01..P8-06)

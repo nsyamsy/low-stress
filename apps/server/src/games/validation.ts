@@ -36,3 +36,20 @@ export const updateGameSchema = z.object({
 });
 
 export type UpdateGameInput = z.infer<typeof updateGameSchema>;
+
+export const leaderboardQuerySchema = z.object({
+  period: z.enum(["all", "week", "month"]).default("all"),
+});
+
+export type LeaderboardQueryInput = z.infer<typeof leaderboardQuerySchema>;
+
+export const submitScoreSchema = z
+  .object({
+    score: z.number().int().min(0),
+    durationMs: z.number().int().min(0),
+    moves: z.number().int().min(0).optional(),
+    combos: z.number().int().min(0).optional(),
+  })
+  .passthrough();
+
+export type SubmitScoreInput = z.infer<typeof submitScoreSchema>;

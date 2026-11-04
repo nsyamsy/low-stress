@@ -132,6 +132,7 @@ export const gameScores = pgTable(
       .references(() => games.id, { onDelete: "cascade" }),
     bestScore: integer("best_score").notNull(),
     plays: integer("plays").notNull().default(0),
+    bestPlay: integer("best_play"),
     bestReachedAt: timestamp("best_reached_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

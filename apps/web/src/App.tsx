@@ -18,6 +18,8 @@ import { AdminGamesPage } from "./pages/admin/AdminGamesPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminAuditPage } from "./pages/admin/AdminAuditPage";
 import { GameStatusPage } from "./pages/GameStatusPage";
+import { GamePage } from "./pages/GamePage";
+import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { applyTheme, readThemePreference, type ThemePreference } from "./theme";
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemePreference; key: string }> = [
@@ -81,9 +83,19 @@ export function App() {
     <>
       <header className="ls-app-header">
         <div className="ls-container ls-app-header__inner">
-          <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
-            <Logo variant="horizontal" height={36} />
-          </Link>
+          <div className="ls-row">
+            <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
+              <Logo variant="horizontal" height={36} />
+            </Link>
+            <nav className="ls-nav-links">
+              <Link to="/" className="ls-nav-link">
+                {t("nav.home")}
+              </Link>
+              <Link to="/leaderboard" className="ls-nav-link">
+                {t("nav.leaderboard")}
+              </Link>
+            </nav>
+          </div>
           <div className="ls-row">
             <SegmentedControl
               label={t("language.label")}
@@ -161,6 +173,7 @@ export function App() {
               )
             }
           />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route
             path="/games/:id/status"
             element={
@@ -181,7 +194,7 @@ export function App() {
               ) : user.status === "pending" ? (
                 <Navigate to="/pending" replace />
               ) : (
-                <GameStatusPage />
+                <GamePage />
               )
             }
           />

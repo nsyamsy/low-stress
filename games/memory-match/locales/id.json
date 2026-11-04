@@ -1,0 +1,22 @@
+{
+  "title": "Memory Match",
+  "badge": "Memory Match",
+  "subtitle": "Cocokkan semua pasangan kartu secepat mungkin.",
+  "time": "Waktu",
+  "moves": "Langkah",
+  "pairs": "Pasangan",
+  "mute": "Bisukan suara",
+  "unmute": "Bunyikan suara",
+  "reset": "Ulangi permainan",
+  "newRecord": "Rekor baru",
+  "allMatched": "Semua cocok",
+  "completedDesc": "Selesai dalam {{time}} dengan {{moves}} langkah",
+  "finalScore": "Skor akhir",
+  "best": "Terbaik",
+  "playAgain": "Main lagi",
+  "howTo": "Cara bermain",
+  "rulesPairs": "Balik dua kartu untuk mencari pasangan yang cocok.",
+  "rulesScore": "Selesaikan lebih cepat dengan langkah lebih sedikit untuk skor lebih tinggi. Kombo cocok berturut-turut memberi bonus poin.",
+  "rulesAudio": "Suara disintesis langsung di peramban dan dapat dibisukan kapan saja.",
+  "leaderboardNote": "Skor terbaikmu akan otomatis tercatat di papan peringkat mingguan, bulanan, dan sepanjang waktu."
+}
