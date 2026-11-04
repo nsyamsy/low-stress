@@ -1,0 +1,9 @@
+# Reverse proxy HTTPS untuk profil `public`.
+# APP_DOMAIN diisi domain publik (mis. game.example.com) di `.env`.
+# Untuk `localhost`, Caddy memakai CA internal (sertifikat tidak dipercaya
+# perangkat lain; hanya cocok untuk uji di mesin yang sama).
+
+{$APP_DOMAIN:localhost} {
+  encode zstd gzip
+  reverse_proxy web:8080
+}

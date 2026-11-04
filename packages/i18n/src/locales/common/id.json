@@ -1,0 +1,133 @@
+{
+  "app": {
+    "name": "Low Stress",
+    "tagline": "Main santai, tanpa tekanan"
+  },
+  "nav": {
+    "home": "Beranda",
+    "leaderboard": "Leaderboard",
+    "profile": "Profil",
+    "login": "Masuk",
+    "register": "Buat akun",
+    "logout": "Keluar",
+    "showcase": "Contoh komponen"
+  },
+  "action": {
+    "play": "Main",
+    "cancel": "Batal",
+    "close": "Tutup",
+    "save": "Simpan",
+    "back": "Kembali",
+    "retry": "Coba lagi"
+  },
+  "state": {
+    "loading": "Memuat…",
+    "empty": "Belum ada apa-apa di sini",
+    "error": "Ada yang tidak berjalan. Coba lagi.",
+    "offline": "Kamu sedang luring"
+  },
+  "theme": {
+    "label": "Tema",
+    "system": "Sistem",
+    "light": "Terang",
+    "dark": "Gelap"
+  },
+  "language": {
+    "label": "Bahasa",
+    "auto": "Ikuti browser",
+    "id": "Indonesia",
+    "en": "English"
+  },
+  "design": {
+    "title": "Contoh komponen",
+    "subtitle": "Pratinjau token dan komponen dasar pada mode terang dan gelap.",
+    "button": "Tombol",
+    "primary": "Masuk",
+    "secondary": "Kembali",
+    "ghost": "Lewati",
+    "danger": "Hapus",
+    "input": "Kolom isian",
+    "inputLabel": "Nama tampilan",
+    "inputPlaceholder": "Contoh: Damar",
+    "inputHelp": "2–24 karakter.",
+    "inputError": "Nama tampilan terlalu pendek.",
+    "chip": "Chip dan badge",
+    "chipActive": "Aktif",
+    "chipMaintenance": "Maintenance",
+    "chipDanger": "Ditolak",
+    "chipNeutral": "Nonaktif",
+    "segmented": "Kontrol segmen",
+    "period": "Periode",
+    "weekly": "Mingguan",
+    "monthly": "Bulanan",
+    "allTime": "Sepanjang waktu",
+    "modal": "Modal",
+    "openModal": "Buka modal",
+    "modalTitle": "Hapus skor ini?",
+    "modalBody": "Tindakan ini tidak bisa dibatalkan.",
+    "toast": "Toast",
+    "showToast": "Tampilkan toast",
+    "toastSaved": "Pengaturan disimpan",
+    "registryTitle": "Registry game",
+    "registryDescription": "Game yang ditemukan dari folder games/ dan siap diaktifkan admin.",
+    "registryEmpty": "Belum ada folder game.",
+    "registrySolo": "Solo",
+    "registryMultiplayer": "Multiplayer"
+  },
+  "auth": {
+    "login": {
+      "title": "Masuk",
+      "subtitle": "Masuk dan main santai",
+      "username": "Username",
+      "usernamePlaceholder": "username",
+      "password": "Password",
+      "passwordPlaceholder": "Minimal 8 karakter",
+      "showPassword": "Lihat password",
+      "hidePassword": "Sembunyikan password",
+      "submit": "Masuk",
+      "toRegister": "Belum punya akun? Daftar",
+      "registrationClosed": "Pendaftaran sedang ditutup",
+      "forgotPasswordNotice": "Lupa password? Hubungi admin",
+      "lockoutMessage": "Terlalu banyak percobaan gagal. Coba lagi dalam {{seconds}} detik."
+    },
+    "register": {
+      "title": "Buat akun",
+      "subtitle": "Daftar untuk mulai bermain",
+      "username": "Username",
+      "usernamePlaceholder": "3–20 karakter, huruf kecil dan angka",
+      "usernameHelp": "3–20 karakter huruf kecil, angka, garis bawah, atau titik.",
+      "displayName": "Nama tampilan",
+      "displayNamePlaceholder": "2–24 karakter",
+      "displayNameHelp": "Nama yang tampil di leaderboard.",
+      "email": "Email",
+      "emailPlaceholder": "nama@contoh.com",
+      "emailHelp": "Email dipakai untuk pemulihan akun saat fitur email aktif.",
+      "password": "Password",
+      "passwordPlaceholder": "Minimal 8 karakter",
+      "passwordHelp": "Minimal 8 karakter dan tidak sama dengan username.",
+      "submit": "Daftar",
+      "toLogin": "Sudah punya akun? Masuk",
+      "captchaLabel": "Verifikasi anti-bot"
+    },
+    "pending": {
+      "title": "Menunggu persetujuan",
+      "chip": "Pending",
+      "description": "Admin akan meninjau pendaftaranmu. Kamu bisa masuk setelah disetujui.",
+      "accountLabel": "Akun: {{username}}",
+      "backToLogin": "Kembali ke login"
+    },
+    "error": {
+      "invalidCredentials": "Username atau password salah.",
+      "accountPending": "Akunmu masih menunggu persetujuan admin.",
+      "accountRejected": "Pendaftaran akunmu ditolak admin.",
+      "accountSuspended": "Akunmu sedang ditangguhkan.",
+      "accountBanned": "Akunmu telah diblokir.",
+      "usernameTaken": "Username sudah digunakan.",
+      "emailTaken": "Email sudah terdaftar.",
+      "passwordTooWeak": "Password minimal 8 karakter dan tidak boleh sama dengan username.",
+      "registrationClosed": "Pendaftaran sedang ditutup oleh admin.",
+      "captchaFailed": "Verifikasi CAPTCHA gagal. Coba lagi.",
+      "generic": "Terjadi kesalahan. Coba beberapa saat lagi."
+    }
+  }
+}

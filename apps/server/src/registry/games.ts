@@ -1,0 +1,100 @@
+import { readdir, stat } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import type { Database } from "@low-stress/db";
+import { games } from "@low-stress/db";
+import { assertGameManifest, type GameManifest } from "@low-stress/sdk";
+
+export interface LoadedGame {
+  manifest: GameManifest;
+  /** Path absolut ke `manifest.ts`. */
+  path: string;
+}
+
+export interface GameManifestModule {
+  manifest?: unknown;
+  default?: unknown;
+}
+
+export interface RegistrySyncResult {
+  inserted: string[];
+  unchanged: string[];
+}
+
+const DEFAULT_GAMES_DIR = resolve(import.meta.dirname, "../../../../games");
+
+async function isDirectory(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Pindai `games/<id>/manifest.ts` dan validasi bentuk manifest. Folder yang
+ * tidak punya manifest dilewati; manifest rusak melempar error agar boot gagal
+ * dengan pesan yang jelas.
+ */
+export async function scanGameManifests(
+  gamesDir: string = DEFAULT_GAMES_DIR,
+): Promise<LoadedGame[]> {
+  if (!(await isDirectory(gamesDir))) return [];
+
+  const loaded: LoadedGame[] = [];
+  const entries = await readdir(gamesDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith(".") || entry.name.startsWith("_")) continue;
+
+    const manifestPath = join(gamesDir, entry.name, "manifest.ts");
+    if (!(await stat(manifestPath).catch(() => null))) continue;
+
+    const module = (await import(
+      pathToFileURL(manifestPath).href
+    )) as GameManifestModule;
+    const candidate = module.manifest ?? module.default;
+    assertGameManifest(candidate, `${entry.name}/manifest.ts`);
+
+    if (candidate.id !== entry.name) {
+      throw new Error(
+        `${entry.name}/manifest.ts: id "${candidate.id}" harus sama dengan nama folder "${entry.name}"`,
+      );
+    }
+
+    loaded.push({ manifest: candidate, path: manifestPath });
+  }
+
+  return loaded.sort((a, b) => a.manifest.id.localeCompare(b.manifest.id));
+}
+
+/**
+ * Sinkronkan manifest ke tabel `games`. Hanya baris baru yang dibuat; field
+ * yang dikelola admin (status, jadwal, urutan, badge) tidak pernah ditimpa.
+ */
+export async function syncGameRegistry(
+  db: Database,
+  loaded: readonly LoadedGame[],
+): Promise<RegistrySyncResult> {
+  if (loaded.length === 0) return { inserted: [], unchanged: [] };
+
+  const inserted = await db
+    .insert(games)
+    .values(loaded.map(({ manifest }) => ({ id: manifest.id })))
+    .onConflictDoNothing({ target: games.id })
+    .returning({ id: games.id });
+
+  const insertedIds = new Set(inserted.map((row) => row.id));
+  return {
+    inserted: [...insertedIds].sort(),
+    unchanged: loaded
+      .map(({ manifest }) => manifest.id)
+      .filter((id) => !insertedIds.has(id))
+      .sort(),
+  };
+}
+
+/** Path default, diekspor untuk tes dan tooling. */
+export const GAMES_DIR = DEFAULT_GAMES_DIR;

@@ -1,0 +1,20 @@
+{
+  "name": "@low-stress/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./rules/no-raw-design-values": "./rules/no-raw-design-values.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "eslint": "^10.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
+  }
+}

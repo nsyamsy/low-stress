@@ -1,0 +1,9 @@
+{
+  "title": "__GAME_TITLE__",
+  "subtitle": "Game contoh dari template Low Stress.",
+  "tap": "Tambah skor",
+  "finish": "Selesai",
+  "exit": "Keluar",
+  "score": "Skor: {{score}}",
+  "stageLabel": "Area permainan"
+}

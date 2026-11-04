@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Low Stress">
+  <title>Low Stress</title>
+  <g fill="none">
+    <path
+      d="M14 40c0-13 9.5-22 22-22 6.5 0 12.5 3 16.5 7.5 4-1 8 0 11 2.5-2 3-5 5-8.5 6 2 4 3 8.5 3 13 0 1 0 3-1 4H24c-6 0-10-4.5-10-11Z"
+      fill="#F2735B"
+    />
+    <path d="M14 39c-4.5-3-8.5-3-11-1 2.5 5.5 6.5 8.5 11.5 8.5Z" fill="#F2735B" />
+    <path d="M52 30l10 4.5-10 4.5Z" fill="#F2B84B" />
+    <circle cx="44" cy="32" r="2.6" fill="#16211F" />
+    <path
+      d="M26 46c4.5 2.2 9.5 2.2 14 0"
+      stroke="#16211F"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      opacity="0.35"
+    />
+  </g>
+</svg>

@@ -1,0 +1,133 @@
+{
+  "app": {
+    "name": "Low Stress",
+    "tagline": "Play at your own pace"
+  },
+  "nav": {
+    "home": "Home",
+    "leaderboard": "Leaderboard",
+    "profile": "Profile",
+    "login": "Log in",
+    "register": "Create account",
+    "logout": "Log out",
+    "showcase": "Component showcase"
+  },
+  "action": {
+    "play": "Play",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "back": "Back",
+    "retry": "Try again"
+  },
+  "state": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet",
+    "error": "Something went wrong. Try again.",
+    "offline": "You are offline"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "auto": "Follow browser",
+    "id": "Indonesia",
+    "en": "English"
+  },
+  "design": {
+    "title": "Component showcase",
+    "subtitle": "Preview of design tokens and base components in light and dark mode.",
+    "button": "Buttons",
+    "primary": "Log in",
+    "secondary": "Back",
+    "ghost": "Skip",
+    "danger": "Delete",
+    "input": "Input",
+    "inputLabel": "Display name",
+    "inputPlaceholder": "For example: Damar",
+    "inputHelp": "2–24 characters.",
+    "inputError": "Display name is too short.",
+    "chip": "Chips and badges",
+    "chipActive": "Active",
+    "chipMaintenance": "Maintenance",
+    "chipDanger": "Rejected",
+    "chipNeutral": "Inactive",
+    "segmented": "Segmented control",
+    "period": "Period",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "allTime": "All time",
+    "modal": "Modal",
+    "openModal": "Open modal",
+    "modalTitle": "Delete this score?",
+    "modalBody": "This cannot be undone.",
+    "toast": "Toast",
+    "showToast": "Show toast",
+    "toastSaved": "Settings saved",
+    "registryTitle": "Game registry",
+    "registryDescription": "Games discovered from the games/ folder and ready for an admin to enable.",
+    "registryEmpty": "No game folders yet.",
+    "registrySolo": "Solo",
+    "registryMultiplayer": "Multiplayer"
+  },
+  "auth": {
+    "login": {
+      "title": "Log in",
+      "subtitle": "Log in and play casually",
+      "username": "Username",
+      "usernamePlaceholder": "username",
+      "password": "Password",
+      "passwordPlaceholder": "At least 8 characters",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "submit": "Log in",
+      "toRegister": "Don't have an account? Sign up",
+      "registrationClosed": "Registration is currently closed",
+      "forgotPasswordNotice": "Forgot password? Contact admin",
+      "lockoutMessage": "Too many failed attempts. Try again in {{seconds}} seconds."
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "Sign up to start playing",
+      "username": "Username",
+      "usernamePlaceholder": "3–20 characters, lowercase and numbers",
+      "usernameHelp": "3–20 lowercase letters, numbers, underscores, or dots.",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "2–24 characters",
+      "displayNameHelp": "Name displayed on the leaderboard.",
+      "email": "Email",
+      "emailPlaceholder": "name@example.com",
+      "emailHelp": "Email is used for account recovery when email features are active.",
+      "password": "Password",
+      "passwordPlaceholder": "At least 8 characters",
+      "passwordHelp": "At least 8 characters and not the same as username.",
+      "submit": "Sign up",
+      "toLogin": "Already have an account? Log in",
+      "captchaLabel": "Anti-bot verification"
+    },
+    "pending": {
+      "title": "Pending approval",
+      "chip": "Pending",
+      "description": "An admin will review your registration. You can log in once approved.",
+      "accountLabel": "Account: {{username}}",
+      "backToLogin": "Back to login"
+    },
+    "error": {
+      "invalidCredentials": "Incorrect username or password.",
+      "accountPending": "Your account is still pending admin approval.",
+      "accountRejected": "Your account registration was rejected by admin.",
+      "accountSuspended": "Your account has been suspended.",
+      "accountBanned": "Your account has been banned.",
+      "usernameTaken": "Username is already taken.",
+      "emailTaken": "Email is already registered.",
+      "passwordTooWeak": "Password must be at least 8 characters and cannot match username.",
+      "registrationClosed": "Registration is currently closed by admin.",
+      "captchaFailed": "CAPTCHA verification failed. Please try again.",
+      "generic": "Something went wrong. Please try again shortly."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@low-stress/game-__GAME_ID__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@low-stress/i18n": "workspace:*",
+    "@low-stress/sdk": "workspace:*",
+    "@low-stress/ui": "workspace:*",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.9.3"
+  }
+}

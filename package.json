@@ -1,0 +1,38 @@
+{
+  "name": "low-stress",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Low Stress — situs game santai dengan leaderboard dan panel admin.",
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @low-stress/web --filter @low-stress/server dev",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "i18n:check": "tsx tools/check-i18n/src/index.ts",
+    "check:migrations": "tsx tools/check-migrations/src/index.ts",
+    "db:migrate": "pnpm --filter @low-stress/db migrate",
+    "new-game": "tsx tools/new-game/src/index.ts",
+    "generate:icons": "tsx tools/generate-icons/src/index.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "eslint-import-resolver-node": "^0.4.0",
+    "eslint-plugin-boundaries": "^7.4.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.14.0",
+    "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
+  }
+}
