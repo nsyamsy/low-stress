@@ -83,3 +83,12 @@ export const adminResetLeaderboardSchema = z.object({
 export type AdminResetLeaderboardInput = z.infer<
   typeof adminResetLeaderboardSchema
 >;
+
+export const adminLudoRoomsQuerySchema = z.object({
+  status: z.enum(["lobby", "playing", "finished"]).optional(),
+});
+
+export const adminLudoKickSchema = z.object({
+  userId: z.string().uuid("ID pengguna harus berupa UUID"),
+});
+

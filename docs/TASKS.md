@@ -4,7 +4,7 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Fase 6 (Flappy Bird) — Selesai
+## Lingkup eksekusi saat ini: Fase 7 (Ludo) — Sedang berjalan
 
 Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai. Fase 4 (P4-01 sampai P4-04) selesai. Fase 5 (P5-01 sampai P5-05) selesai. Fase 6 (P6-01 sampai P6-04) selesai.
 
@@ -67,8 +67,19 @@ Fase 6 (Flappy Bird):
 - [x] P6-03 Skala FIT di mobile, tanpa scroll, mendukung `prefers-reduced-motion` (hilangkan kilat). Uji 360x640 dan 1280x800.
 - [x] P6-04 Integrasi skor: run dengan skor < 1 tidak dihitung; pilihan karakter disimpan. Sesuai perilaku `recordScore` lama.
 
+Fase 7 (Ludo):
+
+- [x] P7-01 Port engine (`ludo-engine`) ke `games/ludo/shared`, naikkan `MAX_PLAYERS` ke 12, tambah 2 warna, `defaultPawns` untuk 11–12 = 2. Tes unit geometri 2–12 pemain; simulasi panjang permainan didokumentasikan.
+- [x] P7-02 Tabel `ludo_rooms`, `ludo_players`, `ludo_messages` dengan migrasi dan `last_activity_at`. Migrasi lolos dari DB kosong.
+- [x] P7-03 Server otoritatif via Socket.IO: aksi (API_Spec §9), dadu di server, validasi langkah, persist state, pemulihan setelah restart. Restart server tidak menghilangkan game berjalan.
+- [x] P7-04 Autopilot (jeda 1,5 dtk; ambil alih setelah 60 dtk tanpa gerakan) dan penyambungan ulang klien. Pemain terputus digantikan autopilot lalu bisa mengambil alih lagi.
+- [x] P7-05 UI lobi room, undangan, papan SVG, pion, dadu, suara, chat room (Screens §9–10), mobile dan desktop. E2E 2 pemain menyelesaikan game; tampilan 360px terbaca.
+- [x] P7-06 Kedaluwarsa room: hapus yang tidak aktif > 7 hari (job tiap jam). Tes dengan jam palsu.
+- [x] P7-07 Perilaku saat game dimatikan: room dibeku, dilanjutkan saat dinyalakan. Teruji.
+- [x] P7-08 Moderasi admin untuk Ludo: daftar room, hapus/reset, kick, lihat chat. Aksi tercatat di audit log.
+- [x] P7-09 Uji keterbacaan 12 pemain di 360px; bila gagal, turunkan bawaan `ludo.maxPlayers` atau batasi 12 hanya di desktop, dan catat keputusan. Keputusan tertulis di PRD §8.
+
 ## Antrean berikutnya (belum diinstruksikan)
 
-- [ ] Fase 7 — Ludo (P7-01..P7-09)
 - [ ] Fase 8 — Chat, sensor, moderasi (P8-01..P8-06)
 - [ ] Fase 9 — Polish dan rilis (P9-01..P9-05)

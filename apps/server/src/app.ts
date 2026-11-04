@@ -3,10 +3,14 @@ import rateLimit from "@fastify/rate-limit";
 import type { Database } from "@low-stress/db";
 import Fastify, { type FastifyInstance } from "fastify";
 
+import { Server as SocketIOServer } from "socket.io";
 import { applySecurityHeaders } from "./auth/middleware";
 import { registerAuthRoutes } from "./auth/routes";
 import { registerAdminRoutes } from "./admin/routes";
 import { registerGameRoutes } from "./games/routes";
+import { startLudoExpirationJob } from "./ludo/expiration";
+import type { AutopilotOptions } from "./ludo/autopilot";
+import { setupLudoSocket } from "./ludo/socket";
 import type { Env } from "./env";
 import { createErrorHandler, errorBody, notFoundHandler } from "./errors";
 import type { LoadedGame } from "./registry/games";
@@ -19,6 +23,8 @@ export interface BuildAppOptions {
   checkDatabase?: () => Promise<boolean>;
   /** Nonaktifkan logger pada tes. */
   logger?: boolean;
+  /** Opsi autopilot Ludo (mis. jeda waktu cepat untuk pengujian). */
+  ludoAutopilot?: AutopilotOptions;
 }
 
 export async function buildApp({
@@ -27,6 +33,7 @@ export async function buildApp({
   games,
   checkDatabase,
   logger,
+  ludoAutopilot,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger:
@@ -92,6 +99,27 @@ export async function buildApp({
   });
 
   if (db) {
+    const io = new SocketIOServer(app.server, {
+      path: "/ws",
+      cors: {
+        origin: env.APP_ORIGIN,
+        credentials: true,
+      },
+    });
+
+    const { autopilot } = setupLudoSocket(io, db, ludoAutopilot);
+    const expirationJob = startLudoExpirationJob(db, io);
+    app.decorate("io", io);
+
+    app.addHook("onClose", async () => {
+      expirationJob.stop();
+      autopilot.stopAll();
+      io.disconnectSockets(true);
+      await new Promise<void>((resolve) => {
+        io.close(() => resolve());
+      });
+    });
+
     await registerAuthRoutes(app, { db, env, games });
     await registerAdminRoutes(app, { db, env, games });
     await registerGameRoutes(app, { db, env, games });

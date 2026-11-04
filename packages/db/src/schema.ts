@@ -224,6 +224,78 @@ export const bannedWords = pgTable("banned_words", {
   enabled: boolean("enabled").notNull().default(true),
 });
 
+export const ludoRooms = pgTable(
+  "ludo_rooms",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    hostId: uuid("host_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("lobby"),
+    maxPlayers: integer("max_players").notNull().default(4),
+    pawns: integer("pawns"),
+    seatUsers: jsonb("seat_users").$type<string[]>(),
+    state: jsonb("state"),
+    version: integer("version").notNull().default(0),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_ludo_rooms_last_activity").on(table.lastActivityAt),
+  ],
+);
+
+export const ludoPlayers = pgTable(
+  "ludo_players",
+  {
+    roomId: text("room_id")
+      .notNull()
+      .references(() => ludoRooms.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("invited"),
+    pawn: text("pawn"),
+    autopilot: boolean("autopilot").notNull().default(false),
+    invitedAt: timestamp("invited_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    joinedAt: timestamp("joined_at", { withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.roomId, table.userId] }),
+    index("idx_ludo_players_user").on(table.userId),
+  ],
+);
+
+export const ludoMessages = pgTable(
+  "ludo_messages",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    roomId: text("room_id")
+      .notNull()
+      .references(() => ludoRooms.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("idx_ludo_messages_room").on(table.roomId, table.id)],
+);
+
 /** Daftar tabel inti, dipakai pemeriksa migrasi dan tes. */
 export const coreTables = [
   "users",

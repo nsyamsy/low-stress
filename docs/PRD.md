@@ -209,8 +209,14 @@ Sudah diputuskan: backend Fastify; leaderboard per game; Ludo sampai 12 pemain; 
 
 Dokumen pendamping: [ROADMAP.md](ROADMAP.md) (tugas dan keputusan bawaan), [API_Spec.md](API_Spec.md), [Screens.md](Screens.md), [Porting_Guide.md](Porting_Guide.md). Setiap butir di bawah sudah diberi **nilai bawaan** di ROADMAP §0 agar eksekusi tidak terhenti; pemilik dapat mengubahnya kapan saja.
 
+Keputusan fitur:
+1. **Keterbacaan dan batas pemain Ludo (Diputuskan pada P7-09):**
+   Hasil uji keterbacaan pada viewport 360px menunjukkan papan SVG 12 lengan diskalakan proporsional tanpa scroll horizontal (`w-full`, viewBox adaptif), dan safe zone serta pion tetap terlihat. Berkat mekanisme `autoMove` dan area ketuk pion yang diperlebar (`r=22`), permainan tetap dapat dimainkan di mobile. Namun karena permainan 12 pemain membutuhkan waktu relatif panjang (~144 lemparan/pemain), diputuskan:
+   - Nilai pilihan bawaan saat membuat ruangan adalah **4 pemain** (paling ideal untuk mobile).
+   - Pemain tetap dapat membuat ruangan hingga **12 pemain** baik di mobile maupun desktop selama diizinkan oleh pengaturan admin.
+   - Admin dapat membatasi batas atas ruangan melalui pengaturan `ludo.maxPlayers` (rentang 2–12, bawaan 12).
+
 Masih terbuka:
-1. Apakah Ludo 12 pemain nyaman di layar ponsel? Perlu uji sebelum angka 12 dikunci (cadangan: 12 hanya di desktop).
-2. Retensi pesan chat 7 hari dan batas 300 karakter: sesuai?
-3. Apakah panel chat publik ikut tampil di halaman game desktop, atau hanya di beranda dan leaderboard?
-4. Anti-cheat skor: cukup plausibility check, atau perlu replay atau simulasi server?
+1. Retensi pesan chat 7 hari dan batas 300 karakter: sesuai?
+2. Apakah panel chat publik ikut tampil di halaman game desktop, atau hanya di beranda dan leaderboard?
+3. Anti-cheat skor: cukup plausibility check, atau perlu replay atau simulasi server?

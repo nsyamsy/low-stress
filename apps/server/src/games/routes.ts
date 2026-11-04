@@ -22,6 +22,7 @@ import {
   recordScore,
 } from "./scores";
 import { checkGameGate, listPlayerGames } from "./service";
+import { registerLudoRoutes } from "../ludo/routes";
 import {
   leaderboardQuerySchema,
   submitScoreSchema,
@@ -189,4 +190,6 @@ export async function registerGameRoutes(
 
     return result;
   });
+
+  registerLudoRoutes(app, { db });
 }

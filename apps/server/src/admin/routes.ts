@@ -16,11 +16,16 @@ import { createEmailAdapter } from "../email/adapter";
 import { listAdminGames, updateAdminGame } from "../games/service";
 import { updateGameSchema } from "../games/validation";
 import {
+  adminDeleteLudoRoom,
+  adminKickLudoPlayer,
+  adminResetLudoRoom,
   bulkUpdateUsers,
   deleteGameRun,
   deleteUserByAdmin,
   getAdminDashboard,
+  getAdminLudoRoomDetail,
   getAdminSettings,
+  listAdminLudoRooms,
   listAuditLogs,
   listGameRuns,
   listUsers,
@@ -34,6 +39,8 @@ import {
   adminAuditQuerySchema,
   adminBulkUserActionSchema,
   adminLoginBodySchema,
+  adminLudoKickSchema,
+  adminLudoRoomsQuerySchema,
   adminResetLeaderboardSchema,
   adminRunsQuerySchema,
   adminSmtpTestSchema,
@@ -342,6 +349,65 @@ export async function registerAdminRoutes(
         gameId,
         parseResult.data.period,
       );
+    },
+  );
+
+  // Moderasi Ludo (API_Spec §9)
+  // GET /api/admin/ludo/rooms?status=
+  app.get(
+    "/api/admin/ludo/rooms",
+    { preHandler: [requireAdminAuth] },
+    async (request) => {
+      const parseResult = adminLudoRoomsQuerySchema.safeParse(request.query);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+      return listAdminLudoRooms(db, parseResult.data.status);
+    },
+  );
+
+  // GET /api/admin/ludo/rooms/:id
+  app.get(
+    "/api/admin/ludo/rooms/:id",
+    { preHandler: [requireAdminAuth] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      return getAdminLudoRoomDetail(db, id);
+    },
+  );
+
+  // POST /api/admin/ludo/rooms/:id/reset
+  app.post(
+    "/api/admin/ludo/rooms/:id/reset",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      return adminResetLudoRoom(db, request.admin!.id, id);
+    },
+  );
+
+  // POST /api/admin/ludo/rooms/:id/kick
+  app.post(
+    "/api/admin/ludo/rooms/:id/kick",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const parseResult = adminLudoKickSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+      return adminKickLudoPlayer(db, request.admin!.id, id, parseResult.data.userId);
+    },
+  );
+
+  // DELETE /api/admin/ludo/rooms/:id
+  app.delete(
+    "/api/admin/ludo/rooms/:id",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      await adminDeleteLudoRoom(db, request.admin!.id, id);
+      return reply.status(204).send();
     },
   );
 }

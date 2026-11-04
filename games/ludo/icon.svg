@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ludo">
+  <title>Ludo</title>
+  <rect width="64" height="64" rx="16" fill="#1e3a8a" />
+  <!-- 4 quadrant yards -->
+  <rect x="8" y="8" width="20" height="20" rx="4" fill="#E8383D" />
+  <rect x="36" y="8" width="20" height="20" rx="4" fill="#3FA535" />
+  <rect x="36" y="36" width="20" height="20" rx="4" fill="#F9C910" />
+  <rect x="8" y="36" width="20" height="20" rx="4" fill="#2D7FE0" />
+  <!-- Center triangle / star -->
+  <polygon points="32,24 40,32 32,40 24,32" fill="#F6F1E7" />
+  <circle cx="32" cy="32" r="3" fill="#F2735B" />
+</svg>

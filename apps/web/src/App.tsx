@@ -198,6 +198,18 @@ export function App() {
               )
             }
           />
+          <Route
+            path="/games/:id/:roomId"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : user.status === "pending" ? (
+                <Navigate to="/pending" replace />
+              ) : (
+                <GamePage />
+              )
+            }
+          />
           <Route path="/showcase" element={<ShowcasePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
