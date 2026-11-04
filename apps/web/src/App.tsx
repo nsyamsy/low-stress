@@ -14,8 +14,10 @@ import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminApprovalsPage } from "./pages/admin/AdminApprovalsPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
+import { AdminGamesPage } from "./pages/admin/AdminGamesPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminAuditPage } from "./pages/admin/AdminAuditPage";
+import { GameStatusPage } from "./pages/GameStatusPage";
 import { applyTheme, readThemePreference, type ThemePreference } from "./theme";
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemePreference; key: string }> = [
@@ -59,6 +61,7 @@ export function App() {
           <Route index element={<AdminDashboardPage />} />
           <Route path="approvals" element={<AdminApprovalsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="games" element={<AdminGamesPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
         </Route>
@@ -155,6 +158,30 @@ export function App() {
                 <Navigate to="/pending" replace />
               ) : (
                 <HomePage />
+              )
+            }
+          />
+          <Route
+            path="/games/:id/status"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : user.status === "pending" ? (
+                <Navigate to="/pending" replace />
+              ) : (
+                <GameStatusPage />
+              )
+            }
+          />
+          <Route
+            path="/games/:id"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : user.status === "pending" ? (
+                <Navigate to="/pending" replace />
+              ) : (
+                <GameStatusPage />
               )
             }
           />

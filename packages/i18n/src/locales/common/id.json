@@ -140,7 +140,8 @@
       "audit": "Audit log",
       "logout": "Keluar",
       "backToSite": "Ke situs utama",
-      "menu": "Menu"
+      "menu": "Menu",
+      "games": "Kelola Game"
     },
     "header": {
       "deployMode": "Mode deploy: {{mode}}"
@@ -238,6 +239,68 @@
       "copy": "Salin",
       "copied": "Tersalin!",
       "close": "Tutup"
+    },
+    "games": {
+      "title": "Pengelolaan Game",
+      "colName": "Game",
+      "colStatus": "Status",
+      "colSchedule": "Jadwal",
+      "colOrder": "Urutan",
+      "colBadge": "Badge",
+      "colActions": "Aksi",
+      "edit": "Ubah",
+      "modalTitle": "Ubah Pengaturan Game",
+      "statusLabel": "Status Game",
+      "maintMsgId": "Pesan Pemeliharaan (Indonesia)",
+      "maintMsgEn": "Pesan Pemeliharaan (English)",
+      "badgeLabel": "Badge (contoh: new, hot)",
+      "orderLabel": "Urutan Tampil",
+      "scheduleType": "Pengaturan Jadwal",
+      "scheduleGlobal": "Ikuti Jadwal Global",
+      "scheduleCustom": "Jadwal Khusus Game Ini",
+      "save": "Simpan Perubahan",
+      "empty": "Belum ada game terdaftar."
     }
+  },
+  "home": {
+    "greeting": "Halo, {{name}}",
+    "scheduleOpen": "Buka {{windows}}",
+    "scheduleClosed": "Tutup, dibuka kembali {{time}}",
+    "scheduleAllDay": "Buka sepanjang hari",
+    "emptyGames": "Belum ada game yang tersedia saat ini.",
+    "personalBest": "Rekor: {{score}} ({{plays}}x main)",
+    "noScoreYet": "Belum pernah dimainkan"
+  },
+  "game": {
+    "status": {
+      "active": "Aktif",
+      "closed": "Tutup",
+      "maintenance": "Maintenance",
+      "inactive": "Nonaktif"
+    },
+    "action": {
+      "play": "Main",
+      "viewSchedule": "Lihat jadwal",
+      "locked": "Terkunci"
+    },
+    "closed": {
+      "title": "Game sedang ditutup",
+      "description": "Dibuka pukul {{windows}}, {{days}}.",
+      "backHome": "Kembali ke beranda"
+    },
+    "maintenance": {
+      "title": "Sedang diperbarui",
+      "defaultMessage": "Game ini sedang dalam pemeliharaan berkala untuk peningkatan performa.",
+      "backHome": "Kembali ke beranda"
+    }
+  },
+  "days": {
+    "0": "Minggu",
+    "1": "Senin",
+    "2": "Selasa",
+    "3": "Rabu",
+    "4": "Kamis",
+    "5": "Jumat",
+    "6": "Sabtu"
   }
 }

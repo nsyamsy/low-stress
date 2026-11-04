@@ -6,6 +6,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { applySecurityHeaders } from "./auth/middleware";
 import { registerAuthRoutes } from "./auth/routes";
 import { registerAdminRoutes } from "./admin/routes";
+import { registerGameRoutes } from "./games/routes";
 import type { Env } from "./env";
 import { createErrorHandler, errorBody, notFoundHandler } from "./errors";
 import type { LoadedGame } from "./registry/games";
@@ -93,12 +94,8 @@ export async function buildApp({
   if (db) {
     await registerAuthRoutes(app, { db, env, games });
     await registerAdminRoutes(app, { db, env, games });
+    await registerGameRoutes(app, { db, env, games });
   }
-
-  // Placeholder endpoint rute game untuk verifikasi gerbang peran
-  app.get("/api/games/:id/ping", async () => {
-    return { ok: true };
-  });
 
   return app;
 }

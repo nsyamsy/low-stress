@@ -140,7 +140,8 @@
       "audit": "Audit log",
       "logout": "Log out",
       "backToSite": "Back to site",
-      "menu": "Menu"
+      "menu": "Menu",
+      "games": "Games"
     },
     "header": {
       "deployMode": "Deploy mode: {{mode}}"
@@ -238,6 +239,68 @@
       "copy": "Copy",
       "copied": "Copied!",
       "close": "Close"
+    },
+    "games": {
+      "title": "Game Management",
+      "colName": "Game",
+      "colStatus": "Status",
+      "colSchedule": "Schedule",
+      "colOrder": "Sort order",
+      "colBadge": "Badge",
+      "colActions": "Actions",
+      "edit": "Edit",
+      "modalTitle": "Edit Game Settings",
+      "statusLabel": "Game Status",
+      "maintMsgId": "Maintenance Message (Indonesian)",
+      "maintMsgEn": "Maintenance Message (English)",
+      "badgeLabel": "Badge (e.g. new, hot)",
+      "orderLabel": "Sort order",
+      "scheduleType": "Schedule Settings",
+      "scheduleGlobal": "Follow Global Schedule",
+      "scheduleCustom": "Custom Game Schedule",
+      "save": "Save Changes",
+      "empty": "No registered games."
     }
+  },
+  "home": {
+    "greeting": "Hello, {{name}}",
+    "scheduleOpen": "Open {{windows}}",
+    "scheduleClosed": "Closed, opens {{time}}",
+    "scheduleAllDay": "Open all day",
+    "emptyGames": "No games available at the moment.",
+    "personalBest": "Best: {{score}} ({{plays}} plays)",
+    "noScoreYet": "Not played yet"
+  },
+  "game": {
+    "status": {
+      "active": "Active",
+      "closed": "Closed",
+      "maintenance": "Maintenance",
+      "inactive": "Inactive"
+    },
+    "action": {
+      "play": "Play",
+      "viewSchedule": "View schedule",
+      "locked": "Locked"
+    },
+    "closed": {
+      "title": "Game is currently closed",
+      "description": "Opens at {{windows}}, {{days}}.",
+      "backHome": "Back to home"
+    },
+    "maintenance": {
+      "title": "Under maintenance",
+      "defaultMessage": "This game is currently undergoing scheduled maintenance for performance improvements.",
+      "backHome": "Back to home"
+    }
+  },
+  "days": {
+    "0": "Sunday",
+    "1": "Monday",
+    "2": "Tuesday",
+    "3": "Wednesday",
+    "4": "Thursday",
+    "5": "Friday",
+    "6": "Saturday"
   }
 }

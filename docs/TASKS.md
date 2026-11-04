@@ -4,9 +4,9 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Selesai Fase 3 (panel admin)
+## Lingkup eksekusi saat ini: Selesai Fase 4 (Gerbang game)
 
-Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai.
+Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai. Fase 4 (P4-01 sampai P4-04) selesai.
 
 Fase 1 (referensi status):
 
@@ -45,9 +45,15 @@ Fase 3 (Panel admin):
 - [x] P3-08 Dashboard admin: pemain aktif harian, game dimainkan, pendaftar baru hari ini, total pengguna per status, antrean persetujuan
 - [x] P3-09 UI admin responsif (`apps/web`): layout drawer di <= 767px (360px) dan sidebar di >= 1024px (1280px), tabel beralih ke kartu di mobile, dua bahasa (`id` dan `en`), tanpa nilai mentah
 
+Fase 4 (Gerbang game):
+
+- [x] P4-01 Status per game (`active`/`maintenance`/`inactive`) + pesan maintenance dua bahasa + urutan + badge. `inactive` tidak muncul bagi pemain dan API menolak; `maintenance` tampil terkunci.
+- [x] P4-02 Jadwal (global dan per game) dengan zona WIB, jendela multi-waktu, lintas tengah malam (porting `commercial-games.ts`). Tes unit mencakup jendela lintas tengah malam dan hari.
+- [x] P4-03 Halaman beranda dan kartu game (Screens §5), halaman "game ditutup". E2E: admin menutup game → pemain melihat kartu terkunci.
+- [x] P4-04 Gerbang API (`/api/games/:id/*`) memakai status dan jadwal. Semua rute game menolak di luar jadwal dengan `GAME_CLOSED`.
+
 ## Antrean berikutnya (belum diinstruksikan)
 
-- [ ] Fase 4 — Gerbang game (P4-01..P4-04)
 - [ ] Fase 5 — Memory Match dan leaderboard (P5-01..P5-05)
 - [ ] Fase 6 — Flappy Bird (P6-01..P6-04)
 - [ ] Fase 7 — Ludo (P7-01..P7-09)

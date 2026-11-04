@@ -13,6 +13,8 @@ import {
 } from "../auth/session";
 import type { LoadedGame } from "../registry/games";
 import { createEmailAdapter } from "../email/adapter";
+import { listAdminGames, updateAdminGame } from "../games/service";
+import { updateGameSchema } from "../games/validation";
 import {
   bulkUpdateUsers,
   deleteUserByAdmin,
@@ -251,6 +253,30 @@ export async function registerAdminRoutes(
       }
 
       return listAuditLogs(db, parseResult.data);
+    },
+  );
+
+  // GET /api/admin/games
+  app.get(
+    "/api/admin/games",
+    { preHandler: [requireAdminAuth] },
+    async () => {
+      return listAdminGames(db, games);
+    },
+  );
+
+  // PATCH /api/admin/games/:id
+  app.patch(
+    "/api/admin/games/:id",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const parseResult = updateGameSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+
+      return updateAdminGame(db, request.admin!.id, id, parseResult.data);
     },
   );
 }

@@ -126,6 +126,16 @@ export function AdminLayout() {
           </NavLink>
 
           <NavLink
+            to="/admin/games"
+            className={({ isActive }) =>
+              `ls-admin-nav-item ${isActive ? "active" : ""}`
+            }
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>{t("admin.nav.games")}</span>
+          </NavLink>
+
+          <NavLink
             to="/admin/settings"
             className={({ isActive }) =>
               `ls-admin-nav-item ${isActive ? "active" : ""}`

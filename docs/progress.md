@@ -144,4 +144,44 @@ pnpm --filter @low-stress/web build -> lolos (Vite build + 17 entri precache)
 - Pengiriman email SMTP ke server email publik nyata (diuji menggunakan mock SMTP transporter dan LogAdapter).
 - Uji fisik interaksi layar sentuh pada perangkat nyata iOS Safari & Android Chrome untuk drawer hamburger admin.
 
+---
+
+## 2026-11-04 - Fase 4 (P4-01..P4-04)
+
+Lingkup: Fase 4 saja (Gerbang game, status, jadwal, beranda pemain, dan API gate). P1-05, P1-10, P1-11 tidak disentuh.
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P4-01 Status per game, pesan maintenance dwibahasa, sortOrder, badge | Selesai | Endpoint admin `GET /api/admin/games` & `PATCH /api/admin/games/:id`. Endpoint pemain `GET /api/games` hanya menyajikan game berstatus `active` dan `maintenance`; game `inactive` disembunyikan total dari pemain dan ditolak 404 jika diakses langsung. Game `maintenance` tampil dengan `open: false`, tombol terkunci, dan menampilkan pesan maintenance dari admin (dwibahasa `id` dan `en`). Urutan game mematuhi `sortOrder` ASC lalu `id` ASC. Badge didukung dan tampil di kartu game. Aksi perubahan admin tercatat di `audit_log` (`game.update`). Teruji di unit & integrasi. |
+| P4-02 Jadwal WIB (global & per game), jendela multi-waktu, lintas tengah malam | Selesai | Engine jadwal di `apps/server/src/games/schedule.ts` diporting dari `commercial-games.ts` dengan zona waktu `Asia/Jakarta` (WIB). Mendukung 1–6 jendela waktu, batas inklusif start dan eksklusif end, jendela lintas tengah malam (dimulai pada hari jadwal dan tetap terbuka setelah tengah malam di bawah hari mulainya), serta pergantian hari modulo 7 (Minggu ke Senin). Menghitung `opensAt` (waktu pembukaan ISO berikutnya) secara akurat saat game sedang ditutup. Jadwal per game menimpa jadwal global (`settings.globalSchedule`); jika `schedule: null` otomatis mengikuti jadwal global. 7 tes unit `test/schedule.test.ts` mencakup jendela normal, lintas tengah malam, dan pergantian hari. |
+| P4-03 Halaman beranda dan kartu game (Screens §5), halaman "game ditutup" (Screens §6) | Selesai | Halaman `HomePage` (`/`) dengan sapaan nama pengguna "Halo, {displayName}", baris status jadwal ("Buka sepanjang hari" / "Buka {windows} WIB" / "Tutup, dibuka kembali {hari} {jam} WIB"), dan grid responsif kartu game: 1 kolom (< 768px), 2 kolom (768–1023px), 3 kolom (≥ 1024px). Kartu game menyajikan artwork/pratinjau, badge, chip status ("Aktif", "Tutup", "Maintenance"), info rekor pribadi atau pesan maintenance, serta tombol aksi ("Main" primary, "Lihat jadwal" secondary, "Terkunci" disabled). Halaman `GameStatusPage` (`/games/:id/status` dan `/games/:id`) menyajikan layar status kartu tengah dengan ikon jam SVG (Screens §6). Halaman kelola game admin di `AdminGamesPage` (`/admin/games`). E2E integrasi teruji: admin menutup game -> pemain melihat kartu terkunci di beranda dan gerbang menolak dengan `GAME_MAINTENANCE`. 8 tes UI web di `apps/web/test/games-ui.test.tsx`. |
+| P4-04 Gerbang API (`/api/games/:id/*`) | Selesai | Middleware gerbang game di Fastify memvalidasi seluruh rute game: menolak game `inactive` atau tidak ditemukan dengan `404 NOT_FOUND`; menolak game `maintenance` dengan `403 GAME_MAINTENANCE` beserta `maintenanceMessage`; menolak game di luar jadwal dengan `403 GAME_CLOSED` (menyertakan parameter `windows`, `days`, dan `opensAt`); menolak akun admin (`ls_admin`) dengan `403 FORBIDDEN`; menolak tamu dengan `401 UNAUTHENTICATED`; dan menolak pengguna pending dengan `403 ACCOUNT_PENDING`. Pemain active yang bermain di dalam jadwal diizinkan `200 OK`. 13 tes integrasi di `apps/server/test/games-gate.test.ts`. |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (seluruh workspace)
+pnpm test            -> lolos (128 tes: server 73, web 15, sdk 19, i18n 12, ui 7, check-i18n 5, check-migrations 4, create-admin 6)
+pnpm i18n:check      -> lolos (kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm --filter @low-stress/web build -> lolos (Vite build + 17 entri precache PWA)
+```
+
+### Keputusan teknis agent (implementasi, bukan keputusan produk pemilik)
+
+- Jadwal game dihitung secara otoritatif di server dengan zona waktu `Asia/Jakarta` (WIB, UTC+7 tanpa DST).
+- Penghitungan pembukaan berikutnya (`opensAt`) menelusuri 8 hari ke depan dari waktu sekarang di zona WIB untuk menemukan jendela buka paling awal yang sah.
+- Desain grid kartu game diatur lewat kelas CSS `.ls-game-grid` di `packages/ui` yang menerapkan mobile-first (1 kolom di ponsel, 2 kolom di tablet 768px, 3 kolom di desktop 1024px) sesuai Screens §5.
+- Kartu game dan layar status game (`.ls-status-screen`) 100% menggunakan token `@low-stress/ui` tanpa nilai mentah.
+- Rute `/api/games` untuk pemain tetap mengembalikan respons publik/terautentikasi (menampilkan skor `mine` jika pemain login), sementara rute spesifik game `/api/games/:id/*` wajib terautentikasi sebagai pemain aktif.
+
+### Yang belum diverifikasi
+
+- Tampilan fisik kartu game pada game konkret (Flappy Bird, Memory Match, Ludo yang baru akan di-porting pada Fase 5–7).
+- Interaksi sentuh pengguna pada perangkat ponsel nyata.
+
+
 

@@ -994,6 +994,119 @@ body {
   max-width: 20rem;
 }
 
+/* ------------------------------ Game Grid & Cards (Screens §5) -------------------------------- */
+
+.ls-game-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .ls-game-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .ls-game-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ls-game-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.ls-game-card__preview {
+  height: 140px;
+  background: linear-gradient(135deg, var(--teal-200), var(--coral-200));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+:root[data-theme="dark"] .ls-game-card__preview {
+  background: linear-gradient(135deg, var(--teal-900), var(--coral-900));
+}
+
+.ls-game-card__body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-3);
+}
+
+.ls-game-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ls-game-card__title {
+  margin: 0;
+  font-size: var(--font-h3);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.ls-game-card__info {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  min-height: 20px;
+}
+
+.ls-game-card__actions {
+  margin-top: auto;
+  display: flex;
+}
+
+/* ------------------------------ Status Screen (Screens §6) -------------------------------- */
+
+.ls-status-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: var(--space-4);
+}
+
+.ls-status-screen__card {
+  max-width: 440px;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+.ls-status-screen__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--warning-surface);
+  color: var(--warning-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ------------------------------ Motion -------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
