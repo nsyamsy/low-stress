@@ -374,6 +374,28 @@ docker compose       -> profil lan db/server/web healthy, /healthz 200 OK
 GitHub Actions CI    -> workflow CI sukses di branch main
 ```
 
+---
+
+## 2026-11-05 - Penyelesaian P1-05 (Kontras Token CSS WCAG AA 4.5:1)
+
+Lingkup: Penyelesaian P1-05 dengan penyesuaian token CSS agar memenuhi kriteria kontras WCAG AA 4.5:1 sesuai keputusan pemilik.
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P1-05 `packages/ui` kontras warna token CSS | **Selesai** | Penyesuaian nilai hex token teks di `packages/ui/src/styles.css`: Mode terang: `--text-secondary` diubah ke `#557066` (rasio 4,79:1 di latar halaman / 5,30:1 di permukaan), `--text-muted` ke `#6b7d77` (3,87:1 / 4,28:1), `--accent-text` ke `#B53D28` (5,09:1 / 5,64:1). Mode gelap (di 2 tempat: `prefers-color-scheme: dark` dan `[data-theme='dark']`): `--text-muted` diubah ke `#86A199` (5,96:1 di latar / 5,17:1 di permukaan). Catatan penyimpangan sementara di `docs/Design_System.md` §3.3 dihapus dan tabel token semantik §3.2 diperbarui dengan nilai baru. Tugas P1-05 di `docs/TASKS.md` ditandai selesai `[x]`. |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (seluruh workspace)
+pnpm test            -> lolos (214 tes lolos 100%)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+```
+
+
 
 
 

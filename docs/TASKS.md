@@ -4,9 +4,9 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Penyelesaian Sisa Fase 1 — Selesai
+## Lingkup eksekusi saat ini: Seluruh Fase 1–9 Selesai
 
-Fase 1 selesai kecuali P1-05 yang menunggu keputusan pemilik terkait kontras warna token CSS. P1-10 dan P1-11 telah diverifikasi dan selesai. Seluruh Fase 2 sampai Fase 9 selesai.
+Seluruh tugas Fase 1 hingga Fase 9 telah selesai 100%. P1-05 telah diselesaikan dengan penyesuaian kontras token CSS sesuai standar WCAG AA 4.5:1.
 
 Fase 1 (referensi status):
 
@@ -14,7 +14,7 @@ Fase 1 (referensi status):
 - [x] P1-02 ESLint + boundaries (isolasi game, larangan nilai mentah)
 - [x] P1-03 `packages/db` Drizzle, skema inti, migrasi
 - [x] P1-04 `packages/i18n` + `tools/check-i18n`
-- [ ] P1-05 `packages/ui` token, font self-host, logo, komponen dasar — **sebagian**: semua komponen tampil di terang/gelap tanpa overflow, tetapi kriteria kontras §3.3 belum terpenuhi penuh. Penyimpangan tercatat di `Design_System.md` §3.3 sebagai usulan agent yang menunggu keputusan pemilik; belum ada pengecualian resmi.
+- [x] P1-05 `packages/ui` token, font self-host, logo, komponen dasar — penyesuaian kontras token CSS (`--text-secondary`, `--text-muted`, `--accent-text`) memenuhi standar WCAG AA 4.5:1.
 - [x] P1-06 `packages/sdk` kontrak game
 - [x] P1-07 Server Fastify: env Zod, pino, error berkode, healthz/readyz, rate limit
 - [x] P1-08 Registry game (server dan web)

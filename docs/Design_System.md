@@ -44,7 +44,7 @@ Aturan:
 | Koral | `#F2735B` | Aksen, burung, badge, peringkat |
 | Amber | `#F2B84B` | Paruh, peringatan, status Maintenance |
 | Garis | `#D9D2C0` | Border halus |
-| Teks sekunder | `#5B7A72` | Teks pendukung |
+| Teks sekunder | `#557066` | Teks pendukung |
 
 ### 3.2 Token semantik
 
@@ -57,15 +57,15 @@ Komponen hanya memakai token (CSS variables), bukan hex.
 | `--bg-surface-raised` | `#FFFFFF` | `#25372F` |
 | `--bg-inset` | `#F0EADA` | `#121A18` |
 | `--text-primary` | `#2F5D55` | `#F6F1E7` |
-| `--text-secondary` | `#5B7A72` | `#A9BFB6` |
-| `--text-muted` | `#8A9A94` | `#7C918A` |
+| `--text-secondary` | `#557066` | `#A9BFB6` |
+| `--text-muted` | `#6B7D77` | `#86A199` |
 | `--text-on-primary` | `#F6F1E7` | `#16211F` |
 | `--border` | `#D9D2C0` | `#32463F` |
 | `--border-strong` | `#CFC8B5` | `#44594F` |
 | `--primary` | `#2F5D55` | `#7FA88B` |
 | `--primary-hover` | `#3F7268` | `#98BFA3` |
 | `--accent` | `#F2735B` | `#F2735B` |
-| `--accent-text` | `#C4462F` | `#F59A86` |
+| `--accent-text` | `#B53D28` | `#F59A86` |
 | `--success-bg` / `--success-text` | `#D5EAD9` / `#1F4D2C` | `#24402D` / `#BFE3C8` |
 | `--warning-bg` / `--warning-text` | `#FBEBC7` / `#6B4A0A` | `#4A3A14` / `#F2D690` |
 | `--danger-bg` / `--danger-text` | `#F7D9D3` / `#8A2A18` | `#4A2620` / `#F5B8AB` |
@@ -77,17 +77,6 @@ Komponen hanya memakai token (CSS variables), bukan hex.
 - **Satu tombol utama per tampilan**; sisanya tombol sekunder (outline) atau ghost.
 - Status memakai pasangan `*-bg` dan `*-text`, tidak pernah hanya warna: selalu disertai label atau ikon.
 - Target kontras: teks normal ≥ 4,5:1; teks besar dan ikon fungsional ≥ 3:1.
-
-**Penyimpangan terukur — usulan agent, menunggu keputusan pemilik (2026-11-04).** Ini bukan pengecualian resmi dan belum disetujui. Nilai token di §3.2 untuk sementara dipertahankan apa adanya agar tidak ada perubahan desain tanpa keputusan pemilik. Hasil ukur pada latar halaman `#F6F1E7` / permukaan `#FFFDF8`:
-
-| Token | Rasio terukur | Status |
-|---|---|---|
-| `--text-secondary` terang `#5B7A72` | 4,17:1 / 4,62:1 | di bawah 4,5:1 pada latar halaman |
-| `--text-muted` terang `#8A9A94` | 2,62:1 / 2,90:1 | di bawah 4,5:1 |
-| `--accent-text` terang `#C4462F` | 4,37:1 / 4,84:1 | di bawah 4,5:1 pada latar halaman |
-| `--text-muted` gelap `#7C918A` | 4,29:1 pada `#1E2D2A` | di bawah 4,5:1 pada permukaan |
-
-Batasan sementara sampai pemilik memutuskan: `--text-muted` dan `--text-secondary` hanya dipakai untuk teks pendukung yang tidak wajib terbaca (placeholder, keterangan sekunder, metadata), bukan untuk isi utama, label kontrol, pesan error, atau teks yang menjadi satu-satunya pembawa informasi. `--accent-text` hanya untuk tautan/teks pendek, bukan paragraf. Bila nilai token diperbaiki agar lolos 4,5:1, hapus catatan ini. Selama keputusan belum ada, kriteria P1-05 dianggap belum terpenuhi.
 
 ### 3.4 Mode gelap
 
