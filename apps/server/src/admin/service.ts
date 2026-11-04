@@ -4,6 +4,7 @@ import type { Database } from "@low-stress/db";
 import {
   admins,
   auditLog,
+  bannedWords,
   chatMessages,
   gameRuns,
   gameScores,
@@ -1168,3 +1169,102 @@ export async function adminDeleteLudoRoom(
 
   return { ok: true };
 }
+
+/**
+ * Kelola kata terlarang: Ambil semua kata
+ */
+export async function listBannedWords(db: Database) {
+  return db
+    .select()
+    .from(bannedWords)
+    .orderBy(bannedWords.word);
+}
+
+/**
+ * Kelola kata terlarang: Tambah kata baru
+ */
+export async function createBannedWord(
+  db: Database,
+  adminId: string,
+  word: string,
+  lang: "id" | "en" | "any" = "any",
+) {
+  const [row] = await db
+    .insert(bannedWords)
+    .values({
+      word: word.toLowerCase().trim(),
+      lang,
+      source: "admin",
+      enabled: true,
+    })
+    .returning();
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "banned_word_add",
+    targetType: "banned_word",
+    targetId: row!.id,
+    detail: { word: row!.word, lang: row!.lang },
+  });
+
+  return row!;
+}
+
+/**
+ * Kelola kata terlarang: Aktifkan/nonaktifkan kata
+ */
+export async function updateBannedWord(
+  db: Database,
+  adminId: string,
+  id: string,
+  enabled: boolean,
+) {
+  const [row] = await db
+    .update(bannedWords)
+    .set({ enabled })
+    .where(eq(bannedWords.id, id))
+    .returning();
+
+  if (!row) {
+    throw new AppError("NOT_FOUND", 404, { id });
+  }
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "banned_word_update",
+    targetType: "banned_word",
+    targetId: id,
+    detail: { word: row.word, enabled },
+  });
+
+  return row;
+}
+
+/**
+ * Kelola kata terlarang: Hapus kata
+ */
+export async function deleteBannedWord(
+  db: Database,
+  adminId: string,
+  id: string,
+) {
+  const [row] = await db
+    .delete(bannedWords)
+    .where(eq(bannedWords.id, id))
+    .returning();
+
+  if (!row) {
+    throw new AppError("NOT_FOUND", 404, { id });
+  }
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "banned_word_delete",
+    targetType: "banned_word",
+    targetId: id,
+    detail: { word: row.word },
+  });
+
+  return { ok: true };
+}
+

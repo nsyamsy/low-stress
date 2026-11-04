@@ -141,7 +141,9 @@
       "logout": "Keluar",
       "backToSite": "Ke situs utama",
       "menu": "Menu",
-      "games": "Kelola Game"
+      "games": "Kelola Game",
+      "chat": "Moderasi Chat",
+      "leaderboard": "Moderasi Skor"
     },
     "header": {
       "deployMode": "Mode deploy: {{mode}}"
@@ -260,6 +262,48 @@
       "scheduleCustom": "Jadwal Khusus Game Ini",
       "save": "Simpan Perubahan",
       "empty": "Belum ada game terdaftar."
+    },
+    "chat": {
+      "title": "Moderasi Chat",
+      "tabMessages": "Aliran Pesan",
+      "tabMutes": "Pengguna Dibisukan",
+      "tabBannedWords": "Kata Terlarang",
+      "delete": "Hapus",
+      "mute": "Bisukan...",
+      "unmute": "Cabut Bisu",
+      "duration": "Durasi (menit)",
+      "reason": "Alasan (opsional)",
+      "addWord": "Tambah Kata",
+      "word": "Kata",
+      "lang": "Bahasa",
+      "status": "Status",
+      "active": "Aktif",
+      "inactive": "Nonaktif",
+      "emptyMessages": "Belum ada pesan chat.",
+      "emptyMutes": "Tidak ada pengguna yang dibisukan.",
+      "emptyWords": "Belum ada kata terlarang.",
+      "confirmDelete": "Hapus pesan ini secara permanen?",
+      "confirmMute": "Bisukan pengguna ini?"
+    },
+    "leaderboard": {
+      "title": "Moderasi Skor & Leaderboard",
+      "selectGame": "Pilih Game",
+      "filterFlagged": "Janggal saja (flagged)",
+      "allRuns": "Semua Run",
+      "deleteRun": "Hapus Run",
+      "resetWeek": "Reset Papan Mingguan",
+      "resetMonth": "Reset Papan Bulanan",
+      "colPlayer": "Pemain",
+      "colScore": "Skor",
+      "colDuration": "Durasi",
+      "colFlagged": "Status",
+      "colTime": "Waktu",
+      "flagged": "Janggal",
+      "normal": "Wajar",
+      "emptyRuns": "Belum ada catatan run permainan.",
+      "confirmDeleteRun": "Hapus catatan run ini dan hitung ulang skor terbaik pemain?",
+      "confirmResetWeek": "Apakah Anda yakin ingin mereset papan mingguan untuk game ini? Tindakan ini akan menghapus semua run pada minggu berjalan.",
+      "confirmResetMonth": "Apakah Anda yakin ingin mereset papan bulanan untuk game ini? Tindakan ini akan menghapus semua run pada bulan berjalan."
     }
   },
   "home": {
@@ -320,10 +364,29 @@
     "empty": "Belum ada skor. Jadilah yang pertama!",
     "wibNote": "Semua waktu dalam Waktu Indonesia Barat (WIB)"
   },
+  "chat": {
+    "title": "Chat publik",
+    "online": "{{count}} online",
+    "collapse": "Tutup chat",
+    "expand": "Buka chat",
+    "placeholder": "Tulis pesan…",
+    "send": "Kirim",
+    "empty": "Belum ada pesan. Sapa yang lain!",
+    "muted": "Kamu dibisukan sampai {{time}}",
+    "disabled": "Chat publik sedang dimatikan",
+    "reconnecting": "Menyambung ulang…",
+    "newMessage": "Pesan baru",
+    "charCount": "{{current}}/{{max}}"
+  },
   "errors": {
     "SCORE_INVALID": "Skor tidak valid",
     "SCORE_RATE_LIMITED": "Terlalu cepat mengirim skor. Tunggu sebentar.",
     "GAME_CLOSED": "Game sedang ditutup",
-    "GAME_MAINTENANCE": "Game sedang dalam perbaikan"
+    "GAME_MAINTENANCE": "Game sedang dalam perbaikan",
+    "CHAT_DISABLED": "Chat publik sedang dimatikan",
+    "CHAT_MUTED": "Kamu sedang dibisukan",
+    "CHAT_TOO_LONG": "Pesan terlalu panjang (maks. 300 karakter)",
+    "CHAT_EMPTY": "Pesan tidak boleh kosong",
+    "RATE_LIMITED": "Terlalu cepat. Tunggu sebentar."
   }
 }

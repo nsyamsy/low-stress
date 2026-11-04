@@ -141,7 +141,9 @@
       "logout": "Log out",
       "backToSite": "Back to site",
       "menu": "Menu",
-      "games": "Games"
+      "games": "Games",
+      "chat": "Chat Moderation",
+      "leaderboard": "Score Moderation"
     },
     "header": {
       "deployMode": "Deploy mode: {{mode}}"
@@ -260,6 +262,48 @@
       "scheduleCustom": "Custom Game Schedule",
       "save": "Save Changes",
       "empty": "No registered games."
+    },
+    "chat": {
+      "title": "Chat Moderation",
+      "tabMessages": "Message Stream",
+      "tabMutes": "Muted Users",
+      "tabBannedWords": "Banned Words",
+      "delete": "Delete",
+      "mute": "Mute...",
+      "unmute": "Unmute",
+      "duration": "Duration (minutes)",
+      "reason": "Reason (optional)",
+      "addWord": "Add Word",
+      "word": "Word",
+      "lang": "Language",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "emptyMessages": "No chat messages yet.",
+      "emptyMutes": "No users currently muted.",
+      "emptyWords": "No banned words yet.",
+      "confirmDelete": "Permanently delete this message?",
+      "confirmMute": "Mute this user?"
+    },
+    "leaderboard": {
+      "title": "Score & Leaderboard Moderation",
+      "selectGame": "Select Game",
+      "filterFlagged": "Flagged only",
+      "allRuns": "All Runs",
+      "deleteRun": "Delete Run",
+      "resetWeek": "Reset Weekly Board",
+      "resetMonth": "Reset Monthly Board",
+      "colPlayer": "Player",
+      "colScore": "Score",
+      "colDuration": "Duration",
+      "colFlagged": "Status",
+      "colTime": "Time",
+      "flagged": "Flagged",
+      "normal": "Normal",
+      "emptyRuns": "No game runs recorded yet.",
+      "confirmDeleteRun": "Delete this game run and recalculate the player's best score?",
+      "confirmResetWeek": "Are you sure you want to reset the weekly board for this game? This will delete all runs in the current week.",
+      "confirmResetMonth": "Are you sure you want to reset the monthly board for this game? This will delete all runs in the current month."
     }
   },
   "home": {
@@ -320,10 +364,29 @@
     "empty": "No scores yet. Be the first!",
     "wibNote": "All times in Western Indonesia Time (WIB)"
   },
+  "chat": {
+    "title": "Public chat",
+    "online": "{{count}} online",
+    "collapse": "Collapse chat",
+    "expand": "Open chat",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "empty": "No messages yet. Say hello!",
+    "muted": "You are muted until {{time}}",
+    "disabled": "Public chat is disabled",
+    "reconnecting": "Reconnecting…",
+    "newMessage": "New message",
+    "charCount": "{{current}}/{{max}}"
+  },
   "errors": {
     "SCORE_INVALID": "Invalid score",
     "SCORE_RATE_LIMITED": "Submitting too fast. Please wait a moment.",
     "GAME_CLOSED": "Game is currently closed",
-    "GAME_MAINTENANCE": "Game is under maintenance"
+    "GAME_MAINTENANCE": "Game is under maintenance",
+    "CHAT_DISABLED": "Public chat is currently disabled",
+    "CHAT_MUTED": "You are currently muted",
+    "CHAT_TOO_LONG": "Message is too long (max 300 characters)",
+    "CHAT_EMPTY": "Message cannot be empty",
+    "RATE_LIMITED": "Too fast. Please wait a moment."
   }
 }

@@ -17,9 +17,12 @@ import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminGamesPage } from "./pages/admin/AdminGamesPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminAuditPage } from "./pages/admin/AdminAuditPage";
+import { AdminChatPage } from "./pages/admin/AdminChatPage";
+import { AdminLeaderboardPage } from "./pages/admin/AdminLeaderboardPage";
 import { GameStatusPage } from "./pages/GameStatusPage";
 import { GamePage } from "./pages/GamePage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
+import { PublicChatPanel } from "./features/chat/PublicChatPanel";
 import { applyTheme, readThemePreference, type ThemePreference } from "./theme";
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemePreference; key: string }> = [
@@ -64,6 +67,8 @@ export function App() {
           <Route path="approvals" element={<AdminApprovalsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="games" element={<AdminGamesPage />} />
+          <Route path="leaderboard" element={<AdminLeaderboardPage />} />
+          <Route path="chat" element={<AdminChatPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
         </Route>
@@ -213,6 +218,7 @@ export function App() {
           <Route path="/showcase" element={<ShowcasePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <PublicChatPanel />
         <footer className="ls-footer">{t("app.tagline")}</footer>
       </main>
     </>

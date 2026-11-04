@@ -2,11 +2,11 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import type { Database } from "@low-stress/db";
 import { gameRuns, gameScores } from "@low-stress/db";
 import {
-  censorProfanity,
   isPlausibleRun,
   type GameManifest,
   type ScoreDirection,
 } from "@low-stress/sdk";
+import { censorServerText } from "../chat/profanity-service";
 
 export const APP_TZ = "Asia/Jakarta";
 export const MAX_RUN_MS = 2 * 60 * 60 * 1000; // 2 jam
@@ -145,7 +145,7 @@ export async function getLeaderboard(
     .map((r) => ({
       rank: Number(r.rank),
       userId: r.userId,
-      name: censorProfanity(r.name),
+      name: censorServerText(r.name),
       score: Number(r.score),
       plays: Number(r.plays),
       bestPlay: r.bestPlay === null || r.bestPlay === undefined ? null : Number(r.bestPlay),

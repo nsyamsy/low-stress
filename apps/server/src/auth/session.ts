@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { eq, and, gt } from "drizzle-orm";
 import type { Database } from "@low-stress/db";
 import { admins, sessions, users, type userStatus } from "@low-stress/db";
-import { censorProfanity } from "@low-stress/sdk";
+import { censorServerText } from "../chat/profanity-service";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Env } from "../env";
 
@@ -35,7 +35,7 @@ export function userToMe(user: typeof users.$inferSelect): Me {
   return {
     id: user.id,
     username: user.username,
-    displayName: censorProfanity(user.displayName),
+    displayName: censorServerText(user.displayName),
     email: user.email,
     emailVerified: user.emailVerifiedAt !== null,
     status: user.status,

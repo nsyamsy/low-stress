@@ -92,3 +92,24 @@ export const adminLudoKickSchema = z.object({
   userId: z.string().uuid("ID pengguna harus berupa UUID"),
 });
 
+export const adminChatQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export const adminMuteUserSchema = z.object({
+  userId: z.string().uuid("ID pengguna harus berupa UUID"),
+  minutes: z.coerce.number().int().min(1).default(60),
+  reason: z.string().max(200).optional(),
+});
+
+export const adminCreateBannedWordSchema = z.object({
+  word: z.string().min(1, "Kata tidak boleh kosong").max(100),
+  lang: z.enum(["id", "en", "any"]).default("any"),
+});
+
+export const adminUpdateBannedWordSchema = z.object({
+  enabled: z.boolean(),
+});
+
+

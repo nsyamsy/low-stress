@@ -278,3 +278,38 @@ pnpm --filter @low-stress/web build -> lolos
 - Semua aksi moderasi admin (`reset`, `kick`, `delete`) dicatat di tabel `audit_log`.
 - Keputusan produk keterbacaan 12 pemain dicatat di `docs/PRD.md` §8.
 
+---
+
+## 2026-11-05 - Fase 8 (Chat publik, sensor, moderasi)
+
+Lingkup: Fase 8 (P8-01..P8-06).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P8-01 `sdk.profanity`: normalisasi, daftar bawaan ID dan EN, pengecualian anti-salah-sensor, tabel `banned_words` | Selesai | Engine profanity di `packages/sdk/src/profanity.ts` dinormalisasi (lowercase, aksen/diakritik, leet speak `@`->`a`, `$`->`s`, `1`->`i`, `0`->`o`, collapse huruf berulang > 2, pembersihan simbol antarkata `b.a.n.g.s.a.t`, spasi antarkata `b a n g s a t`). Memuat daftar bawaan Indonesia (`BUILTIN_BANNED_WORDS_ID`) dan English (`BUILTIN_BANNED_WORDS_EN`), daftar pengecualian anti-salah-sensor (`BUILTIN_ALLOW_WORDS`), serta integrasi tabel `banned_words` di server (`apps/server/src/chat/profanity-service.ts`) dengan cache in-memory dan reload instan. 7 tes unit SDK di `packages/sdk/test/profanity.test.ts` dan 3 tes service server di `apps/server/test/profanity-service.test.ts` lolos 100%. |
+| P8-02 Chat publik: namespace Socket.IO `/public-chat`, riwayat, rate limit, sensor di server, job `purge-chat` | Selesai | Namespace `/public-chat` diimplementasikan di `apps/server/src/chat/` (`socket.ts`, `service.ts`, `routes.ts`, `purge.ts`). Autentikasi via cookie sesi pemain aktif (pemain pending/non-aktif ditolak). Rate limit 1 pesan per 2 detik per pemain. Penyensoran server-side (`censorServerText`) memastikan kata kasar tersimpan dalam kondisi tersensor di tabel `chat_messages`. Endpoint riwayat `GET /api/chat/history?limit=50` melayani pesan publik berurutan naik. Background job `purgeOldChatMessages` membersihkan pesan lebih dari 7 hari secara berkala (tiap jam). 5 tes integrasi di `apps/server/test/public-chat.test.ts` lolos 100%. |
+| P8-03 Panel chat desktop ≥ 1024px (Screens §11); tidak membuka soket di bawahnya | Selesai | Komponen desktop chat di `apps/web/src/features/chat/PublicChatPanel.tsx` mounted di `apps/web/src/App.tsx`. Menggunakan deteksi viewport `>= 1024px`: di bawah 1024px (mobile/tablet) komponen tidak me-render elemen apa pun dan soket Socket.IO sama sekali tidak pernah dihubungkan. Di desktop, panel mendukung mode tab terlipat (40px) dengan indikator unread badge oranye dan jumlah online, serta panel penuh (280px) dengan persistensi `localStorage`. Teruji di `apps/web/test/chat-panel.test.tsx` (2 tes lolos). |
+| P8-04 Moderasi chat admin: hapus pesan, mute, matikan chat, kelola kata | Selesai | Rute admin di `apps/server/src/admin/routes.ts` & `service.ts`: `GET /api/admin/chat` (daftar pesan dengan paginasi), `DELETE /api/admin/chat/:id` (hapus pesan, audit log, siaran instan `chat:deleted` ke seluruh klien), `POST /api/admin/chat/mute` (bisukan pengguna dengan durasi menit, audit log, notifikasi instan `chat:muted`), `DELETE /api/admin/chat/mute/:userId` (cabut bisu), `GET /api/admin/chat/mutes`, `GET /api/admin/banned-words`, `POST /api/admin/banned-words` (tambah kata, reload cache instan, audit log), `PATCH /api/admin/banned-words/:id` (toggle status enabled, reload cache), `DELETE /api/admin/banned-words/:id`. Admin settings `PATCH /api/admin/settings` dengan `chatEnabled` menyiarkan event instan `chat:status`. Halaman admin `apps/web/src/pages/admin/AdminChatPage.tsx` dengan tab pesan, bisu, dan kata terlarang serta modal konfirmasi. 6 tes integrasi di `apps/server/test/admin-chat.test.ts` lolos 100%. |
+| P8-05 Moderasi skor admin: lihat run `flagged`, hapus skor, reset papan periodik | Selesai | Rute admin `GET /api/admin/runs?gameId=&flagged=&page=` (filter game dan checkbox hanya flagged), `DELETE /api/admin/runs/:id` (hapus run dari DB dan audit log), `POST /api/admin/leaderboard/:gameId/reset` (reset periodik `week`/`month` dengan konfirmasi 2 langkah dan audit log). Halaman `apps/web/src/pages/admin/AdminLeaderboardPage.tsx` dengan filter game, toggle flagged, modal hapus run, dan modal reset periode. 6 tes integrasi di `apps/server/test/admin-runs.test.ts` lolos 100%. |
+| P8-06 Sensor diterapkan pada chat Ludo dan nama tampilan di semua jalur | Selesai | Penerapan sensor kata terlarang `censorServerText`: pada aksi chat room Ludo (`action: "chat"`) dan data room (`room.name`, `room.hostName`, `player.displayName`, riwayat chat) di `apps/server/src/ludo/service.ts`; pada tampilan profil pengguna (`userToMe`) di `apps/server/src/auth/session.ts`; dan pada entri leaderboard (`getGameLeaderboard`) di `apps/server/src/games/scores.ts`. Teruji menyeluruh di `apps/server/test/censor-all-paths.test.ts` (4 tes lolos 100%). |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (16 workspace projects)
+pnpm test            -> lolos (207 tes lolos 100%)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm --filter @low-stress/web build -> lolos
+```
+
+### Keputusan teknis agent (implementasi, bukan keputusan produk pemilik)
+
+- Seluruh event Socket.IO (`chat:send`, `disconnect`) didaftarkan secara sinkron saat koneksi masuk di connection handler untuk mencegah hilangnya event balasan handshake.
+- Cache in-memory kata terlarang di server (`cachedActiveWords`) dimuat saat server start dan otomatis di-reload setiap ada perubahan di tabel `banned_words` tanpa membutuhkan server restart.
+- Komponen chat publik desktop dan halaman moderasi admin sepenuhnya mematuhi sistem token `@low-stress/ui` dan CSS murni di `packages/ui/src/styles.css` tanpa nilai mentah.
+- Setiap aksi administratif mutasi (hapus pesan, mute/unmute, tambah/ubah/hapus kata terlarang, hapus run, reset leaderboard) diverifikasi CSRF dan dicatat transparan di tabel `audit_log`.
+

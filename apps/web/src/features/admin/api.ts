@@ -167,3 +167,178 @@ export async function getAdminAuditLogsApi(query: {
   const res = await fetch(`/api/admin/audit?${params.toString()}`);
   return parseResponse<{ items: AuditLogItem[]; page: number; pageSize: number; total: number }>(res);
 }
+
+// Moderasi Chat & Kata Terlarang (P8-04)
+export interface AdminChatMessageItem {
+  id: string;
+  userId: string | null;
+  username: string;
+  name: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface AdminChatMuteItem {
+  userId: string;
+  mutedUntil: string;
+  reason: string | null;
+  username: string;
+  displayName: string;
+}
+
+export interface AdminBannedWordItem {
+  id: string;
+  word: string;
+  lang: "id" | "en" | "any";
+  source: "builtin" | "admin";
+  enabled: boolean;
+}
+
+export async function getAdminChatMessagesApi(
+  page = 1,
+  limit = 50,
+): Promise<{ items: AdminChatMessageItem[]; total: number; page: number; totalPages: number }> {
+  const res = await fetch(`/api/admin/chat?page=${page}&limit=${limit}`);
+  return parseResponse<{ items: AdminChatMessageItem[]; total: number; page: number; totalPages: number }>(res);
+}
+
+export async function deleteAdminChatMessageApi(id: string): Promise<void> {
+  const csrf = await getCsrfToken();
+  const res = await fetch(`/api/admin/chat/${id}`, {
+    method: "DELETE",
+    headers: { "x-csrf-token": csrf },
+  });
+  return parseResponse<void>(res);
+}
+
+export async function getAdminChatMutesApi(): Promise<AdminChatMuteItem[]> {
+  const res = await fetch("/api/admin/chat/mutes");
+  return parseResponse<AdminChatMuteItem[]>(res);
+}
+
+export async function muteUserApi(
+  userId: string,
+  minutes: number,
+  reason?: string,
+): Promise<{ ok: boolean; mutedUntil: string }> {
+  const csrf = await getCsrfToken();
+  const res = await fetch("/api/admin/chat/mute", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-token": csrf,
+    },
+    body: JSON.stringify({ userId, minutes, reason }),
+  });
+  return parseResponse<{ ok: boolean; mutedUntil: string }>(res);
+}
+
+export async function unmuteUserApi(userId: string): Promise<void> {
+  const csrf = await getCsrfToken();
+  const res = await fetch(`/api/admin/chat/mute/${userId}`, {
+    method: "DELETE",
+    headers: { "x-csrf-token": csrf },
+  });
+  return parseResponse<void>(res);
+}
+
+export async function getAdminBannedWordsApi(): Promise<AdminBannedWordItem[]> {
+  const res = await fetch("/api/admin/banned-words");
+  return parseResponse<AdminBannedWordItem[]>(res);
+}
+
+export async function createAdminBannedWordApi(
+  word: string,
+  lang: "id" | "en" | "any" = "any",
+): Promise<AdminBannedWordItem> {
+  const csrf = await getCsrfToken();
+  const res = await fetch("/api/admin/banned-words", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-token": csrf,
+    },
+    body: JSON.stringify({ word, lang }),
+  });
+  return parseResponse<AdminBannedWordItem>(res);
+}
+
+export async function updateAdminBannedWordApi(
+  id: string,
+  enabled: boolean,
+): Promise<AdminBannedWordItem> {
+  const csrf = await getCsrfToken();
+  const res = await fetch(`/api/admin/banned-words/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-token": csrf,
+    },
+    body: JSON.stringify({ enabled }),
+  });
+  return parseResponse<AdminBannedWordItem>(res);
+}
+
+export async function deleteAdminBannedWordApi(id: string): Promise<void> {
+  const csrf = await getCsrfToken();
+  const res = await fetch(`/api/admin/banned-words/${id}`, {
+    method: "DELETE",
+    headers: { "x-csrf-token": csrf },
+  });
+  return parseResponse<void>(res);
+}
+
+// Moderasi Skor & Leaderboard (P8-05)
+export interface AdminGameRunItem {
+  id: string;
+  gameId: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  score: number;
+  durationMs: number;
+  flagged: boolean;
+  playedAt: string;
+}
+
+export async function getAdminRunsApi(query: {
+  gameId?: string;
+  flagged?: boolean;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ items: AdminGameRunItem[]; total: number; page: number; pageSize: number }> {
+  const params = new URLSearchParams();
+  if (query.gameId) params.set("gameId", query.gameId);
+  if (query.flagged !== undefined) params.set("flagged", String(query.flagged));
+  if (query.page) params.set("page", String(query.page));
+  if (query.pageSize) params.set("pageSize", String(query.pageSize));
+
+  const res = await fetch(`/api/admin/runs?${params.toString()}`);
+  return parseResponse<{ items: AdminGameRunItem[]; total: number; page: number; pageSize: number }>(res);
+}
+
+export async function deleteAdminRunApi(id: string): Promise<void> {
+  const csrf = await getCsrfToken();
+  const res = await fetch(`/api/admin/runs/${id}`, {
+    method: "DELETE",
+    headers: { "x-csrf-token": csrf },
+  });
+  return parseResponse<void>(res);
+}
+
+export async function resetAdminLeaderboardApi(
+  gameId: string,
+  period: "week" | "month",
+): Promise<{ ok: boolean; deletedCount: number }> {
+  const csrf = await getCsrfToken();
+  const res = await fetch(`/api/admin/leaderboard/${gameId}/reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-token": csrf,
+    },
+    body: JSON.stringify({ period }),
+  });
+  return parseResponse<{ ok: boolean; deletedCount: number }>(res);
+}
+

@@ -136,6 +136,26 @@ export function AdminLayout() {
           </NavLink>
 
           <NavLink
+            to="/admin/leaderboard"
+            className={({ isActive }) =>
+              `ls-admin-nav-item ${isActive ? "active" : ""}`
+            }
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>{t("admin.nav.leaderboard")}</span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/chat"
+            className={({ isActive }) =>
+              `ls-admin-nav-item ${isActive ? "active" : ""}`
+            }
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>{t("admin.nav.chat")}</span>
+          </NavLink>
+
+          <NavLink
             to="/admin/settings"
             className={({ isActive }) =>
               `ls-admin-nav-item ${isActive ? "active" : ""}`

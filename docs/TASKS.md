@@ -79,7 +79,15 @@ Fase 7 (Ludo):
 - [x] P7-08 Moderasi admin untuk Ludo: daftar room, hapus/reset, kick, lihat chat. Aksi tercatat di audit log.
 - [x] P7-09 Uji keterbacaan 12 pemain di 360px; bila gagal, turunkan bawaan `ludo.maxPlayers` atau batasi 12 hanya di desktop, dan catat keputusan. Keputusan tertulis di PRD §8.
 
+Fase 8 (Chat publik, sensor, moderasi):
+
+- [x] P8-01 `sdk.profanity`: normalisasi (huruf kecil, aksen, leet, simbol, huruf berulang), daftar bawaan Indonesia dan English, pengecualian anti-salah-sensor, tabel `banned_words`. Tes unit: `b@ng$at`, `aanjiing`, kata wajar yang mirip tidak tersensor.
+- [x] P8-02 Chat publik: namespace Socket.IO `public-chat`, riwayat, rate limit, sensor di server, job `purge-chat`. Pesan kasar tersimpan tersensor; pemain `pending` ditolak.
+- [x] P8-03 Panel chat desktop ≥ 1024px (Screens §11); tidak membuka soket di bawahnya. Uji: di 768px tidak ada koneksi `public-chat`.
+- [x] P8-04 Moderasi chat admin: hapus pesan, mute, matikan chat, kelola kata. Aksi tercatat; pesan terhapus hilang dari klien seketika.
+- [x] P8-05 Moderasi skor admin: lihat run `flagged`, hapus skor, reset papan periodik. Teruji.
+- [x] P8-06 Sensor diterapkan pada chat Ludo dan nama tampilan. Teruji di semua jalur.
+
 ## Antrean berikutnya (belum diinstruksikan)
 
-- [ ] Fase 8 — Chat, sensor, moderasi (P8-01..P8-06)
 - [ ] Fase 9 — Polish dan rilis (P9-01..P9-05)

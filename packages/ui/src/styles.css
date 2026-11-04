@@ -1227,6 +1227,237 @@ body {
   padding-right: var(--space-1);
 }
 
+/* ------------------------------ Public Chat Panel --------------------- */
+
+.ls-chat-tab {
+  position: fixed;
+  right: 0;
+  bottom: var(--space-6);
+  width: 40px;
+  height: 160px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-top-left-radius: var(--radius-card);
+  border-bottom-left-radius: var(--radius-card);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  cursor: pointer;
+}
+
+.ls-chat-tab-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent);
+}
+
+.ls-chat-tab-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: var(--font-small);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+
+.ls-chat-tab-count {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+.ls-chat-panel {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  height: 460px;
+  max-height: calc(100vh - 80px);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: var(--radius-card);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+}
+
+.ls-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-inset);
+  border-top-left-radius: var(--radius-card);
+}
+
+.ls-chat-header-title {
+  font-weight: var(--weight-medium);
+  font-size: var(--font-small);
+  color: var(--text-primary);
+}
+
+.ls-chat-header-status {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+.ls-chat-collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-body);
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-2);
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ls-chat-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ls-chat-empty {
+  color: var(--text-muted);
+  font-size: var(--font-small);
+  text-align: center;
+  margin-top: var(--space-8);
+}
+
+.ls-chat-msg-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.ls-chat-msg-row--self {
+  align-items: flex-end;
+}
+
+.ls-chat-msg-row--other {
+  align-items: flex-start;
+}
+
+.ls-chat-msg-meta {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.ls-chat-msg-bubble {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-small);
+  color: var(--text-primary);
+  word-break: break-word;
+  max-width: 88%;
+}
+
+.ls-chat-msg-bubble--self {
+  background-color: var(--bg-inset);
+}
+
+.ls-chat-msg-bubble--other {
+  background-color: var(--bg-surface);
+}
+
+.ls-chat-footer {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+  background-color: var(--bg-surface);
+}
+
+.ls-chat-error {
+  font-size: var(--font-caption);
+  color: var(--danger-text);
+  margin-bottom: var(--space-1);
+}
+
+.ls-chat-notice {
+  font-size: var(--font-small);
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-2) 0;
+}
+
+.ls-chat-notice--danger {
+  color: var(--danger-text);
+}
+
+.ls-chat-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ls-chat-textarea {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background-color: var(--bg-inset);
+  color: var(--text-primary);
+  font-size: var(--font-small);
+  resize: none;
+  font-family: inherit;
+}
+
+.ls-chat-send-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ls-chat-char-count {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+/* ------------------------------ Admin Extra Tabs & Filters ------------ */
+
+.ls-admin-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ls-admin-tab-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--font-small);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.ls-admin-tab-btn--active {
+  background-color: var(--primary);
+  color: var(--text-on-primary);
+  border-color: var(--primary);
+  font-weight: var(--weight-medium);
+}
+
 /* ------------------------------ Motion -------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {

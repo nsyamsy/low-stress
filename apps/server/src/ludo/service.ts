@@ -8,7 +8,7 @@ import {
   settings,
   users,
 } from "@low-stress/db";
-import { censorProfanity } from "@low-stress/sdk";
+import { censorServerText } from "../chat/profanity-service";
 import { AppError } from "../errors";
 import {
   autoMove,
@@ -100,10 +100,10 @@ export async function listRooms(
 
   return rows.map((r) => ({
     id: r.id,
-    name: censorProfanity(r.name),
+    name: censorServerText(r.name),
     status: r.status as RoomStatus,
     hostId: r.hostId,
-    hostName: censorProfanity(r.hostName),
+    hostName: censorServerText(r.hostName),
     players: r.playersCount,
     maxPlayers: r.maxPlayers,
     myStatus: (r.myStatus as PlayerStatus) ?? null,
@@ -185,7 +185,7 @@ export async function searchInvitableUsers(
   return results.map((u) => ({
     id: u.id,
     username: u.username,
-    displayName: censorProfanity(u.displayName),
+    displayName: censorServerText(u.displayName),
   }));
 }
 
@@ -285,7 +285,7 @@ export async function loadPlayers(
 
   return rows.map((r) => ({
     ...r,
-    displayName: censorProfanity(r.displayName),
+    displayName: censorServerText(r.displayName),
     status: r.status as PlayerStatus,
   }));
 }
@@ -347,8 +347,8 @@ export async function buildView(
     id: m.id,
     roomId: m.roomId,
     userId: m.userId,
-    name: m.name ? censorProfanity(m.name) : "System",
-    text: censorProfanity(m.text),
+    name: m.name ? censorServerText(m.name) : "System",
+    text: censorServerText(m.text),
     at: m.createdAt.toISOString(),
   }));
 
@@ -373,7 +373,7 @@ export async function buildView(
 
   return {
     id: room.id,
-    name: censorProfanity(room.name),
+    name: censorServerText(room.name),
     status: room.status as RoomStatus,
     hostId: room.hostId,
     maxPlayers: room.maxPlayers,
@@ -838,7 +838,7 @@ export async function performAction(
           });
         }
 
-        const cleanText = censorProfanity(text);
+        const cleanText = censorServerText(text);
         const [inserted] = await tx
           .insert(ludoMessages)
           .values({
@@ -853,7 +853,7 @@ export async function performAction(
           id: inserted!.id,
           roomId,
           userId: actor.userId,
-          name: actor.displayName,
+          name: censorServerText(actor.displayName),
           text: cleanText,
           at: now.toISOString(),
         };

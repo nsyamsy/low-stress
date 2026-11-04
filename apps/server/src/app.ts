@@ -8,6 +8,10 @@ import { applySecurityHeaders } from "./auth/middleware";
 import { registerAuthRoutes } from "./auth/routes";
 import { registerAdminRoutes } from "./admin/routes";
 import { registerGameRoutes } from "./games/routes";
+import { registerChatRoutes } from "./chat/routes";
+import { setupPublicChatSocket } from "./chat/socket";
+import { startPurgeChatJob } from "./chat/purge";
+import { initBannedWords } from "./chat/profanity-service";
 import { startLudoExpirationJob } from "./ludo/expiration";
 import type { AutopilotOptions } from "./ludo/autopilot";
 import { setupLudoSocket } from "./ludo/socket";
@@ -109,9 +113,16 @@ export async function buildApp({
 
     const { autopilot } = setupLudoSocket(io, db, ludoAutopilot);
     const expirationJob = startLudoExpirationJob(db, io);
+    const chatSocket = setupPublicChatSocket(io, db);
+    const purgeChatJob = startPurgeChatJob(db);
     app.decorate("io", io);
+    app.decorate("chatSocket", chatSocket);
+
+    // Inisialisasi banned words cache
+    void initBannedWords(db);
 
     app.addHook("onClose", async () => {
+      purgeChatJob.stop();
       expirationJob.stop();
       autopilot.stopAll();
       io.disconnectSockets(true);
@@ -123,6 +134,7 @@ export async function buildApp({
     await registerAuthRoutes(app, { db, env, games });
     await registerAdminRoutes(app, { db, env, games });
     await registerGameRoutes(app, { db, env, games });
+    await registerChatRoutes(app, { db });
   }
 
   return app;
