@@ -16,6 +16,31 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    # Database sementara khusus CI untuk tes integrasi (auth, dll).
+    # Tidak menyentuh database asli mana pun.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: low_stress_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d low_stress_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DEPLOY_MODE: lan
+      APP_ORIGIN: http://localhost:5173
+      DATABASE_URL: postgres://ci:ci@localhost:5432/low_stress_ci
+      # Nilai khusus CI, bukan rahasia.
+      SESSION_SECRET: ci-only-session-secret-0123456789abcdef
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,6 +65,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Migrate database
+        run: pnpm db:migrate
+
       - name: Test
         run: pnpm test
 
@@ -48,3 +76,6 @@ jobs:
 
       - name: Migration table prefixes
         run: pnpm check:migrations
+
+      - name: Build
+        run: pnpm build
