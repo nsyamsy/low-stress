@@ -4,9 +4,9 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Fase 5 (Memory Match dan leaderboard)
+## Lingkup eksekusi saat ini: Fase 6 (Flappy Bird) — Selesai
 
-Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai. Fase 4 (P4-01 sampai P4-04) selesai. Fase 5 dalam pengerjaan.
+Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai. Fase 4 (P4-01 sampai P4-04) selesai. Fase 5 (P5-01 sampai P5-05) selesai. Fase 6 (P6-01 sampai P6-04) selesai.
 
 Fase 1 (referensi status):
 
@@ -60,9 +60,15 @@ Fase 5 (Memory Match dan leaderboard):
 - [x] P5-04 UI Leaderboard (Screens §8) dengan tab periode dan pilihan game. E2E: skor baru muncul di papan; baris sendiri tersorot.
 - [x] P5-05 Batas laju kirim skor dan penandaan run janggal (`flagged`). Run tak wajar ditandai dan terlihat di admin.
 
+Fase 6 (Flappy Bird):
+
+- [x] P6-01 Port engine (`flappy-engine`) dengan tes unit untuk fisika, pipa, skor. Tes lolos; konstanta sama dengan aslinya.
+- [x] P6-02 Port render Canvas 2D, 6 karakter, medali, layar Game Over, kontrol sentuh dan keyboard. Tampilan identik dengan aslinya (Porting_Guide §2).
+- [x] P6-03 Skala FIT di mobile, tanpa scroll, mendukung `prefers-reduced-motion` (hilangkan kilat). Uji 360x640 dan 1280x800.
+- [x] P6-04 Integrasi skor: run dengan skor < 1 tidak dihitung; pilihan karakter disimpan. Sesuai perilaku `recordScore` lama.
+
 ## Antrean berikutnya (belum diinstruksikan)
 
-- [ ] Fase 6 — Flappy Bird (P6-01..P6-04)
 - [ ] Fase 7 — Ludo (P7-01..P7-09)
 - [ ] Fase 8 — Chat, sensor, moderasi (P8-01..P8-06)
 - [ ] Fase 9 — Polish dan rilis (P9-01..P9-05)

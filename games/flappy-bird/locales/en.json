@@ -1,0 +1,28 @@
+{
+  "title": "Flappy Bird",
+  "badge": "Classic",
+  "subtitle": "Fly your character through the pipes.",
+  "ready": "Get ready",
+  "tapToStart": "Tap or press Space to flap",
+  "gameOver": "Game Over",
+  "score": "Score",
+  "best": "Best",
+  "newBest": "NEW BEST",
+  "tapToRetry": "Tap to play again",
+  "last": "Last",
+  "character": "Choose character",
+  "char": {
+    "yellow": "Yellow bird",
+    "red": "Red bird",
+    "blue": "Blue bird",
+    "bat": "Bat",
+    "plane": "Plane",
+    "ghost": "Ghost"
+  },
+  "howTo": "How to play",
+  "controls": "Tap the screen, click, or press Space, W, or Up Arrow to flap.",
+  "rules": "Each passed pipe awards 1 point. Don't hit pipes or the ground.",
+  "medals": "Earn bronze (10+), silver (20+), or gold (30+) medals.",
+  "bestNote": "Only runs scoring 1 or more are submitted to the leaderboard.",
+  "leaderboardNote": "Your best score is automatically saved to the weekly, monthly, and all-time leaderboards."
+}

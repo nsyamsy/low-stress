@@ -335,6 +335,46 @@ importers:
         specifier: ^7.4.1
         version: 7.4.1
 
+  games/flappy-bird:
+    dependencies:
+      '@low-stress/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@low-stress/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@low-stress/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      i18next:
+        specifier: ^26.7.1
+        version: 26.7.1(typescript@5.9.3)
+      lucide-react:
+        specifier: ^1.67.0
+        version: 1.67.0(@types/react@19.3.0)(react@19.3.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.3.1(react@19.3.1)
+      react-i18next:
+        specifier: ^17.1.12
+        version: 17.1.12(i18next@26.7.1(typescript@5.9.3))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.3.0(@types/react@19.3.0)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15))
+
   games/memory-match:
     dependencies:
       '@low-stress/i18n':

@@ -1,0 +1,28 @@
+{
+  "title": "Flappy Bird",
+  "badge": "Klasik",
+  "subtitle": "Terbangkan karaktermu melewati celah pipa.",
+  "ready": "Siap?",
+  "tapToStart": "Ketuk atau tekan Spasi untuk terbang",
+  "gameOver": "Game Over",
+  "score": "Skor",
+  "best": "Rekor",
+  "newBest": "REKOR BARU",
+  "tapToRetry": "Ketuk untuk main lagi",
+  "last": "Terakhir",
+  "character": "Pilih karakter",
+  "char": {
+    "yellow": "Burung kuning",
+    "red": "Burung merah",
+    "blue": "Burung biru",
+    "bat": "Kelelawar",
+    "plane": "Pesawat",
+    "ghost": "Hantu"
+  },
+  "howTo": "Cara bermain",
+  "controls": "Ketuk layar, klik, atau tekan Spasi, W, atau Panah Atas untuk terbang.",
+  "rules": "Setiap pipa yang berhasil dilewati bernilai 1 poin. Jangan menabrak pipa atau tanah.",
+  "medals": "Raih medali perunggu (10+), perak (20+), atau emas (30+).",
+  "bestNote": "Hanya run dengan skor minimal 1 yang dicatat ke papan peringkat.",
+  "leaderboardNote": "Skor terbaikmu akan otomatis tercatat di papan peringkat mingguan, bulanan, dan sepanjang waktu."
+}

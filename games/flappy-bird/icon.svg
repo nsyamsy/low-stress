@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Flappy Bird">
+  <title>Flappy Bird</title>
+  <rect width="64" height="64" rx="16" fill="#4ec0ca" />
+  <!-- Green pipe -->
+  <rect x="42" y="36" width="14" height="28" fill="#5aa02c" stroke="#3b6a1a" stroke-width="2" />
+  <rect x="40" y="32" width="18" height="8" rx="2" fill="#8fd14f" stroke="#3b6a1a" stroke-width="2" />
+  <!-- Yellow bird body -->
+  <ellipse cx="24" cy="28" rx="14" ry="11" fill="#f8d12f" stroke="#8a5a12" stroke-width="2" />
+  <!-- Wing -->
+  <ellipse cx="19" cy="30" rx="7" ry="4.5" fill="#f0a81c" stroke="#8a5a12" stroke-width="1.5" />
+  <!-- Eye -->
+  <circle cx="30" cy="24" r="4.5" fill="#ffffff" stroke="#8a5a12" stroke-width="1.5" />
+  <circle cx="32" cy="24" r="2" fill="#222222" />
+  <!-- Beak -->
+  <polygon points="34,28 44,30 34,34" fill="#f4733a" stroke="#8a5a12" stroke-width="1.5" />
+</svg>

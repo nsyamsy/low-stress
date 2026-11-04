@@ -199,6 +199,41 @@ Lingkup: Fase 5 (Memory Match dan Leaderboard).
 | P5-04 UI Leaderboard (Screens §8) | Selesai | Halaman Leaderboard (`/leaderboard` di `LeaderboardPage.tsx`) dengan pemilihan game (chip interaktif), tab periode (Minggu ini, Bulan ini, Sepanjang waktu), kartu `GameLeaderboard` responsif, podium mahkota/medali, avatar inisial, penandaan pemain sendiri `(kamu)` dengan gaya `--bg-inset` dan highlight `isMe: true`. Navigasi Beranda dan Leaderboard terintegrasi di header shell. E2E teruji: pemain mengirim skor baru -> skor seketika muncul di leaderboard dan baris pemain tersorot `isMe: true`. 4 tes komponen web di `apps/web/test/leaderboard-ui.test.tsx` dan 1 tes E2E di `apps/server/test/leaderboard-e2e.test.ts`. |
 | P5-05 Batas laju kirim skor dan penandaan run janggal (`flagged`) | Selesai | Rate limiting submission skor (jeda minimal 3 detik antar kirim per pemain & game, batas frekuensi `maxSubmitRatePerMin` per menit sesuai manifest) yang menolak pelanggaran dengan `429 SCORE_RATE_LIMITED`. Deteksi run tidak wajar / mencurigakan (`isSuspiciousRun`) menandai run sebagai `flagged: true` di `game_runs` tanpa memperbarui rekor `game_scores` ataupun leaderboard publik. Endpoint admin untuk moderasi run: `GET /api/admin/runs` (dengan filter `gameId`, `flagged=true/false`, pagination), alias `GET /api/admin/games/:id/runs`, `DELETE /api/admin/runs/:id` yang menghapus run dan menghitung ulang skor pemain via `recomputeGameScore` serta mencatat aksi di `audit_log`, dan `POST /api/admin/leaderboard/:gameId/reset` untuk reset leaderboard mingguan/bulanan. Teruji 6 tes unit/integrasi di `apps/server/test/admin-runs.test.ts`. |
 
+---
+
+## 2026-11-04 - Fase 6 (Flappy Bird)
+
+Lingkup: Fase 6 (Flappy Bird).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P6-01 Port engine (`flappy-engine`) dengan tes unit untuk fisika, pipa, skor | Selesai | Engine `games/flappy-bird/shared/engine.ts` memporting seluruh aturan dan fisika tanpa DOM: dimensi kanvas logis 360x560 (tanah 70px, area bermain 490px), konfigurasi fisika (gravity 1500, flapVelocity -430, maxFall 640, baseSpeed 150, speedPerPoint 2, maxSpeedBonus 80, gap 150, pipeWidth 58, spacing 210, birdX 90, birdRadius 12, startY 270, gapMargin 46). Fungsi transisi `flap`, deteksi tabrakan pipa presisi lingkaran vs dua persegi panjang `hitsPipe`, langkah waktu fisika tetap `step(state, dt)` dengan pembatasan langit-langit, deteksi tabrakan tanah, pergerakan & daur ulang pipa, skor saat pipa dilewati, perputaran rotasi burung, serta kalkulasi medali `medalFor` (perunggu >= 10, perak >= 20, emas >= 30). 12 tes unit di `games/flappy-bird/test/engine.test.ts` lolos 100%. |
+| P6-02 Port render Canvas 2D, 6 karakter, medali, layar Game Over, kontrol sentuh dan keyboard | Selesai | Modul `characters.ts` memuat 6 karakter (`yellow`, `red`, `blue`, `bat`, `plane`, `ghost`) dengan fungsi `drawCharacter`. Komponen `FlappyBird.tsx` mengimplementasikan render Canvas 2D 360x560 persis aslinya: langit gradasi `#4ec0ca` -> `#b6ecf2`, 4 awan melayang, bukit jauh `#9bd9a3`, pipa hijau bergradasi dengan bibir pipa, tanah `#ded895` dengan rumput bergerigi `#73bf2e`/`#9be04a`, burung dengan rotasi & animasi kepakan sayap, teks skor outlined, layar ready, layar Game Over dengan panel krem `#ded895`, slot medali radial gradient (perunggu, perak, emas) bertabur bintang, rekor pribadi, dan lencana "REKOR BARU" `#e5483a`. Kontrol pointerdown pada kanvas, tombol keyboard (Space, ArrowUp, KeyW) dengan pengecualian elemen input, penguncian restart 0.45 dtk, serta radiogroup 6 pemilih karakter dengan pratinjau kanvas mini. 5 tes unit di `games/flappy-bird/test/flappy-bird.test.tsx` lolos 100%. |
+| P6-03 Skala FIT di mobile, tanpa scroll, mendukung `prefers-reduced-motion` (hilangkan kilat) | Selesai | Kelas `.ls-flappy-layout` di `packages/ui` mengimplementasikan layout mobile-first: kanvas skala FIT dengan aspek 360/560 dan lebar proporsional 100% tanpa scroll horizontal di 360x640, susunan vertikal tertata rapi (game di order-1, mini leaderboard di order-2, aturan di order-3), serta target ketuk tombol karakter memenuhi standar aksesibilitas minimum (h-11 = 44px). Di layar desktop (1280x800), tata letak berubah otomatis menjadi tiga kolom seimbang (leaderboard 280px, game kanvas 360px, aturan minmax(240px, 1fr)). Dukungan aksesibilitas `prefers-reduced-motion`: kilat putih saat tabrakan/mati dieliminasi total dan animasi kemunculan panel hasil dipermudah jika preferensi gerak rendah aktif di perangkat pengguna. 3 tes unit di `games/flappy-bird/test/responsive-motion.test.tsx` lolos 100%. |
+| P6-04 Integrasi skor: run skor < 1 tidak dihitung; pilihan karakter disimpan | Selesai | Aturan skor dipertahankan persis sesuai acuan `recordScore` lama (Porting_Guide §2 & §6): run yang berakhir dengan skor 0 (burung menabrak pipa pertama atau tanah sebelum mencetak poin) tidak dihitung sebagai "play", tidak dikirim ke server oleh klien, dan diabaikan oleh `recordScore` di server (tidak menambah hitungan `plays`, tidak menyisipkan ke `game_runs`, serta tidak memperbarui rekor `game_scores`). Run dengan skor >= 1 dikirim ke `onScore` / endpoint `POST /api/games/flappy-bird/scores` dan divalidasi kewajarannya via `plausibleRun` (skor <= 500, batas waktu durasi fisika maks 2 jam, skor <= floor(durationMs / 1000 / 0.85) + 1). Preferensi karakter pemain (`yellow`, `red`, `blue`, `bat`, `plane`, `ghost`) disimpan di `localStorage` dengan kunci `cbr-flappy-character` dan dipulihkan secara otomatis saat membuka game kembali. Teruji 3 tes unit di `games/flappy-bird/test/score-integration.test.tsx` dan integrasi server di `apps/server/test/scores.test.ts`. |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (15 workspace projects)
+pnpm test            -> lolos (151 tes: flappy-bird 23, memory-match 5, server 73, web 19, sdk 19, i18n 12, ui 7, check-i18n 5, check-migrations 4, create-admin 6)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm --filter @low-stress/web build -> lolos (chunk lazy client Flappy Bird 18.47 kB, 20 entri precache PWA)
+```
+
+### Keputusan teknis agent (implementasi, bukan keputusan produk pemilik)
+
+- Logika rendering Canvas 2D dipisahkan ke `client/render.ts` dengan penanda pengecualian `low-stress/no-raw-design-values` untuk menjaga integritas visual kanvas asli (gradasi langit, bukit, pipa hijau bertingkat, panel Game Over krem `#ded895`, dan medali berkilau) sesuai Porting_Guide §0 dan Agents.md §5.1.
+- Komponen pembungkus React di `client/FlappyBird.tsx` 100% menggunakan token `@low-stress/ui` dan kelas CSS terdedikasi (`.ls-flappy-canvas`, `.ls-flappy-controls`, `.ls-flappy-char-btn`, `.ls-flappy-scores-row`) tanpa nilai mentah.
+- State inisialisasi karakter dan rekor menggunakan lazy initializers React 19 (`useState(() => ...)`) untuk mencegah cascading render.
+- Nilai preferensi `prefers-reduced-motion` didukung melalui pemantauan `matchMedia` dinamis serta properti opsional komponen `reducedMotion`.
+
+
+
 
 
 
