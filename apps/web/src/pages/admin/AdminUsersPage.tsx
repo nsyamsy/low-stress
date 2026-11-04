@@ -179,13 +179,13 @@ export function AdminUsersPage() {
             <table className="ls-admin-table">
               <thead>
                 <tr>
-                  <th>{t("admin.users.colUsername")}</th>
-                  <th>{t("admin.users.colName")}</th>
-                  <th>{t("admin.users.colEmail")}</th>
-                  <th>{t("admin.users.colStatus")}</th>
-                  <th>{t("admin.users.colJoined")}</th>
-                  <th>{t("admin.users.colLastLogin")}</th>
-                  <th style={{ textAlign: "right" }}>{t("admin.users.colActions")}</th>
+                  <th scope="col">{t("admin.users.colUsername")}</th>
+                  <th scope="col">{t("admin.users.colName")}</th>
+                  <th scope="col">{t("admin.users.colEmail")}</th>
+                  <th scope="col">{t("admin.users.colStatus")}</th>
+                  <th scope="col">{t("admin.users.colJoined")}</th>
+                  <th scope="col">{t("admin.users.colLastLogin")}</th>
+                  <th scope="col" style={{ textAlign: "right" }}>{t("admin.users.colActions")}</th>
                 </tr>
               </thead>
               <tbody>

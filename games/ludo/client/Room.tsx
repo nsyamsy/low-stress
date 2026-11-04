@@ -171,7 +171,25 @@ export function Room({ roomId, onBack, user }: RoomProps) {
       }, 50);
     });
 
+    // Mobile QA: Sinkronisasi dan penyambungan ulang otomatis saat layar mati / kembali aktif
+    const onVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        if (s.disconnected) {
+          s.connect();
+        } else {
+          s.emit("room:join", { roomId }, (res: { ok: boolean; view?: RoomView }) => {
+            if (res.ok && res.view) {
+              setRoom(res.view);
+              setPawnsSetting(res.view.pawns || 4);
+            }
+          });
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       s.emit("room:leave", { roomId });
       s.disconnect();
     };

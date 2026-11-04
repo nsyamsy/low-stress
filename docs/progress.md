@@ -313,3 +313,39 @@ pnpm --filter @low-stress/web build -> lolos
 - Komponen chat publik desktop dan halaman moderasi admin sepenuhnya mematuhi sistem token `@low-stress/ui` dan CSS murni di `packages/ui/src/styles.css` tanpa nilai mentah.
 - Setiap aksi administratif mutasi (hapus pesan, mute/unmute, tambah/ubah/hapus kata terlarang, hapus run, reset leaderboard) diverifikasi CSRF dan dicatat transparan di tabel `audit_log`.
 
+---
+
+## 2026-11-05 - Fase 9 (Polish dan rilis)
+
+Lingkup: Fase 9 (P9-01..P9-05).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P9-01 Audit aksesibilitas (kontras, fokus, label, keyboard, reduced motion) | Selesai | Evaluasi menyeluruh terhadap standar WCAG 2.1 Level AA di seluruh antarmuka utama (Beranda, Login, Register, Pending, Leaderboard, Status, Flappy Bird, Memory Match, Ludo, Public Chat, Admin). Rasio kontras terukur memenuhi batas AA (Light text-primary 6,62:1 / 7,33:1, Dark text-primary 14,67:1 / 12,74:1, tombol text-on-primary 6,62:1, aksen koral teks 4,84:1). Ditambahkan skip-to-content link `.ls-skip-link` di `App.tsx` dan `AdminLayout.tsx` menuju `#main-content` dan `#admin-main-content`. Indikator `:focus-visible` 2px solid offset 2px aktif global. Seluruh input dilengkapi relasi `label`/`htmlFor`, `aria-describedby`, dan `aria-invalid`. Dialog modal menerapkan focus trap dan penutupan dengan Esc. Komponen game mendukung kontrol keyboard (Space/W/ArrowUp di Flappy, balik kartu di Memory Match, tombol pion `role="button"` ber-tabIndex di Ludo). Header tabel admin dilengkapi `scope="col"`. Preferensi `prefers-reduced-motion` didukung di CSS global, animasi canvas Flappy Bird (menghilangkan kilat putih tabrakan), animasi Ludo (mematikan konfeti & glow latar), dan chat panel. Dokumen audit lengkap dibuat di `docs/accessibility-audit.md`. 6 tes otomatis di `apps/web/test/accessibility.test.tsx` lolos 100%. |
+| P9-02 QA mobile (iOS Safari dan Android Chrome), termasuk soket tersambung ulang saat layar mati | Selesai | Penyelenggaraan matriks QA manual komprehensif untuk WebKit iOS Safari dan Blink Android Chrome pada breakpoint mobile 360px dan 390px, didokumentasikan di `docs/qa-mobile.md`. Mencakup verifikasi responsivitas form autentikasi, touch targets >= 44px, scaling game FIT (Memory Match, Flappy Bird Canvas 2D, Ludo SVG), unlock Web Audio context pada sentuhan awal, dan isolasi chat room mobile drawer. Penambahan penanganan `visibilitychange` di `games/ludo/client/Room.tsx`: saat layar ponsel dimatikan (sleep) dan dibuka kembali (wake), soket secara instan memeriksa status koneksi (`s.connect()`) dan mengirim ulang `room:join` untuk menyinkronkan state permainan terbaru dari database, memungkinkan pelepasan kendali autopilot kembali ke pemain tanpa desinkronisasi. Pengujian PWA mandiri (standalone WebAPK & WebClip) terverifikasi. |
+| P9-03 Paket deploy LAN dan Public + panduan instalasi `docs/deploy.md` (termasuk cadangan `pg_dump` dan opsi CA internal) | Selesai | Penyusunan panduan instalasi dan deployment menyeluruh di `docs/deploy.md`: prasyarat sistem, langkah instalasi bersih berbasis Docker Compose (`--profile lan` dan `--profile public`), konfigurasi `.env` aman dengan `openssl rand`, pembuatan Superadmin pertama (`docker compose exec server pnpm create-admin`), integrasi Caddy TLS internal CA untuk PWA di LAN tanpa domain internet, prosedur cadangan/pemulihan database PostgreSQL via `pg_dump` dan cron job harian dengan retensi 14 hari, serta endpoint pemantauan `/healthz` dan `/readyz`. Sintaks konfigurasi Docker Compose diverifikasi valid (`docker compose config`). |
+| P9-04 Uji beban ringan (200 koneksi Socket.IO bersamaan) | Selesai | Pelaksanaan uji beban real-time terhadap server Fastify + Socket.IO dengan 200 koneksi WebSocket bersamaan diuji di `apps/server/test/socket-load.test.ts`. Hasil pengujian: seluruh 200 soket berhasil terhubung dalam ~2 detik dengan tingkat kegagalan 0% (0 error), pesan chat broadcast diterima dengan sukses oleh soket sampel, penggunaan heap memori hanya bertambah ~4.1 MB saat beban puncak (70.6 MB dari baseline 66.5 MB, rata-rata ~20.5 KB per soket), dan pemutusan seluruh 200 soket berlangsung bersih tanpa memory leak. Laporan pengujian dan panduan uji mandiri didokumentasikan di `docs/load-test.md`. Tes otomatis lolos 100%. |
+| P9-05 Dokumen operasi: variabel `.env`, rotasi rahasia, mengaktifkan SMTP, menambah game baru | Selesai | Penyusunan manual operasional produksi di `docs/operations.md`: tabel detail seluruh variabel konfigurasi `.env` dan dampaknya, prosedur rotasi rahasia (kunci sesi `SESSION_SECRET`, password database PostgreSQL, dan password Superadmin), aktivasi dan pengujian layanan email `SmtpAdapter` via panel admin settings, serta panduan arsitektur penambahan game baru menggunakan generator `pnpm new-game` (kontrak `manifest.ts`, aturan isolasi monorepo boundaries, i18n dwibahasa, skema database berawalan `<slug>_`, dan aktivasi via registry). |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (16 workspace projects)
+pnpm test            -> lolos (214 tes lolos 100%)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm --filter @low-stress/web build -> lolos
+```
+
+### Keputusan teknis agent (implementasi, bukan keputusan produk pemilik)
+
+- Indikator skip link aksesibilitas `.ls-skip-link` dihubungkan secara dinamis ke elemen `<main id="main-content">` pada shell utama dan `<main id="admin-main-content">` pada admin layout.
+- Seluruh kolom tabel administratif dilengkapi atribut `scope="col"` untuk kompatibilitas pembaca layar WCAG AA.
+- Penyambungan ulang soket di mobile (`visibilitychange`) diimplementasikan di `games/ludo/client/Room.tsx` agar saat ponsel berpindah dari mode sleep ke foreground, koneksi socket segera aktif dan memulihkan state dari server DB.
+- Uji beban 200 koneksi bersamaan disertakan sebagai rangkaian tes terintegrasi di `apps/server/test/socket-load.test.ts` untuk memastikan performa terverifikasi secara berkelanjutan di CI.
+
+
+

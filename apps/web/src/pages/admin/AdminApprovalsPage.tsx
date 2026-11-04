@@ -149,7 +149,7 @@ export function AdminApprovalsPage() {
             <table className="ls-admin-table">
               <thead>
                 <tr>
-                  <th style={{ width: 40 }}>
+                  <th scope="col" style={{ width: 40 }}>
                     <input
                       type="checkbox"
                       checked={selectedIds.length === users.length && users.length > 0}
@@ -157,11 +157,11 @@ export function AdminApprovalsPage() {
                       aria-label={t("admin.approvals.selectAll")}
                     />
                   </th>
-                  <th>{t("admin.users.colUsername")}</th>
-                  <th>{t("admin.users.colName")}</th>
-                  <th>{t("admin.users.colEmail")}</th>
-                  <th>{t("admin.users.colJoined")}</th>
-                  <th style={{ textAlign: "right" }}>{t("admin.users.colActions")}</th>
+                  <th scope="col">{t("admin.users.colUsername")}</th>
+                  <th scope="col">{t("admin.users.colName")}</th>
+                  <th scope="col">{t("admin.users.colEmail")}</th>
+                  <th scope="col">{t("admin.users.colJoined")}</th>
+                  <th scope="col" style={{ textAlign: "right" }}>{t("admin.users.colActions")}</th>
                 </tr>
               </thead>
               <tbody>

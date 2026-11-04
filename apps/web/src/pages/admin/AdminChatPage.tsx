@@ -231,10 +231,10 @@ export function AdminChatPage() {
               <table className="ls-admin-table">
                 <thead>
                   <tr>
-                    <th>Waktu</th>
-                    <th>Pengirim</th>
-                    <th>Pesan</th>
-                    <th style={{ textAlign: "right" }}>Aksi</th>
+                    <th scope="col">{t("admin.chat.colTime")}</th>
+                    <th scope="col">{t("admin.chat.colSender")}</th>
+                    <th scope="col">{t("admin.chat.colMessage")}</th>
+                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -313,10 +313,10 @@ export function AdminChatPage() {
               <table className="ls-admin-table">
                 <thead>
                   <tr>
-                    <th>Pengguna</th>
-                    <th>Dibisukan Sampai</th>
-                    <th>Alasan</th>
-                    <th style={{ textAlign: "right" }}>Aksi</th>
+                    <th scope="col">{t("admin.chat.colUser")}</th>
+                    <th scope="col">{t("admin.chat.colMutedUntil")}</th>
+                    <th scope="col">{t("admin.chat.colReason")}</th>
+                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -356,11 +356,11 @@ export function AdminChatPage() {
               <table className="ls-admin-table">
                 <thead>
                   <tr>
-                    <th>{t("admin.chat.word")}</th>
-                    <th>{t("admin.chat.lang")}</th>
-                    <th>Sumber</th>
-                    <th>{t("admin.chat.status")}</th>
-                    <th style={{ textAlign: "right" }}>Aksi</th>
+                    <th scope="col">{t("admin.chat.word")}</th>
+                    <th scope="col">{t("admin.chat.lang")}</th>
+                    <th scope="col">{t("admin.chat.colSource")}</th>
+                    <th scope="col">{t("admin.chat.status")}</th>
+                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>

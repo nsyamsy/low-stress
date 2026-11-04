@@ -233,6 +233,7 @@ export function MemoryMatch({
             onClick={toggleMute}
             className="flex h-7 w-7 items-center justify-center rounded-md border border-outline-variant/20 bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors"
             title={isMuted ? t("unmute") : t("mute")}
+            aria-label={isMuted ? t("unmute") : t("mute")}
           >
             {isMuted ? (
               <VolumeX className="h-3.5 w-3.5" />
@@ -245,6 +246,7 @@ export function MemoryMatch({
             onClick={restartGame}
             className="flex h-7 w-7 items-center justify-center rounded-md border border-outline-variant/20 bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors"
             title={t("reset")}
+            aria-label={t("reset")}
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
@@ -276,7 +278,7 @@ export function MemoryMatch({
                       ? "bg-surface-container-lowest border-2 border-primary/40 ring-1 ring-primary/20"
                       : "bg-gradient-to-br from-surface-container-high to-surface-container-highest border-2 border-outline-variant/30 hover:bg-surface-container-highest",
                 )}
-                aria-label={isFlipped ? def.label : "Hidden Card"}
+                aria-label={isFlipped ? def.label : t("hiddenCard")}
               >
                 {isFlipped ? (
                   <div className="flex flex-col items-center justify-center animate-in zoom-in-75 duration-200">

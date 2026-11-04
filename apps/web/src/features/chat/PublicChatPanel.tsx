@@ -76,7 +76,12 @@ function PublicChatInner({ currentUserId }: { currentUserId: string }) {
 
   // Auto-scroll ke pesan terbaru
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    messagesEndRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
   };
 
   useEffect(() => {
@@ -237,6 +242,15 @@ function PublicChatInner({ currentUserId }: { currentUserId: string }) {
       <aside
         data-testid="public-chat-collapsed"
         className="ls-chat-tab"
+        role="region"
+        aria-label={t("chat.title")}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggleCollapsed();
+          }
+        }}
         onClick={toggleCollapsed}
         title={t("chat.expand")}
       >
@@ -249,7 +263,12 @@ function PublicChatInner({ currentUserId }: { currentUserId: string }) {
 
   // Tampilan Panel Kolom Penuh (280px)
   return (
-    <aside data-testid="public-chat-panel" className="ls-chat-panel">
+    <aside
+      data-testid="public-chat-panel"
+      className="ls-chat-panel"
+      role="region"
+      aria-label={t("chat.title")}
+    >
       {/* Header */}
       <div className="ls-chat-header">
         <div>
@@ -315,6 +334,7 @@ function PublicChatInner({ currentUserId }: { currentUserId: string }) {
               onChange={(e) => setInputText(e.target.value.slice(0, 300))}
               onKeyDown={handleKeyDown}
               placeholder={t("chat.placeholder")}
+              aria-label={t("chat.placeholder")}
               rows={2}
               className="ls-chat-textarea"
             />

@@ -52,6 +52,7 @@ export function Die({
   return (
     <div
       ref={ref}
+      role="img"
       className="grid h-12 w-12 shrink-0 grid-cols-3 grid-rows-3 gap-1 rounded-[12px] border-2 border-slate-700 bg-white p-2 shadow-sm"
       aria-label={face ? String(face) : "-"}
     >

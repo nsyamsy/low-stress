@@ -190,12 +190,12 @@ export function AdminLeaderboardPage() {
               <table className="ls-admin-table">
                 <thead>
                   <tr>
-                    <th>{t("admin.leaderboard.colTime")}</th>
-                    <th>{t("admin.leaderboard.colPlayer")}</th>
-                    <th>{t("admin.leaderboard.colScore")}</th>
-                    <th>{t("admin.leaderboard.colDuration")}</th>
-                    <th>{t("admin.leaderboard.colFlagged")}</th>
-                    <th style={{ textAlign: "right" }}>Aksi</th>
+                    <th scope="col">{t("admin.leaderboard.colTime")}</th>
+                    <th scope="col">{t("admin.leaderboard.colPlayer")}</th>
+                    <th scope="col">{t("admin.leaderboard.colScore")}</th>
+                    <th scope="col">{t("admin.leaderboard.colDuration")}</th>
+                    <th scope="col">{t("admin.leaderboard.colFlagged")}</th>
+                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.leaderboard.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>

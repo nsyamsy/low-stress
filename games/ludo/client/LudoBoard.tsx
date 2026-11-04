@@ -435,8 +435,21 @@ export function LudoBoard({
                   ? `transform ${it.sh.dur}ms ${it.sh.walking ? "linear" : "ease-in-out"}`
                   : undefined,
               }}
+              role={canMove ? "button" : undefined}
+              tabIndex={canMove ? 0 : undefined}
+              aria-label={canMove ? `Pion ${it.pawn + 1}` : undefined}
               className={canMove ? "cursor-pointer" : undefined}
               onClick={canMove ? () => onPawn?.(it.pawn) : undefined}
+              onKeyDown={
+                canMove
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onPawn?.(it.pawn);
+                      }
+                    }
+                  : undefined
+              }
             >
               {canMove && (
                 <circle r={12} fill="none" stroke="#fff" strokeWidth={2.5}>

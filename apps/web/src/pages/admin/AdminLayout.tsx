@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { Menu } from "lucide-react";
 import { Button, SegmentedControl } from "@low-stress/ui";
 import { useAdmin } from "../../features/admin";
 import { fetchPublicConfig } from "../../features/auth/api";
@@ -67,6 +68,9 @@ export function AdminLayout() {
 
   return (
     <div className="ls-admin-layout">
+      <a href="#admin-main-content" className="ls-skip-link">
+        {t("nav.skipToContent")}
+      </a>
       {/* Sidebar Mobile Backdrop */}
       {mobileMenuOpen && (
         <div
@@ -82,7 +86,10 @@ export function AdminLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`ls-admin-sidebar ${mobileMenuOpen ? "open" : ""}`}>
+      <aside
+        id="admin-sidebar"
+        className={`ls-admin-sidebar ${mobileMenuOpen ? "open" : ""}`}
+      >
         <div className="ls-admin-sidebar-header">
           <h2 className="ls-admin-sidebar-title">{t("admin.nav.title")}</h2>
           <span style={{ fontSize: "var(--font-caption)", opacity: 0.8 }}>
@@ -197,11 +204,15 @@ export function AdminLayout() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
+                gap: "var(--space-1)",
                 padding: "var(--space-1) var(--space-2)",
               }}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="admin-sidebar"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              ☰ {t("admin.nav.menu")}
+              <Menu className="h-4 w-4" aria-hidden="true" />
+              <span>{t("admin.nav.menu")}</span>
             </button>
             <span className="ls-admin-badge--deploy">
               {t("admin.header.deployMode", { mode: deployMode.toUpperCase() })}
@@ -238,7 +249,7 @@ export function AdminLayout() {
           </div>
         </header>
 
-        <main className="ls-admin-content">
+        <main id="admin-main-content" className="ls-admin-content">
           <Outlet />
         </main>
       </div>

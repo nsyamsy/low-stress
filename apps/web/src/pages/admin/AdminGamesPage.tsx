@@ -100,12 +100,12 @@ export function AdminGamesPage() {
             <table className="ls-admin-table">
               <thead>
                 <tr>
-                  <th>{t("admin.games.colName")}</th>
-                  <th>{t("admin.games.colStatus")}</th>
-                  <th>{t("admin.games.colBadge")}</th>
-                  <th>{t("admin.games.colOrder")}</th>
-                  <th>{t("admin.games.colSchedule")}</th>
-                  <th>{t("admin.games.colActions")}</th>
+                  <th scope="col">{t("admin.games.colName")}</th>
+                  <th scope="col">{t("admin.games.colStatus")}</th>
+                  <th scope="col">{t("admin.games.colBadge")}</th>
+                  <th scope="col">{t("admin.games.colOrder")}</th>
+                  <th scope="col">{t("admin.games.colSchedule")}</th>
+                  <th scope="col">{t("admin.games.colActions")}</th>
                 </tr>
               </thead>
               <tbody>

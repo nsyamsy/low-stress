@@ -1458,6 +1458,30 @@ body {
   font-weight: var(--weight-medium);
 }
 
+/* ------------------------------ Skip Link ----------------------------- */
+
+.ls-skip-link {
+  position: absolute;
+  top: -100px;
+  left: var(--space-4);
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-4);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-control);
+  font-weight: var(--weight-medium);
+  z-index: 1000;
+  text-decoration: none;
+  transition: top var(--dur-fast) var(--ease-out);
+}
+
+.ls-skip-link:focus,
+.ls-skip-link:focus-visible {
+  top: var(--space-4);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* ------------------------------ Motion -------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {

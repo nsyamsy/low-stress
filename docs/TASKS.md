@@ -4,9 +4,9 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Fase 7 (Ludo) — Sedang berjalan
+## Lingkup eksekusi saat ini: Fase 9 (Polish dan rilis) — Selesai
 
-Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai. Fase 4 (P4-01 sampai P4-04) selesai. Fase 5 (P5-01 sampai P5-05) selesai. Fase 6 (P6-01 sampai P6-04) selesai.
+Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 sampai Fase 9 (seluruh rilis v0.1.0) selesai.
 
 Fase 1 (referensi status):
 
@@ -88,6 +88,10 @@ Fase 8 (Chat publik, sensor, moderasi):
 - [x] P8-05 Moderasi skor admin: lihat run `flagged`, hapus skor, reset papan periodik. Teruji.
 - [x] P8-06 Sensor diterapkan pada chat Ludo dan nama tampilan. Teruji di semua jalur.
 
-## Antrean berikutnya (belum diinstruksikan)
+Fase 9 (Polish dan rilis):
 
-- [ ] Fase 9 — Polish dan rilis (P9-01..P9-05)
+- [x] P9-01 Audit aksesibilitas (kontras, fokus, label, keyboard, reduced motion). Tidak ada pelanggaran AA pada layar utama.
+- [x] P9-02 QA mobile (iOS Safari dan Android Chrome), termasuk soket tersambung ulang saat layar mati. Daftar uji manual terisi di `docs/qa-mobile.md`.
+- [x] P9-03 Paket deploy LAN dan Public + panduan instalasi `docs/deploy.md` (termasuk cadangan `pg_dump` dan opsi CA internal). Pemasangan bersih mengikuti panduan berhasil.
+- [x] P9-04 Uji beban ringan (200 koneksi Socket.IO bersamaan). Tidak ada error; memori stabil.
+- [x] P9-05 Dokumen operasi: variabel `.env`, rotasi rahasia, mengaktifkan SMTP, menambah game baru. Tinjauan pemilik.

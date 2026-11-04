@@ -10,7 +10,8 @@
     "login": "Log in",
     "register": "Create account",
     "logout": "Log out",
-    "showcase": "Component showcase"
+    "showcase": "Component showcase",
+    "skipToContent": "Skip to main content"
   },
   "action": {
     "play": "Play",
@@ -283,7 +284,15 @@
       "emptyMutes": "No users currently muted.",
       "emptyWords": "No banned words yet.",
       "confirmDelete": "Permanently delete this message?",
-      "confirmMute": "Mute this user?"
+      "confirmMute": "Mute this user?",
+      "colTime": "Time",
+      "colSender": "Sender",
+      "colMessage": "Message",
+      "colActions": "Actions",
+      "colUser": "User",
+      "colMutedUntil": "Muted Until",
+      "colReason": "Reason",
+      "colSource": "Source"
     },
     "leaderboard": {
       "title": "Score & Leaderboard Moderation",
@@ -298,6 +307,7 @@
       "colDuration": "Duration",
       "colFlagged": "Status",
       "colTime": "Time",
+      "colActions": "Actions",
       "flagged": "Flagged",
       "normal": "Normal",
       "emptyRuns": "No game runs recorded yet.",
@@ -366,6 +376,7 @@
   },
   "chat": {
     "title": "Public chat",
+    "close": "Close chat",
     "online": "{{count}} online",
     "collapse": "Collapse chat",
     "expand": "Open chat",

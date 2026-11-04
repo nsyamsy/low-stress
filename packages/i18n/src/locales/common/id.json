@@ -10,7 +10,8 @@
     "login": "Masuk",
     "register": "Buat akun",
     "logout": "Keluar",
-    "showcase": "Contoh komponen"
+    "showcase": "Contoh komponen",
+    "skipToContent": "Lewati ke konten utama"
   },
   "action": {
     "play": "Main",
@@ -283,7 +284,15 @@
       "emptyMutes": "Tidak ada pengguna yang dibisukan.",
       "emptyWords": "Belum ada kata terlarang.",
       "confirmDelete": "Hapus pesan ini secara permanen?",
-      "confirmMute": "Bisukan pengguna ini?"
+      "confirmMute": "Bisukan pengguna ini?",
+      "colTime": "Waktu",
+      "colSender": "Pengirim",
+      "colMessage": "Pesan",
+      "colActions": "Aksi",
+      "colUser": "Pengguna",
+      "colMutedUntil": "Dibisukan Sampai",
+      "colReason": "Alasan",
+      "colSource": "Sumber"
     },
     "leaderboard": {
       "title": "Moderasi Skor & Leaderboard",
@@ -298,6 +307,7 @@
       "colDuration": "Durasi",
       "colFlagged": "Status",
       "colTime": "Waktu",
+      "colActions": "Aksi",
       "flagged": "Janggal",
       "normal": "Wajar",
       "emptyRuns": "Belum ada catatan run permainan.",
@@ -366,6 +376,7 @@
   },
   "chat": {
     "title": "Chat publik",
+    "close": "Tutup chat",
     "online": "{{count}} online",
     "collapse": "Tutup chat",
     "expand": "Buka chat",

@@ -60,11 +60,11 @@ export function AdminAuditPage() {
             <table className="ls-admin-table">
               <thead>
                 <tr>
-                  <th>{t("admin.audit.colTime")}</th>
-                  <th>{t("admin.audit.colAdmin")}</th>
-                  <th>{t("admin.audit.colAction")}</th>
-                  <th>{t("admin.audit.colTarget")}</th>
-                  <th>{t("admin.audit.colDetail")}</th>
+                  <th scope="col">{t("admin.audit.colTime")}</th>
+                  <th scope="col">{t("admin.audit.colAdmin")}</th>
+                  <th scope="col">{t("admin.audit.colAction")}</th>
+                  <th scope="col">{t("admin.audit.colTarget")}</th>
+                  <th scope="col">{t("admin.audit.colDetail")}</th>
                 </tr>
               </thead>
               <tbody>

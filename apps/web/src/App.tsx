@@ -86,6 +86,9 @@ export function App() {
 
   return (
     <>
+      <a href="#main-content" className="ls-skip-link">
+        {t("nav.skipToContent")}
+      </a>
       <header className="ls-app-header">
         <div className="ls-container ls-app-header__inner">
           <div className="ls-row">
@@ -124,7 +127,7 @@ export function App() {
         </div>
       </header>
 
-      <main className="ls-container ls-app-main">
+      <main id="main-content" className="ls-container ls-app-main">
         <Routes>
           <Route
             path="/login"
