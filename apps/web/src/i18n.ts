@@ -14,8 +14,10 @@ export type LocalePreference = "auto" | Locale;
 
 export function readLocalePreference(): LocalePreference {
   try {
-    const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-    if (stored === "auto" || stored === "id" || stored === "en") return stored;
+    if (typeof window !== "undefined" && window.localStorage) {
+      const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+      if (stored === "auto" || stored === "id" || stored === "en") return stored;
+    }
   } catch {
     // localStorage bisa diblokir; jatuh ke deteksi browser.
   }
@@ -23,9 +25,14 @@ export function readLocalePreference(): LocalePreference {
 }
 
 function initialLocale(): Locale {
+  const browserLanguages =
+    typeof navigator !== "undefined"
+      ? (navigator.languages ?? [navigator.language])
+      : ["id"];
+
   return detectLocale({
     storedPreference: readLocalePreference(),
-    browserLanguages: navigator.languages ?? [navigator.language],
+    browserLanguages,
     defaultLocale: DEFAULT_LOCALE,
   });
 }
@@ -46,15 +53,21 @@ void i18n.use(initReactI18next).init({
 
 export function changeLocale(preference: LocalePreference): void {
   try {
-    window.localStorage.setItem(LOCALE_STORAGE_KEY, preference);
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.setItem(LOCALE_STORAGE_KEY, preference);
+    }
   } catch {
     // Abaikan; bahasa tetap berganti untuk sesi ini.
   }
   const next = preference === "auto" ? initialLocale() : preference;
   void i18n.changeLanguage(next);
-  document.documentElement.lang = next;
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = next;
+  }
 }
 
-document.documentElement.lang = startLocale;
+if (typeof document !== "undefined") {
+  document.documentElement.lang = startLocale;
+}
 
 export default i18n;

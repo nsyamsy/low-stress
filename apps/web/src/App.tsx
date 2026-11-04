@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Logo, SegmentedControl } from "@low-stress/ui";
 import { useAuth } from "./features/auth";
 import { changeLocale, readLocalePreference, type LocalePreference } from "./i18n";
@@ -9,6 +9,13 @@ import { LoginPage } from "./pages/LoginPage";
 import { PendingPage } from "./pages/PendingPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ShowcasePage } from "./pages/ShowcasePage";
+import { AdminLayout } from "./pages/admin/AdminLayout";
+import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
+import { AdminApprovalsPage } from "./pages/admin/AdminApprovalsPage";
+import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
+import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+import { AdminAuditPage } from "./pages/admin/AdminAuditPage";
 import { applyTheme, readThemePreference, type ThemePreference } from "./theme";
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemePreference; key: string }> = [
@@ -24,6 +31,7 @@ const LOCALE_OPTIONS: ReadonlyArray<{ value: LocalePreference; key: string }> = 
 
 export function App() {
   const { t } = useTranslation();
+  const location = useLocation();
   const { user, loading } = useAuth();
   const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
   const [locale, setLocale] = useState<LocalePreference>(readLocalePreference);
@@ -41,6 +49,22 @@ export function App() {
     setLocale(value);
     changeLocale(value);
   };
+
+  // Rute panel admin mandiri
+  if (location.pathname.startsWith("/admin")) {
+    return (
+      <Routes>
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="approvals" element={<AdminApprovalsPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
+          <Route path="audit" element={<AdminAuditPage />} />
+        </Route>
+      </Routes>
+    );
+  }
 
   if (loading) {
     return (

@@ -744,6 +744,256 @@ body {
   color: var(--primary-hover);
 }
 
+/* ------------------------------- Admin --------------------------------- */
+
+.ls-admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+.ls-admin-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--primary);
+  color: #f6f1e7;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) 0;
+}
+
+.ls-admin-sidebar-header {
+  padding: 0 var(--space-4) var(--space-4);
+  border-bottom: 1px solid rgba(246, 241, 231, 0.2);
+  margin-bottom: var(--space-2);
+}
+
+.ls-admin-sidebar-title {
+  font-size: var(--font-h2);
+  font-weight: var(--weight-medium);
+  color: #f6f1e7;
+  margin: 0;
+}
+
+.ls-admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  padding: 0 var(--space-2);
+}
+
+.ls-admin-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: #f6f1e7;
+  text-decoration: none;
+  font-size: var(--font-body);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.ls-admin-nav-item:hover {
+  background: var(--primary-hover);
+}
+
+.ls-admin-nav-item.active {
+  background: var(--primary-hover);
+  font-weight: var(--weight-medium);
+}
+
+.ls-admin-badge {
+  background: var(--accent);
+  color: #ffffff;
+  border-radius: var(--radius-pill);
+  padding: 2px 6px;
+  font-size: var(--font-caption);
+  line-height: 1;
+}
+
+.ls-admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ls-admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-6);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  gap: var(--space-4);
+}
+
+.ls-admin-content {
+  padding: var(--space-6);
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  flex: 1;
+}
+
+.ls-admin-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.ls-admin-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.ls-admin-stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+
+.ls-admin-stat-number {
+  font-size: var(--font-display);
+  font-weight: var(--weight-medium);
+  color: var(--primary);
+  margin-top: var(--space-1);
+}
+
+.ls-admin-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+}
+
+.ls-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--font-small);
+}
+
+.ls-admin-table th {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-inset);
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+  border-bottom: 1px solid var(--border);
+}
+
+.ls-admin-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.ls-admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ls-admin-card-list {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .ls-admin-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform var(--dur-base) var(--ease-out);
+    box-shadow: var(--shadow-popover);
+  }
+
+  .ls-admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .ls-admin-header {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .ls-admin-content {
+    padding: var(--space-4);
+  }
+
+  .ls-admin-table-container {
+    display: none;
+  }
+
+  .ls-admin-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .ls-admin-mobile-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+
+.ls-admin-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgb(22 33 31 / 0.5);
+}
+
+.ls-admin-badge--deploy {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+
+.ls-admin-row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.ls-admin-row-item:last-child {
+  border-bottom: none;
+}
+
+.ls-admin-temp-password-box {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--font-h2);
+  text-align: center;
+  letter-spacing: 2px;
+  margin: var(--space-4) 0;
+  user-select: all;
+}
+
+.ls-admin-filter-control {
+  max-width: 20rem;
+}
+
 /* ------------------------------ Motion -------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,9 +4,9 @@ Sumber kebenaran isi tugas dan kriteria selesai: [ROADMAP.md](ROADMAP.md). File 
 Aturan: ikuti [Agents.md](../Agents.md). Kerjakan berurutan. Tandai `[x]` hanya bila kriteria selesai di ROADMAP terpenuhi, lalu catat tanggal dan catatan singkat di `docs/progress.md`.
 Bila terhalang (keputusan produk tidak ada di dokumen, tool gagal, konflik dokumen): **berhenti dan lapor ke pemilik**, jangan menebak dan jangan memutar jalan.
 
-## Lingkup eksekusi saat ini: Selesai Fase 2 (auth pemain)
+## Lingkup eksekusi saat ini: Selesai Fase 3 (panel admin)
 
-Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai.
+Fase 1 selesai kecuali P1-05, P1-10, P1-11 yang menunggu keputusan pemilik atau lingkungan; jangan dikerjakan. Fase 2 (P2-01 sampai P2-07) selesai. Fase 3 (P3-01 sampai P3-09) selesai.
 
 Fase 1 (referensi status):
 
@@ -33,9 +33,20 @@ Fase 2 (auth pemain):
 - [x] P2-06 Hapus akun sendiri (`DELETE /api/me`, konfirmasi password) + hook `sdk.onUserDeleted`
 - [x] P2-07 Rate limit register dan login per IP/akun; CAPTCHA proof-of-work self-hosted aktif hanya saat `DEPLOY_MODE=public`
 
+Fase 3 (Panel admin):
+
+- [x] P3-01 `tools/create-admin` (`pnpm create-admin`): meminta username dan password, menyimpan di tabel `admins`, password argon2id
+- [x] P3-02 Login admin terpisah (cookie `ls_admin`), middleware pemisah peran (admin dilarang main game, pemain dilarang akses admin)
+- [x] P3-03 Persetujuan: antrean `pending`, setujui/tolak satuan dan massal, penolakan memutus sesi, pencatatan di `audit_log`
+- [x] P3-04 Pengguna: cari, filter status, suspend, ban, aktifkan, reset password sementara (argon2id), hapus pengguna + data terkait
+- [x] P3-05 Pengaturan: mode pendaftaran (`approval`, `open`, `closed`), bahasa bawaan, jadwal global, status SMTP, limit pemain Ludo, chat toggle
+- [x] P3-06 `EmailAdapter` (`LogAdapter` bawaan, `SmtpAdapter` terprogram), endpoint uji email aktif hanya bila SMTP dikonfigurasi
+- [x] P3-07 Audit log (semua aksi admin yang mengubah data dicatat dengan pelaku, waktu, aksi, target, detail), filter aksi dan pagination
+- [x] P3-08 Dashboard admin: pemain aktif harian, game dimainkan, pendaftar baru hari ini, total pengguna per status, antrean persetujuan
+- [x] P3-09 UI admin responsif (`apps/web`): layout drawer di <= 767px (360px) dan sidebar di >= 1024px (1280px), tabel beralih ke kartu di mobile, dua bahasa (`id` dan `en`), tanpa nilai mentah
+
 ## Antrean berikutnya (belum diinstruksikan)
 
-- [ ] Fase 3 — Panel admin (P3-01..P3-09)
 - [ ] Fase 4 — Gerbang game (P4-01..P4-04)
 - [ ] Fase 5 — Memory Match dan leaderboard (P5-01..P5-05)
 - [ ] Fase 6 — Flappy Bird (P6-01..P6-04)

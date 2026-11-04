@@ -5,6 +5,7 @@ import { registerSW } from "virtual:pwa-register";
 import "@low-stress/ui/styles.css";
 import { App } from "./App";
 import { AuthProvider } from "./features/auth/AuthContext";
+import { AdminProvider } from "./features/admin/AdminContext";
 import "./i18n";
 
 // Service worker hanya meng-cache aset statis. Tanpa `onNeedRefresh` otomatis,
@@ -21,7 +22,9 @@ createRoot(container).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <AdminProvider>
+          <App />
+        </AdminProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

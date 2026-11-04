@@ -1,11 +1,13 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Database } from "@low-stress/db";
-import { type users } from "@low-stress/db";
+import { type admins, type users } from "@low-stress/db";
 import { AppError } from "../errors";
 import type { Env } from "../env";
 import {
+  ADMIN_COOKIE_NAME,
   CSRF_COOKIE_NAME,
   deleteAllUserSessions,
+  getAdminSession,
   getSessionUser,
   SESSION_COOKIE_NAME,
 } from "./session";
@@ -13,6 +15,7 @@ import {
 declare module "fastify" {
   interface FastifyRequest {
     user?: typeof users.$inferSelect;
+    admin?: typeof admins.$inferSelect;
   }
 }
 
@@ -22,6 +25,13 @@ export function createAuthMiddleware(db: Database) {
   ): Promise<void> {
     const rawToken = request.cookies[SESSION_COOKIE_NAME];
     if (!rawToken) {
+      const adminToken = request.cookies[ADMIN_COOKIE_NAME];
+      if (adminToken) {
+        const adminResult = await getAdminSession(db, adminToken);
+        if (adminResult) {
+          throw new AppError("FORBIDDEN", 403);
+        }
+      }
       throw new AppError("UNAUTHENTICATED", 401);
     }
 
@@ -47,6 +57,45 @@ export function createAuthMiddleware(db: Database) {
     }
 
     request.user = user;
+  };
+}
+
+export function createAdminAuthMiddleware(db: Database) {
+  return async function requireAdminAuth(
+    request: FastifyRequest,
+  ): Promise<void> {
+    const rawToken = request.cookies[ADMIN_COOKIE_NAME];
+    if (!rawToken) {
+      const userToken = request.cookies[SESSION_COOKIE_NAME];
+      if (userToken) {
+        const userResult = await getSessionUser(db, userToken);
+        if (userResult) {
+          throw new AppError("FORBIDDEN", 403);
+        }
+      }
+      throw new AppError("UNAUTHENTICATED", 401);
+    }
+
+    const result = await getAdminSession(db, rawToken);
+    if (!result) {
+      throw new AppError("UNAUTHENTICATED", 401);
+    }
+
+    request.admin = result.admin;
+  };
+}
+
+export function createGameGateMiddleware(db: Database) {
+  return async function requireGameGate(
+    request: FastifyRequest,
+  ): Promise<void> {
+    const adminToken = request.cookies[ADMIN_COOKIE_NAME];
+    if (adminToken) {
+      const adminResult = await getAdminSession(db, adminToken);
+      if (adminResult) {
+        throw new AppError("FORBIDDEN", 403);
+      }
+    }
   };
 }
 
@@ -121,7 +170,11 @@ export function applySecurityHeaders(
   }
 
   // Header no-store untuk respons yang terautentikasi atau sensitif
-  if (request.url.startsWith("/api/me") || request.url.startsWith("/api/auth/")) {
+  if (
+    request.url.startsWith("/api/me") ||
+    request.url.startsWith("/api/auth/") ||
+    request.url.startsWith("/api/admin/")
+  ) {
     reply.header("Cache-Control", "no-store");
   }
 }

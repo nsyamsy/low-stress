@@ -1,4 +1,4 @@
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, or } from "drizzle-orm";
 import type { Database } from "@low-stress/db";
 import {
   chatMessages,
@@ -42,11 +42,14 @@ export async function getRegistrationMode(
   db: Database,
   env: Env,
 ): Promise<RegistrationMode> {
-  const [row] = await db
+  const rows = await db
     .select()
     .from(settings)
-    .where(eq(settings.key, "registration_mode"))
-    .limit(1);
+    .where(or(eq(settings.key, "registration"), eq(settings.key, "registration_mode")));
+
+  const row =
+    rows.find((r) => r.key === "registration_mode") ??
+    rows.find((r) => r.key === "registration");
 
   if (row && typeof row.value === "string") {
     if (
@@ -82,13 +85,27 @@ export async function getPublicConfig(db: Database, env: Env) {
   const registration = await getRegistrationMode(db, env);
   const captcha = await isCaptchaRequired(db, env);
 
+  const [localeRow] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, "defaultLocale"))
+    .limit(1);
+  const defaultLocale = (typeof localeRow?.value === "string" ? localeRow.value : env.DEFAULT_LOCALE) as "auto" | "id" | "en";
+
+  const [chatRow] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, "chatEnabled"))
+    .limit(1);
+  const chatEnabled = typeof chatRow?.value === "boolean" ? chatRow.value : true;
+
   return {
     registration,
     captcha,
     emailEnabled: smtpConfigured(env),
-    defaultLocale: env.DEFAULT_LOCALE,
+    defaultLocale,
     deployMode: env.DEPLOY_MODE,
-    chatEnabled: true,
+    chatEnabled,
   };
 }
 

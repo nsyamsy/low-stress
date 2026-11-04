@@ -129,5 +129,115 @@
       "captchaFailed": "Verifikasi CAPTCHA gagal. Coba lagi.",
       "generic": "Terjadi kesalahan. Coba beberapa saat lagi."
     }
+  },
+  "admin": {
+    "nav": {
+      "title": "Panel Admin",
+      "dashboard": "Dashboard",
+      "approvals": "Persetujuan",
+      "users": "Pengguna",
+      "settings": "Pengaturan",
+      "audit": "Audit log",
+      "logout": "Keluar",
+      "backToSite": "Ke situs utama",
+      "menu": "Menu"
+    },
+    "header": {
+      "deployMode": "Mode deploy: {{mode}}"
+    },
+    "login": {
+      "title": "Login Admin",
+      "subtitle": "Masuk ke panel pengelolaan Low Stress",
+      "username": "Username admin",
+      "password": "Password",
+      "submit": "Masuk sebagai admin"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "activeToday": "Aktif hari ini",
+      "pending": "Menunggu persetujuan",
+      "runsToday": "Game dimainkan hari ini",
+      "newRegistrations7d": "Pendaftar baru 7 hari",
+      "pendingSection": "Menunggu persetujuan",
+      "runsByGame": "Game dimainkan per game",
+      "noPending": "Tidak ada pendaftar yang menunggu persetujuan.",
+      "noRuns": "Belum ada game yang dimainkan hari ini."
+    },
+    "approvals": {
+      "title": "Persetujuan Pengguna",
+      "empty": "Tidak ada pendaftar yang menunggu persetujuan.",
+      "selectAll": "Pilih semua",
+      "selectedCount": "{{count}} terpilih",
+      "bulkApprove": "Setujui terpilih",
+      "bulkReject": "Tolak terpilih",
+      "approve": "Setujui",
+      "reject": "Tolak"
+    },
+    "users": {
+      "title": "Manajemen Pengguna",
+      "searchPlaceholder": "Cari username, nama, email…",
+      "all": "Semua",
+      "pending": "Pending",
+      "active": "Aktif",
+      "suspended": "Ditangguhkan",
+      "banned": "Diblokir",
+      "rejected": "Ditolak",
+      "colUsername": "Username",
+      "colName": "Nama",
+      "colEmail": "Email",
+      "colStatus": "Status",
+      "colJoined": "Bergabung",
+      "colLastLogin": "Login terakhir",
+      "colActions": "Aksi",
+      "suspend": "Tangguhkan",
+      "ban": "Blokir",
+      "activate": "Aktifkan",
+      "resetPassword": "Reset password",
+      "delete": "Hapus akun",
+      "empty": "Pengguna tidak ditemukan."
+    },
+    "settings": {
+      "title": "Pengaturan Sistem",
+      "registration": "Mode Pendaftaran",
+      "regApproval": "Approval admin",
+      "regOpen": "Terbuka",
+      "regClosed": "Ditutup",
+      "defaultLocale": "Bahasa Bawaan",
+      "localeAuto": "Ikuti browser",
+      "localeId": "Indonesia",
+      "localeEn": "English",
+      "globalSchedule": "Jadwal Global",
+      "scheduleActive": "Aktifkan pembatasan jadwal",
+      "chat": "Chat Publik",
+      "chatEnabled": "Aktifkan chat publik",
+      "ludo": "Ludo",
+      "ludoMaxPlayers": "Maks. pemain (2–12)",
+      "smtp": "Status SMTP (Email)",
+      "smtpConfigured": "Terhubung",
+      "smtpNotConfigured": "Belum dikonfigurasi",
+      "smtpNotice": "Diisi lewat .env. Saat aktif: verifikasi email, lupa password, notifikasi.",
+      "testEmail": "Kirim email uji",
+      "testEmailPrompt": "Masukkan email tujuan uji:",
+      "saveSuccess": "Pengaturan berhasil diperbarui."
+    },
+    "audit": {
+      "title": "Audit Log",
+      "colTime": "Waktu",
+      "colAdmin": "Admin",
+      "colAction": "Aksi",
+      "colTarget": "Target",
+      "colDetail": "Detail",
+      "empty": "Belum ada catatan audit."
+    },
+    "modal": {
+      "confirmTitle": "Konfirmasi Aksi",
+      "confirmDelete": "Apakah kamu yakin ingin menghapus akun ini? Seluruh data skor dan pesan akan terhapus permanen.",
+      "confirmBan": "Apakah kamu yakin ingin memblokir akun ini? Seluruh sesi aktif akan diputus seketika.",
+      "tempPasswordTitle": "Password Sementara",
+      "tempPasswordNotice": "Salin password sementara ini sekarang. Password ini hanya ditampilkan sekali:",
+      "copy": "Salin",
+      "copied": "Tersalin!",
+      "close": "Tutup"
+    }
   }
 }

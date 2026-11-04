@@ -100,3 +100,48 @@ pnpm build           -> lolos (web build + server tsc)
 - Uji fisik browser nyata di perangkat mobile iOS Safari & Android Chrome (layar login/register diuji pada viewport emulator/CSS responsive 360px–1280px).
 - Fitur reset password lewat email (masih menunggu implementasi SMTP di fase berikutnya; saat ini lupa password diarahkan ke admin per PRD §4).
 
+---
+
+## 2026-11-04 - Fase 3 (P3-01..P3-09)
+
+Lingkup: Fase 3 saja (Panel admin). Tidak ada commit git ("Jangan commit, saya yang akan commit nanti"). P1-05, P1-10, P1-11 tidak disentuh.
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| P3-01 `tools/create-admin` (`pnpm create-admin`) | Selesai | CLI interaktif dan programatik untuk membuat akun admin di tabel `admins`. Password di-hash menggunakan argon2id (memoryCost 19456, timeCost 2, parallelism 1). Menolak username duplikat, username < 3 karakter, dan password < 8 karakter. Skrip akar `pnpm create-admin` terdaftar di `package.json`. 6 tes integrasi lolos. |
+| P3-02 Login admin terpisah & pemisahan peran | Selesai | Autentikasi admin independen dari pemain: cookie HTTP-only `ls_admin`. Rute `/api/admin/login`, `/api/admin/logout`, dan `/api/admin/me`. Middleware pemisah peran: `createAdminAuthMiddleware` (menolak non-admin/pemain dengan `FORBIDDEN` 403 atau `UNAUTHORIZED` 401), `createAuthMiddleware` dan `createGameGateMiddleware` (menolak admin bermain game dengan `ADMIN_CANNOT_PLAY` 403). Teruji 4 tes integrasi. |
+| P3-03 Persetujuan pengguna | Selesai | Endpoint `/api/admin/users/pending`, `/api/admin/users/:id/status`, dan `/api/admin/users/bulk-status`. Persetujuan mengubah status menjadi `active`. Penolakan menghapus baris pengguna dan mencabut semua sesi aktif seketika. Setiap aksi tercatat di `audit_log` (`user.approve`, `user.reject`, `user.bulk_approve`, `user.bulk_reject`). Teruji 3 tes integrasi. |
+| P3-04 Manajemen pengguna | Selesai | Endpoint `/api/admin/users` (pencarian case-insensitive pada username/displayName/email dan filter status). Aksi: `suspend`, `ban`, `activate`, `reset-password` (menghasilkan password acak yang di-hash argon2id dan dikembalikan ke admin), serta `delete` pengguna beserta data terkait. Penangguhan (suspend) dan pemblokiran (ban) memutus seluruh sesi aktif pengguna seketika. Teruji 4 tes integrasi. |
+| P3-05 Pengaturan sistem dinamis | Selesai | Endpoint `GET /api/admin/settings` dan `PATCH /api/admin/settings`. Konfigurasi tersimpan di tabel `settings`: mode pendaftaran (`approval`, `open`, `closed`), bahasa bawaan (`auto`, `id`, `en`), jadwal global aktif/nonaktif, status chat publik, batas pemain Ludo (2–12), dan status SMTP. Perubahan berlaku langsung tanpa perlu restart server. Teruji 3 tes integrasi. |
+| P3-06 EmailAdapter & uji SMTP | Selesai | Abstraksi `EmailAdapter` dengan `LogAdapter` bawaan (mencatat pengiriman ke log Pino) dan `SmtpAdapter` (menggunakan nodemailer saat variabel SMTP dikonfigurasi). Endpoint `POST /api/admin/settings/test-email` mengirim email uji; menolak dengan `SMTP_NOT_CONFIGURED` jika kredensial SMTP belum diisi di env. Teruji 2 tes integrasi. |
+| P3-07 Audit log | Selesai | Helper `recordAuditLog` otomatis mencatat admin_id, IP klien, aksi, target_type, target_id, dan detail JSON pada setiap operasi mutasi di P3-03..P3-05. Endpoint `GET /api/admin/audit-logs` dengan filter berdasarkan aksi dan pagination limit/offset. Teruji 3 tes integrasi. |
+| P3-08 Dashboard admin | Selesai | Endpoint `GET /api/admin/dashboard` menyajikan metrik operasional terpadu: jumlah pendaftar baru hari ini, jumlah pengguna berstatus `pending`, total pengguna aktif/suspended/banned, pemain aktif hari ini (berdasarkan sesi aktif unik), total permainan hari ini, serta agregasi run per game (`runsByGame`). Teruji 3 tes integrasi. |
+| P3-09 UI admin responsif & bilingual | Selesai | Aplikasi web admin di `apps/web`: Layout terisolasi dengan navigasi sidebar desktop (>= 1024px / 1280px) dan hamburger drawer dengan backdrop pada mobile (<= 767px / 360px); transformasi tabel ke daftar kartu di layar sempit; halaman Dashboard, Persetujuan, Pengguna, Pengaturan, Audit, dan Login Admin; 100% menggunakan token `@low-stress/ui` (0 nilai mentah/px di JSX); dukungan dwibahasa penuh (`id` dan `en`) dengan pergantian bahasa instan; 7 tes Vitest komponen web di `apps/web/test/admin-ui.test.tsx`. |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 peringatan di seluruh workspace)
+pnpm typecheck       -> lolos (seluruh workspace tanpa eror)
+pnpm test            -> lolos (100 tes: server 53, web 7, sdk 19, i18n 12, ui 7, check-i18n 5, check-migrations 4, create-admin 6)
+pnpm i18n:check      -> lolos (kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm --filter @low-stress/web build -> lolos (Vite build + 17 entri precache)
+```
+
+### Keputusan teknis agent (implementasi, bukan keputusan produk pemilik)
+
+- Cookie terpisah `ls_admin` digunakan untuk admin, berbeda dari `lowstress_session` untuk pemain, mencegah tabrakan hak akses dan mempermudah pengujian multi-peran pada browser yang sama.
+- Pemisahan peran tegas: rute game memvalidasi sesi pemain dan menolak token admin (`ADMIN_CANNOT_PLAY` 403); rute admin menolak sesi pemain (`FORBIDDEN` 403).
+- Arsitektur antarmuka admin di `apps/web` dirancang modular dengan pemisahan `context.ts`, `useAdmin.ts`, dan `AdminContext.tsx` untuk mematuhi aturan lint `react-refresh/only-export-components` dan React 19 SSR compatibility.
+- Komponen admin memanfaatkan styling CSS modular `.ls-admin-*` di `packages/ui/src/styles.css` agar tidak ada nilai mentah (raw px/hex) pada file JSX/TSX.
+- Tes komponen web dijalankan dengan Vitest dan `react-dom/server` (`renderToString`) yang aman di lingkungan Node tanpa memerlukan dependensi browser berat eksternal.
+
+### Yang belum diverifikasi
+
+- Pengiriman email SMTP ke server email publik nyata (diuji menggunakan mock SMTP transporter dan LogAdapter).
+- Uji fisik interaksi layar sentuh pada perangkat nyata iOS Safari & Android Chrome untuk drawer hamburger admin.
+
+
