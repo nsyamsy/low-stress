@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import type { Database } from "@low-stress/db";
-import { AppError } from "../errors";
+import type { Database } from "@low-stress/sdk/server";
+import { AppError } from "./errors";
 import {
   createRoom,
   deleteRoom,
@@ -18,7 +18,10 @@ const createRoomSchema = z.object({
 });
 
 function getActor(request: FastifyRequest): LudoActor {
-  const user = request.user;
+  const reqWithUser = request as FastifyRequest & {
+    user?: { id: string; username: string; displayName: string };
+  };
+  const user = reqWithUser.user;
   if (!user) {
     throw new AppError("UNAUTHENTICATED", 401);
   }

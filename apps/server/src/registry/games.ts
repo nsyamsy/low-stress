@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -98,3 +99,69 @@ export async function syncGameRegistry(
 
 /** Path default, diekspor untuk tes dan tooling. */
 export const GAMES_DIR = DEFAULT_GAMES_DIR;
+
+import type { FastifyInstance } from "fastify";
+import type { Server as SocketIOServer } from "socket.io";
+import type { GameServerContext, GameServerModule, GameJob } from "@low-stress/sdk/server";
+
+export interface InitializedGameServer {
+  id: string;
+  module: GameServerModule;
+  jobs: GameJob[];
+}
+
+export async function loadGameServerModules(
+  loaded: readonly LoadedGame[],
+  ctx: GameServerContext,
+  app: FastifyInstance,
+  io?: SocketIOServer,
+): Promise<InitializedGameServer[]> {
+  const initialized: InitializedGameServer[] = [];
+
+  for (const { manifest } of loaded) {
+    try {
+      let serverModule: GameServerModule | undefined;
+      if (manifest.server) {
+        serverModule = await manifest.server();
+      } else {
+        const serverPathTs = resolve(GAMES_DIR, manifest.id, "server/index.ts");
+        const serverPathJs = resolve(GAMES_DIR, manifest.id, "server/index.js");
+        const serverFile = existsSync(serverPathTs)
+          ? serverPathTs
+          : existsSync(serverPathJs)
+            ? serverPathJs
+            : null;
+        if (serverFile) {
+          const mod = await import(pathToFileURL(serverFile).href);
+          serverModule = (mod.serverModule ?? mod.default) as GameServerModule;
+        }
+      }
+
+      if (!serverModule) continue;
+
+      if (serverModule.registerRoutes) {
+        await serverModule.registerRoutes(app, ctx);
+      }
+
+      if (serverModule.registerRealtime && io) {
+        await serverModule.registerRealtime(io, ctx);
+      }
+
+      let jobs: GameJob[] = [];
+      if (serverModule.registerJobs) {
+        jobs = await serverModule.registerJobs(ctx);
+      }
+
+      initialized.push({
+        id: manifest.id,
+        module: serverModule,
+        jobs,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Gagal memuat modul server game '${manifest.id}':`, msg);
+    }
+  }
+
+  return initialized;
+}

@@ -1,15 +1,21 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import type { Database } from "@low-stress/db";
+
 import {
-  ludoMessages,
-  ludoPlayers,
-  ludoRooms,
-  settings,
+  type Database,
   users,
-} from "@low-stress/db";
-import { censorServerText } from "../chat/profanity-service";
-import { AppError } from "../errors";
+  ludoRooms,
+  ludoPlayers,
+  ludoMessages,
+  settings,
+  eq,
+  and,
+  sql,
+  desc,
+  inArray,
+} from "@low-stress/sdk/server";
+import { censorProfanity } from "@low-stress/sdk";
+const censorServerText = (t: string) => censorProfanity(t);
+import { AppError } from "./errors";
 import {
   autoMove,
   defaultPawns,
@@ -26,7 +32,7 @@ import {
   type LastEvent,
   type LudoState,
   type PawnCharacter,
-} from "./engine";
+} from "../shared/engine";
 import type {
   ChatMessage,
   LudoAction,
@@ -279,6 +285,7 @@ export async function loadPlayers(
     .innerJoin(users, eq(users.id, ludoPlayers.userId))
     .where(eq(ludoPlayers.roomId, roomId))
     .orderBy(
+      sql`CASE WHEN ${ludoPlayers.userId} = (SELECT host_id FROM ludo_rooms WHERE id = ${roomId}) THEN 0 ELSE 1 END`,
       sql`${ludoPlayers.joinedAt} NULLS LAST`,
       ludoPlayers.invitedAt,
     );

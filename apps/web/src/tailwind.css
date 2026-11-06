@@ -1,0 +1,27 @@
+/*
+ * Tailwind untuk kelas utilitas di halaman leaderboard dan UI game.
+ *
+ * Urutan layer: gaya tak berlayer (kelas `.ls-*` dari @low-stress/ui) selalu
+ * mengalahkan layer Tailwind, jadi halaman yang sudah memakai token desain
+ * tidak berubah. Warna dan jarak tetap berasal dari token (`var(--...)`).
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Game dan paket UI berada di luar folder apps/web. */
+@source "../../../games";
+@source "../../../packages/ui/src";
+
+/* Mode gelap mengikuti atribut data-theme dan preferensi sistem, sama seperti token desain. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}

@@ -17,7 +17,11 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^17.1.12",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "socket.io": "^4.8.4",
+    "fastify": "^5.0.0",
+    "zod": "^4.0.0",
+    "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

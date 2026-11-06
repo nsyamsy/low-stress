@@ -43,7 +43,11 @@ export async function recordFailedAttempt(
     .limit(1);
 
   const now = new Date();
-  const nextCount = (existing?.count ?? 0) + 1;
+  // Kunci yang sudah kedaluwarsa dimulai dari nol; tanpa ini satu kegagalan
+  // setelah kunci berakhir langsung mengunci lagi karena hitungan masih 5.
+  const lockExpired = Boolean(existing?.lockedUntil && existing.lockedUntil <= now);
+  const previousCount = lockExpired ? 0 : (existing?.count ?? 0);
+  const nextCount = previousCount + 1;
   const shouldLock = nextCount >= MAX_ATTEMPTS;
   const lockedUntil = shouldLock
     ? new Date(now.getTime() + LOCKOUT_DURATION_MS)
@@ -60,7 +64,7 @@ export async function recordFailedAttempt(
       target: loginAttempts.key,
       set: {
         count: nextCount,
-        lockedUntil: shouldLock ? lockedUntil : existing?.lockedUntil ?? null,
+        lockedUntil: shouldLock ? lockedUntil : lockExpired ? null : (existing?.lockedUntil ?? null),
       },
     });
 }

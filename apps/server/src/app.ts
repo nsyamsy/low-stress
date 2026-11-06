@@ -12,12 +12,23 @@ import { registerChatRoutes } from "./chat/routes";
 import { setupPublicChatSocket } from "./chat/socket";
 import { startPurgeChatJob } from "./chat/purge";
 import { initBannedWords } from "./chat/profanity-service";
-import { startLudoExpirationJob } from "./ludo/expiration";
-import type { AutopilotOptions } from "./ludo/autopilot";
-import { setupLudoSocket } from "./ludo/socket";
+
+export type AutopilotOptions = Record<string, unknown>;
+
 import type { Env } from "./env";
 import { createErrorHandler, errorBody, notFoundHandler } from "./errors";
-import type { LoadedGame } from "./registry/games";
+
+import { scanGameManifests, loadGameServerModules, type LoadedGame } from "./registry/games";
+import { checkGameGate } from "./games/service";
+import { recordScore } from "./games/scores";
+import {
+  getSessionUser,
+  getAdminSession,
+  SESSION_COOKIE_NAME,
+  ADMIN_COOKIE_NAME,
+} from "./auth/session";
+import type { GameServerContext } from "@low-stress/sdk/server";
+
 
 export interface BuildAppOptions {
   env: Env;
@@ -111,8 +122,6 @@ export async function buildApp({
       },
     });
 
-    const { autopilot } = setupLudoSocket(io, db, ludoAutopilot);
-    const expirationJob = startLudoExpirationJob(db, io);
     const chatSocket = setupPublicChatSocket(io, db);
     const purgeChatJob = startPurgeChatJob(db);
     app.decorate("io", io);
@@ -121,19 +130,80 @@ export async function buildApp({
     // Inisialisasi banned words cache
     void initBannedWords(db);
 
+    const gameList = games ?? (await scanGameManifests().catch(() => []));
+    const parseCookieHeader = (header?: string): Record<string, string> => {
+      if (!header) return {};
+      const res: Record<string, string> = {};
+      for (const pair of header.split(";")) {
+        const [k, ...v] = pair.trim().split("=");
+        if (k) res[k] = decodeURIComponent(v.join("="));
+      }
+      return res;
+    };
+
+    const gameContext: GameServerContext = {
+      db,
+      io,
+      env,
+      options: { ludoAutopilot },
+      checkGameGate: async (gameId: string) => {
+        await checkGameGate(db, gameId);
+      },
+      recordScore: async (params) => recordScore({ ...params, db }),
+      resolvePrincipal: async (cookieHeader?: string) => {
+        const cookies = parseCookieHeader(cookieHeader);
+        const sessionToken = cookies[SESSION_COOKIE_NAME];
+        const adminToken = cookies[ADMIN_COOKIE_NAME];
+        if (sessionToken) {
+          const res = await getSessionUser(db, sessionToken);
+          if (res && res.user.status === "active") {
+            return {
+              kind: "user" as const,
+              user: {
+                id: res.user.id,
+                username: res.user.username,
+                displayName: res.user.displayName,
+                status: res.user.status,
+              },
+            };
+          }
+        }
+        if (adminToken) {
+          const res = await getAdminSession(db, adminToken);
+          if (res) {
+            return {
+              kind: "admin" as const,
+              admin: { id: res.admin.id, username: res.admin.username },
+            };
+          }
+        }
+        return { kind: "none" as const };
+      },
+    };
+
+    const initializedGameServers = await loadGameServerModules(gameList, gameContext, app, io);
+
     app.addHook("onClose", async () => {
       purgeChatJob.stop();
-      expirationJob.stop();
-      autopilot.stopAll();
+      for (const ig of initializedGameServers) {
+        if (ig.jobs) {
+          for (const job of ig.jobs) {
+            if (job.stop) job.stop();
+          }
+        }
+        if (ig.module.dispose) {
+          await ig.module.dispose();
+        }
+      }
       io.disconnectSockets(true);
       await new Promise<void>((resolve) => {
         io.close(() => resolve());
       });
     });
 
-    await registerAuthRoutes(app, { db, env, games });
-    await registerAdminRoutes(app, { db, env, games });
-    await registerGameRoutes(app, { db, env, games });
+    await registerAuthRoutes(app, { db, env, games: gameList });
+    await registerAdminRoutes(app, { db, env, games: gameList });
+    await registerGameRoutes(app, { db, env, games: gameList });
     await registerChatRoutes(app, { db });
   }
 

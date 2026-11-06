@@ -7,6 +7,26 @@ name: low-stress
 # Salin `.env.example` menjadi `.env` sebelum menjalankan compose.
 
 services:
+  db-test:
+    image: postgres:16-alpine
+    profiles: ["test"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-low_stress}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-low_stress}
+      POSTGRES_DB: low_stress_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   db:
     image: postgres:16-alpine
     profiles: ["lan", "public"]

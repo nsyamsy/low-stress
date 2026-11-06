@@ -131,6 +131,45 @@
       "generic": "Something went wrong. Please try again shortly."
     }
   },
+  "profile": {
+    "title": "Profile",
+    "account": "Account",
+    "username": "Username",
+    "displayName": "Display name",
+    "displayNameHelp": "Shown on the leaderboard and in chat.",
+    "email": "Email",
+    "emailUnverified": "Not verified",
+    "emailVerified": "Verified",
+    "saved": "Changes saved",
+    "saveFailed": "Could not save. Try again.",
+    "preferences": "Preferences",
+    "preferencesHint": "Saved to your account, so they follow you on any device.",
+    "password": {
+      "title": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "submit": "Change password",
+      "success": "Password changed",
+      "wrongCurrent": "Current password is incorrect.",
+      "weak": "Password must be at least 8 characters and cannot match username."
+    },
+    "install": {
+      "title": "Install app",
+      "description": "Add Low Stress to your home screen.",
+      "action": "Install"
+    },
+    "session": "Session",
+    "danger": {
+      "title": "Delete account",
+      "warning": "This permanently deletes your account, scores, and play history. Your chat messages stay as \"Deleted user\".",
+      "action": "Delete account",
+      "confirmTitle": "Delete your account?",
+      "confirmBody": "This cannot be undone. Enter your password to confirm.",
+      "password": "Password",
+      "confirm": "Delete account",
+      "failed": "Could not delete the account. Check your password and try again."
+    }
+  },
   "admin": {
     "nav": {
       "title": "Admin Panel",

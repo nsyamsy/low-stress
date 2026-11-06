@@ -30,6 +30,16 @@ export function AdminLayout() {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Laci menu (layar sempit): tutup dengan Esc.
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mobileMenuOpen]);
+
   useEffect(() => {
     fetchPublicConfig()
       .then((cfg) => setDeployMode(cfg.deployMode))
@@ -187,6 +197,7 @@ export function AdminLayout() {
               to="/"
               className="ls-admin-nav-item"
               style={{ opacity: 0.8 }}
+              onClick={() => setMobileMenuOpen(false)}
             >
               ← {t("admin.nav.backToSite")}
             </Link>
@@ -200,13 +211,7 @@ export function AdminLayout() {
           <div className="ls-row" style={{ gap: "var(--space-3)" }}>
             <button
               type="button"
-              className="ls-link"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                padding: "var(--space-1) var(--space-2)",
-              }}
+              className="ls-link ls-admin-menu-toggle"
               aria-expanded={mobileMenuOpen}
               aria-controls="admin-sidebar"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

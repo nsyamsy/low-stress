@@ -35,11 +35,48 @@ export interface GameUserDeletedContext {
   db: unknown;
 }
 
+/** Definisi job berkala milik game. */
+export interface GameJob {
+  name: string;
+  intervalMs: number;
+  run: (ctx: GameServerContext) => Promise<void> | void;
+  stop?: () => void;
+}
+
+/** Konteks lingkungan server yang diberikan saat modul server game diinisialisasi. */
+export interface GameServerContext {
+  db: unknown;
+  io?: unknown;
+  env?: unknown;
+  logger?: unknown;
+  options?: Record<string, unknown>;
+  checkGameGate?: (gameId: string) => Promise<unknown>;
+  resolvePrincipal?: (cookieHeader?: string) => Promise<{
+    kind: "user" | "admin" | "none";
+    user?: { id: string; username: string; displayName: string; status: string };
+    admin?: { id: string; username: string };
+  }>;
+  recordScore?: (params: {
+    gameId: string;
+    userId: string;
+    score: number;
+    durationMs?: number;
+    flagged?: boolean;
+    metadata?: Record<string, unknown>;
+  }) => Promise<unknown>;
+}
+
 export interface GameServerModule {
-  /** Daftarkan rute khusus game pada instance Fastify. */
-  registerRoutes?: (app: unknown) => void | Promise<void>;
+  /** Daftarkan rute REST khusus game pada instance Fastify. */
+  registerRoutes?: (app: unknown, ctx: GameServerContext) => void | Promise<void>;
+  /** Daftarkan handler Socket.IO namespace per game. */
+  registerRealtime?: (io: unknown, ctx: GameServerContext) => void | Promise<void>;
+  /** Daftarkan background jobs berkala milik game. */
+  registerJobs?: (ctx: GameServerContext) => GameJob[] | Promise<GameJob[]>;
   /** Bersihkan data milik pengguna yang menghapus akunnya. */
   onUserDeleted?: (context: GameUserDeletedContext) => void | Promise<void>;
+  /** Cleanup saat server ditutup. */
+  dispose?: () => void | Promise<void>;
 }
 
 /** Kontrak satu game. Satu-satunya titik masuk dari registry. */

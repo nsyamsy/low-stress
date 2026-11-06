@@ -95,10 +95,11 @@ describe("Admin UI (P3-09)", () => {
   });
 
   describe("Responsivitas CSS Admin (360px mobile vs 1280px desktop)", () => {
+    // Normalkan CRLF (checkout Windows) agar pencocokan blok CSS tidak bergantung pada akhir baris.
     const css = readFileSync(
       new URL("../../../packages/ui/src/styles.css", import.meta.url),
       "utf8",
-    );
+    ).replace(/\r\n/g, "\n");
 
     it("memiliki aturan media query 767px untuk viewport 360px (mobile drawer)", () => {
       expect(css).toContain("@media (max-width: 767px)");

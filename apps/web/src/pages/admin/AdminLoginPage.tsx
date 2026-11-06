@@ -29,9 +29,14 @@ export function AdminLoginPage() {
       await login(username.trim(), password);
       navigate("/admin");
     } catch (err: unknown) {
-      const code = (err as { apiError?: { code?: string } })?.apiError?.code;
+      const apiError = (err as { apiError?: { code?: string; params?: Record<string, unknown> } })
+        ?.apiError;
+      const code = apiError?.code;
       if (code === "AUTH_INVALID_CREDENTIALS") {
         setErrorMsg(t("auth.error.invalidCredentials"));
+      } else if (code === "AUTH_LOCKED") {
+        const seconds = (apiError?.params?.retryAfterSec as number | undefined) ?? 60;
+        setErrorMsg(t("auth.login.lockoutMessage", { seconds }));
       } else {
         setErrorMsg(t("auth.error.generic"));
       }

@@ -8,6 +8,7 @@
   "roomName": "Room name",
   "roomNamePh": "e.g. Chill Room",
   "maxPlayers": "Max. players",
+  "playerCountOption": "{{count}} players",
   "joinAsPlayer": "Join as a player",
   "joinAsPlayerHint": "If toggled off, you only manage the room without taking a player seat.",
   "accept": "Join",

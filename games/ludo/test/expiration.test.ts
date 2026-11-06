@@ -5,31 +5,28 @@ import {
   ludoMessages,
   ludoPlayers,
   ludoRooms,
-  runGameMigrations,
   users,
+  eq,
   type Database,
-} from "@low-stress/db";
-import { eq } from "drizzle-orm";
-import { hashPassword } from "../src/auth/password";
-import { readEnv } from "../src/env";
+} from "@low-stress/sdk/server";
 import {
   expireInactiveRooms,
   startLudoExpirationJob,
-} from "../src/ludo/expiration";
+} from "../server/expiration";
 
 if (typeof process.loadEnvFile === "function") {
   try {
-    process.loadEnvFile("../../.env");
+    process.loadEnvFile("../../.env.test");
   } catch {
     try {
-      process.loadEnvFile(".env");
+      process.loadEnvFile("../../.env");
     } catch {
       // Abaikan
     }
   }
 }
 
-const env = readEnv();
+const dbUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
 describe("P7-06: Ludo Room Expiration Job (> 7 Days Inactive)", () => {
   let dbHandle: ReturnType<typeof createDb>;
@@ -37,11 +34,12 @@ describe("P7-06: Ludo Room Expiration Job (> 7 Days Inactive)", () => {
   let testUser: typeof users.$inferSelect;
 
   beforeAll(async () => {
-    dbHandle = createDb(env.DATABASE_URL);
+    if (!dbUrl) {
+      throw new Error("DATABASE_URL atau TEST_DATABASE_URL wajib diatur");
+    }
+    dbHandle = createDb(dbUrl);
     db = dbHandle.db;
-    await runGameMigrations(dbHandle.sql);
 
-    const pwHash = await hashPassword("LudoPass123!");
     const timeSuffix = (Date.now() % 1000000).toString(36) + "_exp";
 
     const [u] = await db
@@ -50,7 +48,7 @@ describe("P7-06: Ludo Room Expiration Job (> 7 Days Inactive)", () => {
         username: `exp_u_${timeSuffix}`,
         displayName: "User Expire",
         email: `exp_u_${timeSuffix}@example.com`,
-        passwordHash: pwHash,
+        passwordHash: "dummy_hash_for_test",
         status: "active",
       })
       .returning();
@@ -58,7 +56,12 @@ describe("P7-06: Ludo Room Expiration Job (> 7 Days Inactive)", () => {
   });
 
   afterAll(async () => {
-    await dbHandle.sql.end();
+    if (testUser) {
+      await db.delete(users).where(eq(users.id, testUser.id));
+    }
+    if (dbHandle) {
+      await dbHandle.sql.end();
+    }
   });
 
   it("deletes rooms inactive > 7 days and preserves active rooms", async () => {

@@ -97,6 +97,8 @@ low-stress/
 ```text
 games/<id>/
 ├─ manifest.ts       identitas dan konfigurasi (satu-satunya titik masuk)
+├─ icon.svg          ikon persegi 64x64
+├─ thumbnail.svg     gambar kartu di beranda, rasio 400x180 (ditemukan otomatis lewat nama berkas)
 ├─ client/           UI game (React, Canvas 2D, SVG, atau scene Phaser: dipilih per game)
 ├─ server/           validasi skor, rute atau handler realtime khusus
 ├─ shared/           tipe dan engine murni (dipakai klien dan server)

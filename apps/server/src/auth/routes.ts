@@ -19,6 +19,7 @@ import {
 } from "./service";
 import {
   clearSessionCookie,
+  CSRF_COOKIE_NAME,
   generateToken,
   SESSION_COOKIE_NAME,
   setCsrfCookie,
@@ -49,8 +50,13 @@ export async function registerAuthRoutes(
   const verifyCsrf = createCsrfMiddleware(env);
 
   // GET /api/csrf
+  // Token dipakai ulang selama cookie-nya masih ada. Cookie `ls_csrf` dibagi oleh
+  // semua tab; jika tiap panggilan membuat token baru, tab lain yang sudah
+  // menyimpan token lama akan ditolak `CSRF_INVALID` pada POST berikutnya.
   app.get("/api/csrf", async (request, reply) => {
-    const token = generateToken();
+    const existing = request.cookies[CSRF_COOKIE_NAME];
+    const token =
+      existing && /^[A-Za-z0-9_-]{32,64}$/.test(existing) ? existing : generateToken();
     setCsrfCookie(reply, env, request, token);
     return { token };
   });

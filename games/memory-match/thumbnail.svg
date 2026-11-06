@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Memory Match">
+  <title>Memory Match</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e293b" />
+      <stop offset="1" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6" /><stop offset="1" stop-color="#9333ea" /></linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee" /><stop offset="1" stop-color="#3b82f6" /></linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24" /><stop offset="1" stop-color="#f97316" /></linearGradient>
+    <linearGradient id="rose" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f43f5e" /><stop offset="1" stop-color="#dc2626" /></linearGradient>
+    <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#facc15" /><stop offset="1" stop-color="#f59e0b" /></linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399" /><stop offset="1" stop-color="#16a34a" /></linearGradient>
+  </defs>
+  <rect width="400" height="180" fill="url(#bg)" />
+
+  <!-- Baris 1 -->
+  <rect x="42" y="14" width="70" height="70" rx="12" fill="url(#violet)" />
+  <g fill="#ffffff">
+    <ellipse cx="77" cy="46" rx="8" ry="17" />
+    <polygon points="69,52 61,66 71,62" />
+    <polygon points="85,52 93,66 83,62" />
+    <circle cx="77" cy="42" r="3.5" fill="#8b5cf6" />
+  </g>
+
+  <rect x="124" y="14" width="70" height="70" rx="12" fill="#334155" stroke="#475569" stroke-width="2" />
+  <path d="M159 36 l4 11 11 4 -11 4 -4 11 -4 -11 -11 -4 11 -4z" fill="#94a3b8" />
+
+  <rect x="206" y="14" width="70" height="70" rx="12" fill="url(#amber)" />
+  <polygon points="244,26 228,52 240,52 236,72 254,44 242,44" fill="#ffffff" />
+
+  <rect x="288" y="14" width="70" height="70" rx="12" fill="url(#rose)" />
+  <g fill="none" stroke="#ffffff" stroke-width="5">
+    <circle cx="323" cy="49" r="19" />
+    <circle cx="323" cy="49" r="9" />
+  </g>
+  <circle cx="323" cy="49" r="3" fill="#ffffff" />
+
+  <!-- Baris 2 -->
+  <rect x="42" y="96" width="70" height="70" rx="12" fill="url(#cyan)" />
+  <polygon points="77,110 97,131 77,152 57,131" fill="#ffffff" />
+  <polygon points="77,110 87,131 77,152 67,131" fill="#bae6fd" opacity="0.7" />
+
+  <rect x="124" y="96" width="70" height="70" rx="12" fill="url(#yellow)" />
+  <polygon points="159,110 165,126 183,127 169,137 174,154 159,144 144,154 149,137 135,127 153,126" fill="#ffffff" />
+
+  <rect x="206" y="96" width="70" height="70" rx="12" fill="#334155" stroke="#475569" stroke-width="2" />
+  <path d="M241 118 l4 11 11 4 -11 4 -4 11 -4 -11 -11 -4 11 -4z" fill="#94a3b8" />
+
+  <rect x="288" y="96" width="70" height="70" rx="12" fill="url(#green)" />
+  <g fill="#ffffff">
+    <circle cx="315" cy="122" r="11" />
+    <circle cx="331" cy="122" r="11" />
+    <circle cx="315" cy="138" r="11" />
+    <circle cx="331" cy="138" r="11" />
+  </g>
+  <rect x="321" y="140" width="4" height="16" rx="2" fill="#ffffff" />
+</svg>

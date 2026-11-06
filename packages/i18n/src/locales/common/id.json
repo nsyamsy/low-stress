@@ -131,6 +131,45 @@
       "generic": "Terjadi kesalahan. Coba beberapa saat lagi."
     }
   },
+  "profile": {
+    "title": "Profil",
+    "account": "Akun",
+    "username": "Username",
+    "displayName": "Nama tampilan",
+    "displayNameHelp": "Tampil di leaderboard dan chat.",
+    "email": "Email",
+    "emailUnverified": "Belum diverifikasi",
+    "emailVerified": "Terverifikasi",
+    "saved": "Perubahan disimpan",
+    "saveFailed": "Tidak bisa menyimpan. Coba lagi.",
+    "preferences": "Preferensi",
+    "preferencesHint": "Disimpan di akunmu, jadi ikut di perangkat mana pun.",
+    "password": {
+      "title": "Ganti password",
+      "current": "Password saat ini",
+      "new": "Password baru",
+      "submit": "Ganti password",
+      "success": "Password diganti",
+      "wrongCurrent": "Password saat ini salah.",
+      "weak": "Password minimal 8 karakter dan tidak boleh sama dengan username."
+    },
+    "install": {
+      "title": "Pasang aplikasi",
+      "description": "Tambahkan Low Stress ke layar utama.",
+      "action": "Pasang"
+    },
+    "session": "Sesi",
+    "danger": {
+      "title": "Hapus akun",
+      "warning": "Akun, skor, dan riwayat main dihapus permanen. Pesan chat-mu tetap ada sebagai \"Pengguna dihapus\".",
+      "action": "Hapus akun",
+      "confirmTitle": "Hapus akunmu?",
+      "confirmBody": "Tindakan ini tidak bisa dibatalkan. Masukkan password untuk konfirmasi.",
+      "password": "Password",
+      "confirm": "Hapus akun",
+      "failed": "Tidak bisa menghapus akun. Periksa password lalu coba lagi."
+    }
+  },
   "admin": {
     "nav": {
       "title": "Panel Admin",

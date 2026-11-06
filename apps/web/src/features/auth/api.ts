@@ -10,7 +10,25 @@ export async function fetchCsrfToken(): Promise<string> {
   return data.token;
 }
 
+/**
+ * Cookie `ls_csrf` dibagi oleh semua tab. Token yang disimpan di memori bisa
+ * basi bila tab lain mengambil token baru, jadi nilai cookie saat ini
+ * didahulukan; permintaan ke server hanya bila cookie belum ada.
+ */
+function readCsrfCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const entry = document.cookie.split("; ").find((c) => c.startsWith("ls_csrf="));
+  if (!entry) return null;
+  const value = decodeURIComponent(entry.slice("ls_csrf=".length));
+  return value || null;
+}
+
 export async function getCsrfToken(): Promise<string> {
+  const fromCookie = readCsrfCookie();
+  if (fromCookie) {
+    cachedCsrfToken = fromCookie;
+    return fromCookie;
+  }
   if (cachedCsrfToken) return cachedCsrfToken;
   return fetchCsrfToken();
 }

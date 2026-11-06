@@ -8,6 +8,7 @@
   "roomName": "Nama ruangan",
   "roomNamePh": "Contoh: Ruangan Santai",
   "maxPlayers": "Maks. pemain",
+  "playerCountOption": "{{count}} pemain",
   "joinAsPlayer": "Saya ikut bermain",
   "joinAsPlayerHint": "Jika dimatikan, kamu hanya mengelola ruangan tanpa mengambil kursi pion.",
   "accept": "Gabung",

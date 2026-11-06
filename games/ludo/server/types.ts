@@ -1,4 +1,4 @@
-import type { LastEvent, LudoState, PawnCharacter } from "./engine";
+import type { LastEvent, LudoState, PawnCharacter } from "../shared/engine";
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 export type PlayerStatus = "invited" | "accepted" | "declined" | "observer";

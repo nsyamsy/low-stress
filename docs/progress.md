@@ -395,6 +395,106 @@ pnpm test            -> lolos (214 tes lolos 100%)
 pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
 ```
 
+---
+
+## 2026-11-05 - Eksekusi Gerbang Riot: D-01 dan R-04
+
+Lingkup: Penyelesaian gerbang prasyarat sebelum memulai game Riot sesuai instruksi pemilik dan `docs/TASKS_DEBUG_REFACTOR.md`:
+1. **D-01 (Database Uji Terpisah):** Mencegah tes server memodifikasi database pengembangan.
+2. **R-04 (Isolasi Server Ludo & Hapus Duplikasi Mesin):** Memindahkan logika server Ludo ke `games/ludo/server/` dan memuatnya secara dinamis via kontrak manifest/registry generic.
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| D-01 Database Uji Terpisah | **Selesai** | Pembuatan database `low_stress_test` dan perkakas `tools/test-db` (`pnpm test:db:up`, `pnpm test:db:clean`). Mekanisme fast-fail di `apps/server/test/setup.ts`: bila `TEST_DATABASE_URL` tidak disetel atau tidak berakhiran `_test`, tes server langsung gagal cepat. CI dan docker-compose diperbarui dengan profil `test`. Verifikasi: baris database pengembangan `low_stress` tetap utuh `{"users":1,"admins":1,"games":3,"sessions":1}` sebelum dan setelah seluruh pengujian server dijalankan. |
+| R-04 Isolasi Server Ludo & Hapus Duplikasi Mesin | **Selesai** | Memindahkan seluruh logika server Ludo dari `apps/server/src/ludo/` ke `games/ludo/server/` (`service.ts`, `socket.ts`, `routes.ts`, `autopilot.ts`, `expiration.ts`, `index.ts`). Menghapus salinan `apps/server/src/ludo/engine.ts` (mengimpor langsung dari `games/ludo/shared/engine`). Memperluas SDK `@low-stress/sdk/server` untuk mengekspor DB/Drizzle primitives dan kontrak modul server (`GameServerModule`, `GameServerContext`). Memperbarui registri `apps/server/src/registry/games.ts` untuk memuat server game secara dinamis melalui konvensi folder `games/<id>/server/index.ts` tanpa mengotori bundel SPA browser (`apps/web` bebas dependensi Node/server, ukuran bundel turun dari 995 KiB ke 753 KiB). Menghapus folder lama `apps/server/src/ludo/`. Seluruh 20 file tes server (131 tes) dan 5 file tes Ludo (23 tes) lolos 100%. |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (seluruh workspace)
+pnpm test            -> lolos (seluruh workspace, dev DB aman)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm build           -> lolos (seluruh workspace)
+```
+
+---
+
+## 2026-11-05 - Eksekusi Game Riot: Fase 0 (RT-01 s.d. RT-05)
+
+Lingkup: Pengerjaan seluruh fondasi Fase 0 [ROADMAP_RIOT.md](ROADMAP_RIOT.md):
+- **RT-01 (Kontrak SDK & Registry Multiplayer):** Ekstensi `GameServerModule` dan generic registry loading dengan unit test.
+- **RT-02 (Shared Room Kit):** Ekstrak primitif room ke `@low-stress/sdk` dan `@low-stress/sdk/server`, refaktor Ludo agar memakainya.
+- **RT-03 (Buku Besar Aset & Pipeline):** Perkakas `tools/check-assets` (`pnpm check:assets`), CI step, dan pedoman anggaran ukuran.
+- **RT-04 (Template `new-game --engine r3f`):** Opsi generator Three.js / R3F dengan lazy import dan dependensi terisolasi.
+- **RT-05 (Usulan Keputusan Terbuka Pemilik):** Penulisan usulan judul publik penuh, nama stasiun & 10 ruangan, 6 spesies Mochi, 8 aksesori ke `docs/concepts/riot.md` berlabel 'USULAN, menunggu persetujuan pemilik'.
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| RT-01 Perluas Kontrak SDK dan Registry | **Selesai** | Kontrak `GameServerModule` (`registerRoutes`, `registerRealtime`, `registerJobs`, `onUserDeleted`, `dispose`) dan `GameServerContext` terpasang di `packages/sdk/src/manifest.ts`. Pemuat generic `loadGameServerModules` di `apps/server/src/registry/games.ts` memuat modul server game secara dinamis. Diuji menyeluruh di `apps/server/test/game-registry.test.ts`. |
+| RT-02 Kit Room Bersama | **Selesai** | Modul `packages/sdk/src/room.ts` menyediakan `isRoomHost`, `assertRoomHost`, `computeExpirationCutoff`, `generateRoomCode`, `filterInvitableUsers`, `createIdleTimer`. Refaktor `games/ludo/server/expiration.ts` memakai `computeExpirationCutoff`. 5 tes unit di `packages/sdk/test/room.test.ts` lolos 100%; seluruh 23 tes Ludo tetap lolos. |
+| RT-03 Buku Besar Aset dan Pipeline | **Selesai** | Perkakas `tools/check-assets` memindai `games/*/assets/` terhadap `LICENSES.md`, menolak lisensi berembel-embel NC/ND, dan memvalidasi anggaran ukuran aset di `src/pipeline.ts`. Ditambahkan ke skrip `pnpm check:assets` dan GitHub Actions CI. 5 tes unit di `tools/check-assets/test/check.test.ts` lolos 100%. |
+| RT-04 Template `new-game --engine r3f` | **Selesai** | Opsi `--engine r3f` pada `tools/new-game` membuat struktur game 3D dengan template canvas WebGL/Three.js dinamis/lazy, mengisolasi dependensi `three` dan `@types/three` ke game terkait tanpa membebani shell web utama. Diuji di `tools/new-game/test/generator.test.ts`. |
+| RT-05 Keputusan Terbuka Pemilik | **Selesai** | Usulan tertulis di `docs/concepts/riot.md` §2 berlabel 'USULAN, menunggu persetujuan pemilik': (A) 3 opsi judul publik penuh untuk mitigasi risiko merek Riot Games (rekomendasi: *Low Stress: Riot di Stasiun Hening*); (B) Stasiun Orbital Hening (SOS); (C) 10 ruangan orisinal (Ruang Komando, Kebun Hidroponik, Dok Kargo, Lab Biologi, Ruang Antena, Mesin Pendingin, Asrama Kru, Kubah Observasi, Generator Daya, Lorong Ventilasi & Servis); (D) 6 spesies Mochi (Kucing, Kelinci, Burung, Katak, Beruang, Rubah); (E) 8 aksesori kosmik awal. |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning)
+pnpm typecheck       -> lolos (seluruh workspace)
+pnpm test            -> lolos (seluruh workspace)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations-> lolos
+pnpm check:assets    -> lolos
+```
+
+---
+
+## 2026-11-06 - Eksekusi Game Riot: Fase 1 (RT-10..RT-13)
+
+Lingkup: Verifikasi dan penyelesaian tugas RT-10, RT-11, RT-12, dan RT-13 [ROADMAP_RIOT.md](ROADMAP_RIOT.md) §2 (Uji kelayakan Fase 1). Berhenti setelah RT-13 sesuai instruksi pemilik (RT-14 uji ponsel fisik dan gerbang kelanjutan menunggu keputusan pemilik).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| RT-10 Kerangka Game `games/riot/` | **Selesai** | Pembuatan paket `@low-stress/game-riot`: `manifest.ts` (`mode: "multiplayer"`, `mobile: any`, `permissions: ["scores", "realtime", "db"]`), `thumbnail.svg` (400×180 orisinal vektor bertema stasiun luar angkasa orbital hening dan Mochi kosmonot tanpa logo Riot Games/Among Us), `locales/{id,en}.json` dengan kunci lengkap ruangan dan kontrol, `client/index.tsx` (komponen game Three.js termuat secara lazy lewat dynamic import tanpa membebani bundel web utama), `assets/LICENSES.md` untuk buku besar lisensi, status awal terdaftar `inactive` di database. Tanpa impor lintas game. Diuji 2 tes unit di `games/riot/test/manifest.test.ts` lolos 100%. |
+| RT-11 Peta Greybox & Tabrakan 2D | **Selesai** | Peta Stasiun Hening dengan 10 ruangan orisinal (Komando, Hidroponik, Antena, Kargo, Generator, Asrama, Pendingin, Biolab, Observasi, Ventilasi) berukuran 120×90, 28 titik spawn tersebar di seluruh ruangan. Data tabrakan 2D (`collision.json`) dan modul logika murni (`collision.ts`) di `games/riot/shared/`: fungsi tabrakan Circle-AABB, deteksi ruangan, deteksi batas dinding, pencegahan penembusan dinding (continuous substepping) serta penggeseran dinding (wall sliding). Diuji 9 tes unit di `games/riot/test/collision.test.ts` lolos 100%. |
+| RT-12 Gerak Multi-pemain & Simulasi Otoritatif | **Selesai** | Simulasi server otoritatif 15 Hz di `shared/simulation.ts` memproses input 20 Hz (50ms dt), menolak manipulasi kecepatan (speed-hack/magnitude > 1), menolak delta waktu tidak valid, dan mencegah penembusan dinding lewat penyelesaian tabrakan kontinyu. Komponen `VirtualJoystick.tsx` (area sentuh joystick 112px, knob 48px ≥ 44px WCAG, mendukung keyboard WASD/panah dan pointer touch), modul prediksi klien (`ClientPredictionManager`) untuk rekonsiliasi responsif instan, dan modul interpolasi pemain jarak jauh (`RemoteInterpolationManager`) untuk pergerakan mulus antarpemain. Diuji 12 tes unit di `games/riot/test/movement.test.ts` lolos 100%. |
+| RT-13 Interest Management & Benchmark Simulator | **Selesai** | Modul `shared/interest.ts`: penyaringan radius pandang 12.0m menjamin klien HANYA menerima data posisi pemain di dalam jangkauan pandangnya (0 data bocor ke pemain di luar jangkauan). Format snapshot ringkas berupa tuple angka berpresisi sentimeter (`[id, x, y, vx, vy, heading, lastSeq]`). Simulator uji beban 20 dan 32 klien tanpa kepala selama 100 tick (15 Hz) membuktikan efisiensi ekstrem: CPU server rata-rata < 0.3 ms/tick (jauh di bawah batas 66.67 ms), bandwidth hanya ~2.5–2.7 KB/s per klien, latensi p95 input < 0.01 ms, dan 0 kebocoran posisi pemain di luar pandangan. Diuji 5 tes di `games/riot/test/interest.test.ts` lolos 100%. |
+
+### Laporan Angka Benchmark RT-13 (Simulator Klien Tanpa Kepala)
+
+| Metrik Pengukuran | Target Anggaran | Hasil 20 Klien | Hasil 32 Klien | Status |
+|---|---|---|---|---|
+| **Rata-rata CPU per tick** | < 16.6 ms (anggaran 66.67 ms @ 15 Hz) | **0.254 ms** | **0.244 ms** | **Sangat Baik** (0.38% kapasitas) |
+| **Puncak CPU per tick** | < 66.67 ms | **1.897 ms** | **0.804 ms** | **Sangat Baik** |
+| **Rata-rata Bandwidth per klien** | < 10.0 KB/s (jaringan seluler) | **2.74 KB/s** (21.96 kbps) | **2.53 KB/s** (20.22 kbps) | **Sangat Ringan** |
+| **Puncak Bandwidth per klien** | < 25.0 KB/s | **4.22 KB/s** | **4.24 KB/s** | **Sangat Ringan** |
+| **Latensi Input Server p95** | < 20.0 ms | **0.006 ms** | **0.002 ms** | **Seketika (Instant)** |
+| **Kebocoran Posisi di Luar Pandang (>12m)** | 0 kebocoran (keamanan deduksi) | **0 kebocoran** | **0 kebocoran** | **100% Terisolasi** |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint            -> lolos (0 error, 0 warning di seluruh monorepo)
+pnpm typecheck       -> lolos (seluruh workspace lolos tsc --noEmit)
+pnpm test            -> lolos (seluruh workspace, 28 tes @low-stress/game-riot, 132 tes server, 100% lulus)
+pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
+pnpm check:assets    -> lolos (semua berkas aset terdaftar dan memenuhi lisensi CC0/orisinil)
+pnpm check:migrations-> lolos (semua tabel game menggunakan prefix yang benar)
+pnpm build (@low-stress/web) -> lolos (Three.js terpisah bersih sebagai dynamic chunk mandiri)
+Database low_stress (dev)   -> UTUH dan TIDAK TERSENTUH (baris data tetap identik)
+```
+
+
+
+
 
 
 

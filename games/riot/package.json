@@ -1,0 +1,23 @@
+{
+  "name": "@low-stress/game-riot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@low-stress/i18n": "workspace:*",
+    "@low-stress/sdk": "workspace:*",
+    "@low-stress/ui": "workspace:*",
+    "react": "^19.0.0",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/three": "^0.170.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

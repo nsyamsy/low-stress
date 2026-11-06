@@ -12,7 +12,31 @@ import { buildApp } from "../src/app";
 import { hashPassword } from "../src/auth/password";
 import { createSession } from "../src/auth/session";
 import { readEnv } from "../src/env";
-import type { RoomView } from "../src/ludo/types";
+interface RoomView {
+  id: string;
+  turn?: number | null;
+  status: string;
+  myStatus?: string | null;
+  players: Array<{
+    userId: string;
+    username: string;
+    displayName: string;
+    status: string;
+    seat?: number | null;
+    autopilot?: boolean;
+    [k: string]: unknown;
+  }>;
+  state: {
+    turn?: number | null;
+    phase?: string;
+    rolls?: number[];
+    pawns?: Record<string, number>;
+    winner?: number | null;
+    place?: number[];
+    [k: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+}
 
 if (typeof process.loadEnvFile === "function") {
   try {
@@ -122,6 +146,7 @@ describe("P7-07: Ludo Game Gate / Maintenance Freezing & Resuming", () => {
         },
         transports: ["websocket"],
         forceNew: true,
+        multiplex: false,
       });
 
       socket.on("connect", () => resolve(socket));

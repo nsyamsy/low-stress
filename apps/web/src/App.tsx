@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { Logo, SegmentedControl } from "@low-stress/ui";
-import { useAuth } from "./features/auth";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Button, Logo, SegmentedControl } from "@low-stress/ui";
+import { useAuth, useSavePreferences } from "./features/auth";
+import { ProfilePage } from "./pages/ProfilePage";
 import { changeLocale, readLocalePreference, type LocalePreference } from "./i18n";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -39,7 +40,9 @@ const LOCALE_OPTIONS: ReadonlyArray<{ value: LocalePreference; key: string }> = 
 export function App() {
   const { t } = useTranslation();
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const { user, loading, logout } = useAuth();
+  const savePreferences = useSavePreferences();
   const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
   const [locale, setLocale] = useState<LocalePreference>(readLocalePreference);
 
@@ -50,11 +53,18 @@ export function App() {
   const onThemeChange = (value: ThemePreference) => {
     setTheme(value);
     applyTheme(value);
+    void savePreferences({ theme: value });
   };
 
   const onLocaleChange = (value: LocalePreference) => {
     setLocale(value);
     changeLocale(value);
+    void savePreferences({ locale: value });
+  };
+
+  const onLogout = async () => {
+    await logout();
+    navigate("/login");
   };
 
   // Rute panel admin mandiri
@@ -102,6 +112,11 @@ export function App() {
               <Link to="/leaderboard" className="ls-nav-link">
                 {t("nav.leaderboard")}
               </Link>
+              {user?.status === "active" && (
+                <Link to="/profile" className="ls-nav-link">
+                  {t("nav.profile")}
+                </Link>
+              )}
             </nav>
           </div>
           <div className="ls-row">
@@ -123,6 +138,11 @@ export function App() {
               value={theme}
               onChange={onThemeChange}
             />
+            {user && (
+              <Button variant="secondary" onClick={onLogout}>
+                {t("nav.logout")}
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -182,6 +202,18 @@ export function App() {
             }
           />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route
+            path="/profile"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : user.status === "pending" ? (
+                <Navigate to="/pending" replace />
+              ) : (
+                <ProfilePage />
+              )
+            }
+          />
           <Route
             path="/games/:id/status"
             element={

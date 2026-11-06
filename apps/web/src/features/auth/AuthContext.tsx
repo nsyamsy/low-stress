@@ -1,12 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { changeLocale } from "../../i18n";
-import { applyTheme } from "../../theme";
+import { changeLocale, readLocalePreference } from "../../i18n";
+import { applyTheme, readThemePreference } from "../../theme";
 import {
   fetchCsrfToken,
   fetchPublicConfig,
   getMeApi,
   loginApi,
   logoutApi,
+  updateProfileApi,
 } from "./api";
 import { AuthContext } from "./context";
 import type { Me, PublicConfig } from "./types";
@@ -16,16 +17,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [publicConfig, setPublicConfig] = useState<PublicConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Pilihan eksplisit di akun menang. Bila akun masih bawaan ("system"/"auto"),
+  // pilihan di browser dipertahankan lalu disimpan ke akun, sehingga login
+  // tidak mengembalikan tema atau bahasa ke bawaan.
   const applyUserPreferences = (userObj: Me) => {
-    if (userObj.locale === "id" || userObj.locale === "en") {
-      changeLocale(userObj.locale);
-    }
-    if (
-      userObj.theme === "light" ||
-      userObj.theme === "dark" ||
-      userObj.theme === "system"
-    ) {
-      applyTheme(userObj.theme);
+    const localTheme = readThemePreference();
+    const localLocale = readLocalePreference();
+    const theme = userObj.theme !== "system" ? userObj.theme : localTheme;
+    const locale = userObj.locale !== "auto" ? userObj.locale : localLocale;
+
+    applyTheme(theme);
+    changeLocale(locale);
+
+    const patch: { theme?: Me["theme"]; locale?: Me["locale"] } = {};
+    if (userObj.theme === "system" && localTheme !== "system") patch.theme = localTheme;
+    if (userObj.locale === "auto" && localLocale !== "auto") patch.locale = localLocale;
+    if (patch.theme || patch.locale) {
+      void updateProfileApi(patch)
+        .then((me) => setUser(me))
+        .catch(() => undefined);
     }
   };
 

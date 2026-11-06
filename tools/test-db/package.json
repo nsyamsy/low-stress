@@ -1,0 +1,20 @@
+{
+  "name": "@low-stress/test-db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "up": "tsx src/setup.ts",
+    "clean": "tsx src/clean.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@low-stress/db": "workspace:*",
+    "postgres": "^3.4.7",
+    "tsx": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "typescript": "^5.9.3"
+  }
+}

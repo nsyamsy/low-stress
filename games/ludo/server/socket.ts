@@ -1,70 +1,44 @@
-import type { Server, Socket } from "socket.io";
-import type { Database } from "@low-stress/db";
-import {
-  ADMIN_COOKIE_NAME,
-  getAdminSession,
-  getSessionUser,
-  SESSION_COOKIE_NAME,
-} from "../auth/session";
-import { AppError } from "../errors";
-import { checkGameGate } from "../games/service";
+import type { Server as SocketIOServer, Socket } from "socket.io";
 import {
   AutopilotManager,
   type AutopilotOptions,
 } from "./autopilot";
 import {
-  getRoomView,
-  performAction,
-} from "./service";
+  type Database,
+} from "@low-stress/sdk/server";
+import { getRoomView, performAction } from "./service";
 import type { LudoAction, LudoActor, RoomView } from "./types";
-
-function parseCookies(cookieHeader?: string): Record<string, string> {
-  const list: Record<string, string> = {};
-  if (!cookieHeader) return list;
-
-  cookieHeader.split(";").forEach((cookie) => {
-    const parts = cookie.split("=");
-    const key = parts.shift()?.trim();
-    if (key) {
-      list[key] = decodeURIComponent(parts.join("=").trim());
-    }
-  });
-
-  return list;
-}
+import type { GameServerContext } from "@low-stress/sdk/server";
 
 export function setupLudoSocket(
-  io: Server,
+  io: SocketIOServer,
   db: Database,
-  options?: AutopilotOptions,
+  options: AutopilotOptions = {},
+  ctx?: GameServerContext,
 ) {
   const nsp = io.of("/ludo");
-  const autopilot = new AutopilotManager(nsp, db, options);
+  const autopilot = new AutopilotManager(nsp, db, {
+    ...options,
+    checkGameGate: ctx?.checkGameGate,
+  });
 
   // Resume running rooms after startup/restart
   void autopilot.resumeActiveRooms();
 
   // Middleware autentikasi soket via session cookie
-  nsp.use(async (socket: Socket, next) => {
+  nsp.use(async (socket: Socket, next: (err?: Error) => void) => {
     try {
-      const cookies = parseCookies(socket.handshake.headers.cookie);
-      const sessionToken = cookies[SESSION_COOKIE_NAME];
-      const adminToken = cookies[ADMIN_COOKIE_NAME];
-
-      if (sessionToken) {
-        const sessionResult = await getSessionUser(db, sessionToken);
-        if (sessionResult && sessionResult.user.status === "active") {
-          socket.data.user = sessionResult.user;
+      if (ctx?.resolvePrincipal) {
+        const principal = await ctx.resolvePrincipal(socket.handshake.headers.cookie);
+        if (principal.kind === "user" && principal.user) {
+          socket.data.user = principal.user;
           return next();
         }
-      }
-
-      if (adminToken) {
-        const adminResult = await getAdminSession(db, adminToken);
-        if (adminResult) {
-          socket.data.admin = adminResult.admin;
+        if (principal.kind === "admin" && principal.admin) {
+          socket.data.admin = principal.admin;
           return next();
         }
+        return next(new Error("UNAUTHENTICATED"));
       }
 
       return next(new Error("UNAUTHENTICATED"));
@@ -90,9 +64,6 @@ export function setupLudoSocket(
           isAdmin: true,
         };
 
-    // Bergabung ke room pribadi per user
-    void socket.join(`user:${actor.userId}`);
-
     // room:join
     socket.on(
       "room:join",
@@ -101,14 +72,14 @@ export function setupLudoSocket(
         callback?: (res: { ok: boolean; view?: RoomView; code?: string }) => void,
       ) => {
         try {
-          const { roomId } = payload || {};
+          const roomId = payload?.roomId;
           if (!roomId || typeof roomId !== "string") {
             callback?.({ ok: false, code: "VALIDATION_FAILED" });
             return;
           }
 
-          if (!actor.isAdmin) {
-            await checkGameGate(db, "ludo");
+          if (!actor.isAdmin && ctx?.checkGameGate) {
+            await ctx.checkGameGate("ludo");
           }
 
           const view = await getRoomView(db, roomId, actor);
@@ -116,8 +87,8 @@ export function setupLudoSocket(
           callback?.({ ok: true, view });
         } catch (err) {
           const code =
-            err instanceof AppError
-              ? err.code
+            err && typeof err === "object" && "code" in err && typeof (err as { code: unknown }).code === "string"
+              ? (err as { code: string }).code
               : "INTERNAL";
           callback?.({ ok: false, code });
         }
@@ -126,7 +97,7 @@ export function setupLudoSocket(
 
     // room:leave
     socket.on("room:leave", async (payload: { roomId: string }) => {
-      const { roomId } = payload || {};
+      const roomId = payload?.roomId;
       if (roomId && typeof roomId === "string") {
         await socket.leave(`ludo:${roomId}`);
       }
@@ -146,8 +117,8 @@ export function setupLudoSocket(
             return;
           }
 
-          if (!actor.isAdmin) {
-            await checkGameGate(db, "ludo");
+          if (!actor.isAdmin && ctx?.checkGameGate) {
+            await ctx.checkGameGate("ludo");
           }
 
           const result = await performAction(
@@ -202,8 +173,8 @@ export function setupLudoSocket(
           callback?.({ ok: true, view: result.view });
         } catch (err) {
           const code =
-            err instanceof AppError
-              ? err.code
+            err && typeof err === "object" && "code" in err && typeof (err as { code: unknown }).code === "string"
+              ? (err as { code: string }).code
               : "INTERNAL";
           callback?.({ ok: false, code });
         }

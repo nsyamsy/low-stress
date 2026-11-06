@@ -22,7 +22,7 @@ import {
   recordScore,
 } from "./scores";
 import { checkGameGate, listPlayerGames } from "./service";
-import { registerLudoRoutes } from "../ludo/routes";
+
 import {
   leaderboardQuerySchema,
   submitScoreSchema,
@@ -74,9 +74,12 @@ export async function registerGameRoutes(
       return;
     }
 
-    // 1. Admin dilarang mengakses API game
+    // 1. Admin dilarang mengakses API game. Bila browser juga memegang sesi
+    //    pemain yang valid, permintaan diperlakukan sebagai pemain.
     const adminToken = request.cookies[ADMIN_COOKIE_NAME];
-    if (adminToken) {
+    const userToken = request.cookies[SESSION_COOKIE_NAME];
+    const hasPlayerSession = userToken ? Boolean(await getSessionUser(db, userToken)) : false;
+    if (adminToken && !hasPlayerSession) {
       const adminResult = await getAdminSession(db, adminToken);
       if (adminResult) {
         throw new AppError("FORBIDDEN", 403);
@@ -191,5 +194,5 @@ export async function registerGameRoutes(
     return result;
   });
 
-  registerLudoRoutes(app, { db });
+  
 }

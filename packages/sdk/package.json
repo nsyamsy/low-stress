@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@low-stress/db": "workspace:*",
+    "drizzle-orm": "^0.45.4"
   },
   "peerDependencies": {
     "react": "^19.0.0"

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Flappy Bird">
+  <title>Flappy Bird</title>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4ec0ca" />
+      <stop offset="1" stop-color="#b6ecf2" />
+    </linearGradient>
+    <linearGradient id="pipe" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5aa02c" />
+      <stop offset="0.35" stop-color="#8fd14f" />
+      <stop offset="1" stop-color="#4d8a24" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="180" fill="url(#sky)" />
+  <g fill="#ffffff" opacity="0.85">
+    <ellipse cx="66" cy="42" rx="26" ry="13" />
+    <ellipse cx="90" cy="36" rx="22" ry="14" />
+    <ellipse cx="108" cy="44" rx="20" ry="11" />
+    <ellipse cx="300" cy="26" rx="22" ry="11" />
+    <ellipse cx="320" cy="22" rx="18" ry="11" />
+  </g>
+  <path d="M0 142 Q60 104 130 130 T262 126 T400 118 V152 H0 Z" fill="#9bd9a3" />
+  <g stroke="#3b6a1a" stroke-width="3" fill="url(#pipe)">
+    <rect x="252" y="-4" width="54" height="62" />
+    <rect x="246" y="48" width="66" height="22" rx="3" />
+    <rect x="252" y="142" width="54" height="12" />
+    <rect x="246" y="118" width="66" height="22" rx="3" />
+    <rect x="346" y="-4" width="54" height="34" />
+    <rect x="340" y="22" width="66" height="22" rx="3" />
+    <rect x="346" y="112" width="54" height="42" />
+    <rect x="340" y="92" width="66" height="22" rx="3" />
+  </g>
+  <rect y="150" width="400" height="30" fill="#ded895" />
+  <rect y="150" width="400" height="10" fill="#73bf2e" />
+  <g fill="#9be04a">
+    <path d="M0 150 h24 l-8 10 h-24z" />
+    <path d="M48 150 h24 l-8 10 h-24z" />
+    <path d="M96 150 h24 l-8 10 h-24z" />
+    <path d="M144 150 h24 l-8 10 h-24z" />
+    <path d="M192 150 h24 l-8 10 h-24z" />
+    <path d="M240 150 h24 l-8 10 h-24z" />
+    <path d="M288 150 h24 l-8 10 h-24z" />
+    <path d="M336 150 h24 l-8 10 h-24z" />
+    <path d="M384 150 h24 l-8 10 h-24z" />
+  </g>
+  <g transform="rotate(-12 130 86)">
+    <ellipse cx="130" cy="86" rx="26" ry="20" fill="#f8d12f" stroke="#8a5a12" stroke-width="3" />
+    <ellipse cx="118" cy="92" rx="13" ry="8.5" fill="#f0a81c" stroke="#8a5a12" stroke-width="2.5" />
+    <circle cx="144" cy="78" r="8.5" fill="#ffffff" stroke="#8a5a12" stroke-width="2.5" />
+    <circle cx="147" cy="78" r="3.6" fill="#222222" />
+    <polygon points="152,88 174,92 152,100" fill="#f4733a" stroke="#8a5a12" stroke-width="2.5" stroke-linejoin="round" />
+  </g>
+</svg>

@@ -89,6 +89,14 @@ export function createGameGateMiddleware(db: Database) {
   return async function requireGameGate(
     request: FastifyRequest,
   ): Promise<void> {
+    // Satu browser bisa memegang cookie pemain dan admin sekaligus (mis. admin
+    // yang juga mencoba akun pemain). Bila sesi pemain valid, permintaan ini
+    // diperlakukan sebagai pemain; cookie admin diabaikan.
+    const userToken = request.cookies[SESSION_COOKIE_NAME];
+    if (userToken && (await getSessionUser(db, userToken))) {
+      return;
+    }
+
     const adminToken = request.cookies[ADMIN_COOKIE_NAME];
     if (adminToken) {
       const adminResult = await getAdminSession(db, adminToken);

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, Chip } from "@low-stress/ui";
 import { useAuth } from "../features/auth";
 import { fetchGamesApi } from "../features/games/api";
+import { getGameThumbnail } from "../features/games/thumbnails";
 import type { GameItem } from "../features/games/types";
 
 export function HomePage({
@@ -104,21 +105,34 @@ export function HomePage({
             const isMaintenance = game.status === "maintenance";
             const isClosed = game.status === "active" && !game.open;
             const isOpen = game.status === "active" && game.open;
+            const thumbnail = getGameThumbnail(game.id);
 
             return (
               <div key={game.id} className="ls-game-card">
                 {/* Pratinjau berwarna */}
-                <div className="ls-game-card__preview">
-                  <div
-                    style={{
-                      fontSize: "var(--font-h2)",
-                      fontWeight: "var(--weight-bold)",
-                      color: "var(--text-primary)",
-                      opacity: 0.85,
-                    }}
-                  >
-                    {title.slice(0, 2).toUpperCase()}
-                  </div>
+                <div
+                  className={`ls-game-card__preview${isOpen ? "" : " ls-game-card__preview--locked"}`}
+                >
+                  {thumbnail ? (
+                    <img
+                      src={thumbnail}
+                      alt=""
+                      className="ls-game-card__thumb"
+                      loading="lazy"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        fontSize: "var(--font-h2)",
+                        fontWeight: "var(--weight-bold)",
+                        color: "var(--text-primary)",
+                        opacity: 0.85,
+                      }}
+                    >
+                      {title.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
                   {game.badge && (
                     <div
                       style={{

@@ -263,7 +263,7 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
             >
               {Array.from({ length: 11 }, (_, i) => i + 2).map((n) => (
                 <option key={n} value={n}>
-                  {n} pemain
+                  {t("playerCountOption", { count: n })}
                 </option>
               ))}
             </select>

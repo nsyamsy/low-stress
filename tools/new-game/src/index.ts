@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 
 import { isGameId } from "@low-stress/sdk";
 
-const ENGINES = ["react", "canvas", "phaser"] as const;
+const ENGINES = ["react", "canvas", "phaser", "r3f"] as const;
 type Engine = (typeof ENGINES)[number];
 
 const ROOT = resolve(import.meta.dirname, "../../..");
@@ -17,7 +17,7 @@ interface Options {
 
 function usage(): string {
   return [
-    "Pemakaian: pnpm new-game <slug> [--engine react|canvas|phaser]",
+    "Pemakaian: pnpm new-game <slug> [--engine react|canvas|phaser|r3f]",
     "",
     "  <slug>   huruf kecil, angka, dan tanda hubung; diawali huruf",
     "  --engine bawaan: react",
@@ -105,8 +105,25 @@ function addPhaserDependency(gameDir: string): void {
   writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
-function main(): void {
-  const { slug, engine } = parseArgs(process.argv.slice(2));
+function addR3fDependencies(gameDir: string): void {
+  const packagePath = join(gameDir, "package.json");
+  const pkg = JSON.parse(readFileSync(packagePath, "utf8")) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+  pkg.dependencies = {
+    ...pkg.dependencies,
+    three: "^0.170.0",
+  };
+  pkg.devDependencies = {
+    ...pkg.devDependencies,
+    "@types/three": "^0.170.0",
+  };
+  writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+}
+
+export function createGame(options: { slug: string; engine: Engine }): void {
+  const { slug, engine } = options;
   const gameDir = join(GAMES_DIR, slug);
   const title = titleFromSlug(slug);
 
@@ -127,6 +144,12 @@ function main(): void {
   copyTemplateDir(join(TEMPLATES, "engines", engine, "client"), join(gameDir, "client"), replacements);
 
   if (engine === "phaser") addPhaserDependency(gameDir);
+  if (engine === "r3f") addR3fDependencies(gameDir);
+}
+
+function main(): void {
+  const { slug, engine } = parseArgs(process.argv.slice(2));
+  createGame({ slug, engine });
 
   console.log(`Game dibuat: games/${slug} (engine: ${engine})`);
   console.log("Langkah berikutnya:");
@@ -136,11 +159,17 @@ function main(): void {
   console.log(`  4. Nyalakan game dari panel admin setelah muncul di registry.`);
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(`new-game: ${error instanceof Error ? error.message : String(error)}`);
-  console.error("");
-  console.error(usage());
-  process.exitCode = 1;
+const isMain =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]).endsWith(join("new-game", "src", "index.ts"));
+
+if (isMain) {
+  try {
+    main();
+  } catch (error) {
+    console.error(`new-game: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("");
+    console.error(usage());
+    process.exitCode = 1;
+  }
 }

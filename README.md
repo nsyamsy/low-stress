@@ -13,7 +13,7 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![Fastify](https://img.shields.io/badge/Fastify-API-000000?logo=fastify&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-![Status](https://img.shields.io/badge/status-dalam%20pengembangan-F2B84B)
+![Status](https://img.shields.io/badge/status-fase%201--9%20selesai-7FA88B)
 
 [Mulai](#-memulai) · [Fitur](#-fitur) · [Status](#-status-pengembangan) · [Arsitektur](#-arsitektur) · [Dokumentasi](#-dokumentasi)
 
@@ -41,21 +41,35 @@ Dua bahasa (Indonesia dan English), mobile-first, bisa dipasang sebagai PWA, dan
 
 ## Status pengembangan
 
+Semua tugas di [ROADMAP](docs/ROADMAP.md) (Fase 1 sampai 9) sudah dikerjakan; 62 dari 62 butir di [TASKS](docs/TASKS.md) tercentang.
+
 | Fase | Isi | Status |
 |---|---|---|
-| 1 | Fondasi: monorepo, paket bersama, DB, registry game, PWA | 9 dari 12 tugas selesai |
+| 1 | Fondasi: monorepo, paket bersama, DB, registry game, Docker, CI, PWA, token kontras AA | Selesai |
 | 2 | Auth pemain: register, login, sesi, CSRF, `/api/me`, hapus akun, rate limit | Selesai |
-| 3 | Panel admin | Belum |
-| 4 | Gerbang game: status dan jadwal | Belum |
-| 5 | Memory Match dan leaderboard | Belum |
-| 6 | Flappy Bird | Belum |
-| 7 | Ludo | Belum |
-| 8 | Chat publik, sensor, moderasi | Belum |
-| 9 | Polish dan rilis | Belum |
+| 3 | Panel admin: persetujuan, pengguna, pengaturan, audit log, SMTP (nonaktif) | Selesai |
+| 4 | Gerbang game: status dan jadwal WIB | Selesai |
+| 5 | Memory Match dan leaderboard weekly, monthly, all time | Selesai |
+| 6 | Flappy Bird (Canvas 2D, 6 karakter, medali) | Selesai |
+| 7 | Ludo realtime 2 sampai 12 pemain (Socket.IO) | Selesai |
+| 8 | Chat publik, sensor kata kasar, moderasi | Selesai |
+| 9 | Aksesibilitas, QA mobile, panduan deploy, uji beban | Selesai |
 
-Masih terbuka di Fase 1: **P1-05** kontras warna (menunggu keputusan pemilik) dan **P1-10** verifikasi Docker (belum ada Docker di mesin pengembang). P1-11 (CI) kini berjalan di GitHub Actions.
+Pemeriksaan terakhir yang tercatat di [progress](docs/progress.md): lint, typecheck, `i18n:check`, `check:migrations`, dan 214 tes lolos; image Docker dibangun dan profil `lan` sehat (`/healthz` 200); CI di GitHub Actions hijau.
 
-Halaman yang ada saat ini: `/` (beranda sederhana), `/login`, `/register`, `/pending`, dan `/showcase` (contoh komponen). Game, leaderboard, dan panel admin belum ada.
+**Belum diverifikasi:** profil `public` (Caddy dengan domain dan HTTPS nyata), pemasangan PWA di HTTPS publik, dan pengujian manual di perangkat iOS dan Android sungguhan. Lihat [qa-mobile](docs/qa-mobile.md).
+
+### Halaman
+
+| Rute | Isi |
+|---|---|
+| `/login`, `/register`, `/pending` | Akun pemain |
+| `/` | Beranda dengan kartu game |
+| `/games/:id` | Flappy Bird, Memory Match, Ludo (lobi dan `/games/ludo/:roomId`) |
+| `/leaderboard` | Papan peringkat per game |
+| `/admin/login` | **Login admin** (terpisah dari `/login`) |
+| `/admin`, `/admin/approvals`, `/admin/users`, `/admin/games`, `/admin/leaderboard`, `/admin/chat`, `/admin/settings`, `/admin/audit` | Panel admin |
+| `/showcase` | Contoh komponen UI (pengembangan) |
 
 Rincian: [ROADMAP](docs/ROADMAP.md) · [TASKS](docs/TASKS.md) · [progress](docs/progress.md)
 
@@ -67,8 +81,29 @@ Prasyarat: Node 22, pnpm 12, dan PostgreSQL 16.
 pnpm install
 cp .env.example .env      # isi DATABASE_URL dan SESSION_SECRET
 pnpm db:migrate           # membuat tabel inti
+pnpm create-admin         # membuat Superadmin pertama (menanyakan username dan password)
 pnpm dev                  # web :5173, server :3001
 ```
+
+### Langkah pertama setelah pemasangan
+
+Database baru kosong: belum ada pemain dan semua game berstatus **Nonaktif**.
+
+1. Buka `http://localhost:5173/admin/login` dan masuk dengan akun dari `pnpm create-admin`.
+2. Di **Game**, ubah status Flappy Bird, Memory Match, dan Ludo menjadi **Aktif**. Tanpa ini beranda pemain kosong.
+3. Buka `/register` untuk membuat akun pemain. Pada mode `lan` akun berstatus `pending`.
+4. Kembali ke panel admin, **Persetujuan**, setujui akun itu, lalu masuk di `/login`.
+
+### Tidak bisa masuk?
+
+| Gejala | Penyebab | Solusi |
+|---|---|---|
+| "Username atau password salah" untuk akun admin di `/login` | **Akun admin tidak ada di halaman login pemain.** Admin dan pemain disimpan di tabel terpisah dengan cookie berbeda. | Masuk lewat `/admin/login`. |
+| "Terlalu banyak percobaan gagal" | 5 kegagalan berturut-turut mengunci kombinasi username dan IP selama 15 menit. Kunci admin dan pemain terpisah. | Tunggu hitung mundur selesai, atau hapus baris terkait di tabel `login_attempts`. |
+| Akun baru tidak bisa dipakai, diarahkan ke `/pending` | Mode `approval` (bawaan `lan`) menunggu admin. | Setujui di `/admin/approvals`. |
+| Beranda masuk tetapi tanpa game | Semua game berstatus Nonaktif setelah instalasi. | Aktifkan di `/admin/games`. |
+| Ditolak dengan `CSRF_INVALID` saat membuka lewat alamat IP | `APP_ORIGIN` tidak sama dengan alamat yang dibuka. Mode pengembangan hanya melonggarkan alamat `localhost`. | Samakan `APP_ORIGIN` di `.env` dengan alamat yang dibuka, lalu mulai ulang server. |
+| Lupa password admin | `pnpm create-admin` menolak username yang sudah ada. | Ubah hash lewat database, atau hapus baris admin lalu jalankan `pnpm create-admin` lagi. |
 
 > [!IMPORTANT]
 > - `SESSION_SECRET` minimal 32 karakter acak. Jangan memakai nilai contoh.
@@ -86,11 +121,15 @@ pnpm dev                  # web :5173, server :3001
 | `pnpm build` | Build semua paket |
 | `pnpm lint` | ESLint, termasuk aturan isolasi game dan larangan nilai desain mentah |
 | `pnpm typecheck` | Pemeriksaan tipe |
-| `pnpm test` | Vitest |
+| `pnpm test` | Vitest (memerlukan database uji untuk server) |
+| `pnpm test:db:up` | Menyiapkan database uji `low_stress_test` dan migrasi |
+| `pnpm test:db:clean` | Membersihkan tabel data pada database uji |
 | `pnpm i18n:check` | Kunci `id` dan `en` harus identik |
 | `pnpm check:migrations` | Tabel game wajib berawalan `<id>_` |
 | `pnpm db:migrate` | Menjalankan migrasi |
 | `pnpm new-game <slug>` | Membuat folder game baru dari template |
+| `pnpm create-admin [username] [password]` | Membuat akun Superadmin (tanpa argumen, akan ditanya) |
+| `pnpm generate:icons` | Membuat ulang ikon PWA dari logo |
 
 ## Arsitektur
 
@@ -131,7 +170,14 @@ Deploy otomatis ke server belum diaktifkan karena belum ada target dan rahasia d
 
 ## Deploy
 
-Profil `lan` dan `public` (dengan Caddy) ada di `docker-compose.yml`. Panduan lengkap di [docs/deploy.md](docs/deploy.md). Berkas Docker sudah ada tetapi belum diverifikasi dengan menjalankan Compose.
+Profil `lan` dan `public` (dengan Caddy) ada di `docker-compose.yml`. Profil `lan` sudah dijalankan dan terverifikasi sehat; profil `public` belum diuji dengan domain dan HTTPS nyata. Panduan lengkap di [docs/deploy.md](docs/deploy.md), operasi harian di [docs/operations.md](docs/operations.md).
+
+```bash
+docker compose --profile lan up -d      # web di http://<ip-server>:8080
+docker compose --profile public up -d   # dengan Caddy dan HTTPS
+```
+
+Saat dibuka lewat alamat selain `localhost`, isi `APP_ORIGIN` di `.env` dengan alamat yang dipakai pengguna.
 
 ## Dokumentasi
 
@@ -145,3 +191,6 @@ Profil `lan` dan `public` (dengan Caddy) ada di `docker-compose.yml`. Panduan le
 | [Design System](docs/Design_System.md) | Warna, tipografi, komponen |
 | [Porting Guide](docs/Porting_Guide.md) | Memorting game dari aplikasi lama |
 | [ROADMAP](docs/ROADMAP.md) | Antrean kerja per fase |
+| [TASKS](docs/TASKS.md) · [progress](docs/progress.md) | Daftar tugas dan catatan hasil per fase |
+| [Deploy](docs/deploy.md) · [Operations](docs/operations.md) | Pemasangan LAN dan Public, operasi harian |
+| [Accessibility](docs/accessibility-audit.md) · [QA mobile](docs/qa-mobile.md) · [Load test](docs/load-test.md) | Audit aksesibilitas, uji mobile, uji beban |

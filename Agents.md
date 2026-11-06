@@ -11,6 +11,8 @@ Dokumen ini untuk agent (Claude Code, dll) yang bekerja di repositori **Low Stre
 | [API_Spec.md](docs/API_Spec.md) | Kontrak REST dan soket, kode error |
 | [Screens.md](docs/Screens.md) | Rute dan isi tiap layar (pengganti mockup) |
 | [Porting_Guide.md](docs/Porting_Guide.md) | Cara memorting Flappy Bird, Memory Match, Ludo dari `performance_dash` |
+| [TASKS_DEBUG_REFACTOR.md](docs/TASKS_DEBUG_REFACTOR.md) | **Antrean perbaikan dan refactor setelah Fase 1–9** (kerjakan D-01 lebih dulu) |
+| [ROADMAP_RIOT.md](docs/ROADMAP_RIOT.md) · [concepts/riot.md](docs/concepts/riot.md) | Game "Riot" (deduksi sosial 3D): tugas per fase dan konsep; **belum dimulai**, menunggu D-01 dan R-04 |
 
 > Status proyek: **perencanaan selesai, belum ada kode**. Perintah di bawah baru tersedia setelah Fase 1 selesai. Mulai eksekusi hanya ketika pemilik proyek menginstruksikannya, lalu **ikuti [ROADMAP.md](docs/ROADMAP.md) berurutan mulai dari P1-01**. Keputusan produk yang sudah punya nilai bawaan ada di ROADMAP §0; jangan menanyakannya lagi. Jika ada konflik antar dokumen, urutan prioritas: ROADMAP §0 → PRD → Architecture → API_Spec → Screens → Design_System.
 
@@ -117,7 +119,7 @@ docker compose --profile public up -d   # deploy Public (dengan Caddy)
 ## 6. Cara menambah game baru
 
 1. `pnpm new-game <slug>`.
-2. Isi `manifest.ts` (id, judul dua bahasa, mode, dukungan mobile, aturan skor, `client` lazy).
+2. Isi `manifest.ts` (id, judul dua bahasa, mode, dukungan mobile, aturan skor, `client` lazy) dan ganti `thumbnail.svg` (400x180) dengan gambar kartu game; tanpa berkas itu kartu di beranda memakai inisial.
 3. Bangun `client/`; tambah `server/` bila perlu; logika murni di `shared/` dengan unit test.
 4. Tulis `locales/id.json` dan `en.json`.
 5. Migrasi (bila ada tabel): `games/<slug>/db`, tabel berawalan `<slug>_`.
