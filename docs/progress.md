@@ -515,6 +515,34 @@ pnpm check:migrations-> lolos (semua tabel game menggunakan prefix yang benar)
 Database low_stress  -> UTUH dan TIDAK TERSENTUH (baris data tetap identik)
 ```
 
+---
+
+## 2026-11-06 - Eksekusi Game Riot: Fase 3 (RT-30..RT-33)
+
+Lingkup: Penyelesaian seluruh tugas Fase 3 (RT-30, RT-31, RT-32, RT-33) dari [ROADMAP_RIOT.md](ROADMAP_RIOT.md) §4 (Interaksi Sosial & Keandalan Jaringan). Berhenti setelah RT-33 sesuai instruksi pemilik (tidak memulai Fase 4).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| RT-30 Rapat dan Voting | **Selesai** | Modul `shared/meetings.ts`: Rapat darurat dapat dipanggil via laporan hologram maupun tombol rapat terbatas (kuota divalidasi server). Chat teks difilter secara otoritatif di server dengan sensor kata kasar (`sdk.profanity`), batas ketat maksimal 300 karakter (menolak `MESSAGE_TOO_LONG`), dan batas kecepatan/rate limit 1 pesan/detik (menolak `RATE_LIMITED`). Isolasi chat hantu mutlak: pesan pemain berstatus `ghost` difilter di server (`filterMessagesForViewer`) sehingga tidak pernah terkirim ke pemain berstatus `alive`. Mekanisme voting murni `resolveVotes`: kandidat suara terbanyak tunggal dieliminasi, jika terjadi seri (*tie*) tidak ada pemain yang dieliminasi, jika pilihan *skip* terbanyak tidak ada pemain yang dieliminasi. Eliminasi seluruh penyusup memicu kemenangan instan kru. Diuji 6 tes di `games/riot/test/meeting-voting.test.ts` lolos 100%. |
+| RT-31 Sabotase (Otoritatif Server) | **Selesai** | Modul `shared/sabotage.ts`: Penyusup dapat memicu sabotase dengan cooldown 30 detik (hanya 1 sabotase aktif sekaligus). Pemadaman (*blackout*) secara otoritatif menyusutkan radius pandang kru menjadi 3.5 meter pada pembuat snapshot server (`getEffectiveVisionRadius`), sehingga data pemain berjarak >3.5m dihilangkan total dari payload jaringan kru (nol kebocoran posisi). Kunci pintu sementara (*doors*) menyegel ruangan target selama 10 detik dan terbuka otomatis saat waktu habis. Alarm kritis (*critical_alarm*) dua titik berbatas waktu 45 detik: membutuhkan perbaikan serentak di dua stasiun berbeda (*station_cooling* dan *station_power*); jika hitung mundur habis tanpa perbaikan, server mengeksekusi kemenangan instan penyusup (`infiltrators_critical_sabotage`). Diuji 5 tes di `games/riot/test/sabotage.test.ts` lolos 100%. |
+| RT-32 Putus Koneksi & Resiliensi Jaringan | **Selesai** | Penanganan diskoneksi mobile di `server/service.ts` & `server/socket.ts`: Pemain yang terputus (layar ponsel mati/aplikasi ke latar belakang) ditandai `connected: false` dan waktu `disconnectedAt` dicatat. Sambung ulang (*reconnect*) dalam masa tenggang mengembalikan kontrol pemain dan status room view pribadi tanpa kehilangan progres. Ronde voting tidak terhambat: bila pemain yang masih terhubung telah selesai memilih seluruhnya, voting disimpulkan otomatis. Masa tenggang 60 detik (`DISCONNECT_GRACE_PERIOD_MS`): jika pemain tidak kembali >60s, pemain ditandai `isAbandoned: true` dan diubah menjadi `ghost` agar sisa pemain aktif tidak terjebak menunggu. Host room memiliki wewenang mengeluarkan pemain (`kickPlayer`) yang langsung memperbarui simulasi dan mengevaluasi ulang kondisi menang. Diuji 4 tes di `games/riot/test/reconnect-resilience.test.ts` lolos 100%. |
+| RT-33 Lobi & Opsi Permainan | **Selesai** | Modul `shared/lobby.ts`: Dukungan pembentukan dan daftar room lobi menggunakan arsitektur room bersama. Opsi host dikonfigurasi dan divalidasi dengan fungsi sanitasi batas aman: jumlah penyusup (1–3), jumlah tugas (1–5), kecepatan gerak pemain (0.5–2.5), radius pandang (4.0–16.0), cooldown aksi (10–60 detik), durasi diskusi (15–120 detik), durasi voting (15–120 detik), dan kuota rapat darurat (1–5). Tombol Mulai (`startGame`) dibatasi ketat hanya untuk host dan wajib memiliki minimal 4 pemain (menolak `MIN_PLAYERS_NOT_MET` jika <4). Batas kapasitas maksimal ruang (`riot.maxPlayers` dan env `RIOT_HARD_CAP`, default 32 pemain) ditegakkan di server saat bergabung (menolak `ROOM_CAPACITY_REACHED`). Opsi host dikunci dan tidak dapat diubah saat permainan berjalan. Diuji 5 tes di `games/riot/test/lobby-options.test.ts` lolos 100%. |
+
+### Pemeriksaan Akhir Monorepo
+
+```
+pnpm lint            -> lolos (0 error, 0 warning di seluruh monorepo)
+pnpm typecheck       -> lolos (seluruh 18 paket/aplikasi/game lolos tsc --noEmit)
+pnpm test            -> lolos (seluruh tes monorepo lolos 100%; games/riot 74/74 tes di 13 berkas tes)
+pnpm i18n:check      -> lolos (seluruh kunci id dan en identik)
+pnpm check:assets    -> lolos (seluruh aset terdaftar & lisensi valid)
+pnpm check:migrations-> lolos (seluruh tabel dan migrasi konsisten)
+Database low_stress  -> UTUH dan TIDAK TERSENTUH (semua tes berjalan pada database low_stress_test)
+```
+
+
 
 
 

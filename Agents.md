@@ -12,7 +12,7 @@ Dokumen ini untuk agent (Claude Code, dll) yang bekerja di repositori **Low Stre
 | [Screens.md](docs/Screens.md) | Rute dan isi tiap layar (pengganti mockup) |
 | [Porting_Guide.md](docs/Porting_Guide.md) | Cara memorting Flappy Bird, Memory Match, Ludo dari `performance_dash` |
 | [TASKS_DEBUG_REFACTOR.md](docs/TASKS_DEBUG_REFACTOR.md) | **Antrean perbaikan dan refactor setelah Fase 1–9** (kerjakan D-01 lebih dulu) |
-| [ROADMAP_RIOT.md](docs/ROADMAP_RIOT.md) · [concepts/riot.md](docs/concepts/riot.md) | Game "Riot" (deduksi sosial 3D): tugas per fase dan konsep; **belum dimulai**, menunggu D-01 dan R-04 |
+| [ROADMAP_RIOT.md](docs/ROADMAP_RIOT.md) · [concepts/riot.md](docs/concepts/riot.md) | Game "Riot" (deduksi sosial 3D): tugas per fase dan konsep. **Fase 0 sampai 3 selesai; mulai dari [HANDOFF_RIOT.md](docs/HANDOFF_RIOT.md)** |
 
 > Status proyek: **perencanaan selesai, belum ada kode**. Perintah di bawah baru tersedia setelah Fase 1 selesai. Mulai eksekusi hanya ketika pemilik proyek menginstruksikannya, lalu **ikuti [ROADMAP.md](docs/ROADMAP.md) berurutan mulai dari P1-01**. Keputusan produk yang sudah punya nilai bawaan ada di ROADMAP §0; jangan menanyakannya lagi. Jika ada konflik antar dokumen, urutan prioritas: ROADMAP §0 → PRD → Architecture → API_Spec → Screens → Design_System.
 

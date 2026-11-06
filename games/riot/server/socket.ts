@@ -1,6 +1,8 @@
 import type { Server as SocketIOServer, Socket } from "socket.io";
 import { RiotGameService } from "./service";
 import { SERVER_TICK_MS } from "../shared/types";
+import type { RiotHostOptions } from "../shared/lobby";
+import type { SabotageKind } from "../shared/sabotage";
 
 export interface SetupRiotSocketResult {
   service: RiotGameService;
@@ -19,14 +21,25 @@ export function setupRiotSocket(io: SocketIOServer, service = new RiotGameServic
     const userId = authData.userId || socket.id;
     const displayName = authData.displayName || `Player_${userId.slice(0, 4)}`;
 
-    socket.on("room:create", (_data: unknown, callback?: (res: unknown) => void) => {
-      const room = service.createRoom(userId, displayName);
+    socket.on("room:create", (data?: { options?: Partial<RiotHostOptions> }, callback?: (res: unknown) => void) => {
+      const room = service.createRoom(userId, displayName, undefined, data?.options);
       socket.join(room.id);
       socketPlayerMap.set(socket.id, { playerId: userId, roomId: room.id });
 
       const view = service.getClientRoomView(room.id, userId);
       if (callback) callback({ success: true, room: view });
       socket.emit("room:view", view);
+    });
+
+    socket.on("room:options", (data: { options: Partial<RiotHostOptions> }, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (!mapping) return;
+
+      const res = service.updateHostOptions(mapping.roomId, mapping.playerId, data.options);
+      if (callback) callback(res);
+      if (res.success) {
+        broadcastRoomViews(riotNamespace, mapping.roomId, service);
+      }
     });
 
     socket.on("room:join", (data: { roomId: string }, callback?: (res: unknown) => void) => {
@@ -80,20 +93,26 @@ export function setupRiotSocket(io: SocketIOServer, service = new RiotGameServic
       service.processMovementInput(mapping.roomId, mapping.playerId, input);
     });
 
-    socket.on("task:complete", (data: { taskId: string; startedAt: number; completedAt: number; durationMs: number }, callback?: (res: unknown) => void) => {
-      const mapping = socketPlayerMap.get(socket.id);
-      if (!mapping) return;
+    socket.on(
+      "task:complete",
+      (
+        data: { taskId: string; startedAt: number; completedAt: number; durationMs: number },
+        callback?: (res: unknown) => void,
+      ) => {
+        const mapping = socketPlayerMap.get(socket.id);
+        if (!mapping) return;
 
-      const res = service.completeTask(mapping.roomId, mapping.playerId, data);
-      if (callback) callback(res);
+        const res = service.completeTask(mapping.roomId, mapping.playerId, data);
+        if (callback) callback(res);
 
-      if (res.success) {
-        broadcastRoomViews(riotNamespace, mapping.roomId, service);
-        if (res.winResult) {
-          riotNamespace.to(mapping.roomId).emit("game:finished", res.winResult);
+        if (res.success) {
+          broadcastRoomViews(riotNamespace, mapping.roomId, service);
+          if (res.winResult) {
+            riotNamespace.to(mapping.roomId).emit("game:finished", res.winResult);
+          }
         }
-      }
-    });
+      },
+    );
 
     socket.on("action:eliminate", (data: { targetId: string }, callback?: (res: unknown) => void) => {
       const mapping = socketPlayerMap.get(socket.id);
@@ -139,20 +158,171 @@ export function setupRiotSocket(io: SocketIOServer, service = new RiotGameServic
       }
     });
 
+    // --- RT-30: Rapat Chat & Voting ---
+    socket.on("chat:send", (data: { text: string }, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (!mapping) return;
+
+      const res = service.sendChatMessage(mapping.roomId, mapping.playerId, data.text);
+      if (callback) callback({ success: res.success, reason: res.reason });
+
+      if (res.success && res.message) {
+        if (res.audience === "ghosts_only") {
+          // Emit only to ghost sockets in room
+          for (const [sockId, map] of socketPlayerMap.entries()) {
+            if (map.roomId === mapping.roomId) {
+              const p = service.getRoom(mapping.roomId)?.players.get(map.playerId);
+              if (p?.status === "ghost") {
+                riotNamespace.to(sockId).emit("chat:message", res.message);
+              }
+            }
+          }
+        } else {
+          // Emit to all sockets in room
+          riotNamespace.to(mapping.roomId).emit("chat:message", res.message);
+        }
+      }
+    });
+
+    socket.on("meeting:advance", (_data: unknown, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (!mapping) return;
+
+      const room = service.getRoom(mapping.roomId);
+      if (!room || room.hostId !== mapping.playerId) {
+        if (callback) callback({ success: false, reason: "NOT_ROOM_HOST" });
+        return;
+      }
+
+      const res = service.advanceMeetingToVoting(mapping.roomId);
+      if (callback) callback(res);
+      if (res.success) {
+        riotNamespace.to(mapping.roomId).emit("meeting:voting_started");
+        broadcastRoomViews(riotNamespace, mapping.roomId, service);
+      }
+    });
+
+    socket.on("vote:cast", (data: { targetId: string | "skip" }, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (!mapping) return;
+
+      const res = service.castVote(mapping.roomId, mapping.playerId, data.targetId);
+      if (callback) callback({ success: res.success, reason: res.reason });
+
+      if (res.success) {
+        broadcastRoomViews(riotNamespace, mapping.roomId, service);
+        if (res.concluded) {
+          riotNamespace.to(mapping.roomId).emit("voting:result", res.votingResult);
+          if (res.winResult) {
+            riotNamespace.to(mapping.roomId).emit("game:finished", res.winResult);
+          }
+        }
+      }
+    });
+
+    // --- RT-31: Sabotase ---
+    socket.on(
+      "sabotage:trigger",
+      (data: { kind: SabotageKind; targetRoom?: string }, callback?: (res: unknown) => void) => {
+        const mapping = socketPlayerMap.get(socket.id);
+        if (!mapping) return;
+
+        const res = service.triggerSabotage(mapping.roomId, mapping.playerId, data.kind, data.targetRoom);
+        if (callback) callback(res);
+
+        if (res.success && res.sabotage) {
+          riotNamespace.to(mapping.roomId).emit("sabotage:active", res.sabotage);
+          broadcastRoomViews(riotNamespace, mapping.roomId, service);
+        }
+      },
+    );
+
+    socket.on("sabotage:repair", (data: { stationId: string }, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (!mapping) return;
+
+      const res = service.repairSabotage(mapping.roomId, mapping.playerId, data.stationId);
+      if (callback) callback(res);
+
+      if (res.success) {
+        if (res.resolved) {
+          riotNamespace.to(mapping.roomId).emit("sabotage:resolved");
+        }
+        broadcastRoomViews(riotNamespace, mapping.roomId, service);
+      }
+    });
+
+    // --- RT-32: Putus Koneksi & Reconnect & Kick ---
+    socket.on("player:reconnect", (data: { roomId: string }, callback?: (res: unknown) => void) => {
+      const res = service.reconnectPlayer(data.roomId, userId);
+      if (!res.success) {
+        if (callback) callback({ success: false });
+        return;
+      }
+
+      socket.join(data.roomId);
+      socketPlayerMap.set(socket.id, { playerId: userId, roomId: data.roomId });
+
+      if (callback) callback({ success: true, room: res.view });
+      broadcastRoomViews(riotNamespace, data.roomId, service);
+    });
+
+    socket.on("room:kick", (data: { targetId: string }, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (!mapping) return;
+
+      const res = service.kickPlayer(mapping.roomId, mapping.playerId, data.targetId);
+      if (callback) callback(res);
+
+      if (res.success) {
+        for (const [sockId, map] of socketPlayerMap.entries()) {
+          if (map.roomId === mapping.roomId && map.playerId === data.targetId) {
+            const kickedSock = riotNamespace.sockets.get(sockId);
+            kickedSock?.emit("room:kicked");
+            kickedSock?.leave(mapping.roomId);
+            socketPlayerMap.delete(sockId);
+          }
+        }
+        broadcastRoomViews(riotNamespace, mapping.roomId, service);
+      }
+    });
+
     socket.on("disconnect", () => {
       const mapping = socketPlayerMap.get(socket.id);
       if (mapping) {
         socketPlayerMap.delete(socket.id);
-        service.leaveRoom(mapping.roomId, mapping.playerId);
+        const room = service.getRoom(mapping.roomId);
+        if (room && room.phase === "lobby") {
+          service.leaveRoom(mapping.roomId, mapping.playerId);
+        } else if (room) {
+          service.handleDisconnect(mapping.roomId, mapping.playerId);
+        }
         broadcastRoomViews(riotNamespace, mapping.roomId, service);
       }
     });
   });
 
-  // 15 Hz Authoritative Tick Loop broadcasting interest-managed snapshots
+  // 15 Hz Authoritative Tick Loop broadcasting interest-managed snapshots and advancing timers
   const tickInterval = setInterval(() => {
     const now = Date.now();
     for (const room of service.getAllRooms()) {
+      if (room.phase === "finished") continue;
+
+      // Handle server tick timers: sabotage expiration, discussion/voting timer, disconnect timeout
+      const tickRes = service.processServerTick(room.id, now);
+      if (tickRes.phaseAdvanced) {
+        if (room.phase === "voting") {
+          riotNamespace.to(room.id).emit("meeting:voting_started");
+        } else if (room.phase === "playing") {
+          riotNamespace.to(room.id).emit("voting:result", room.votingResult);
+        }
+        broadcastRoomViews(riotNamespace, room.id, service);
+      }
+      if (tickRes.winResult) {
+        riotNamespace.to(room.id).emit("game:finished", tickRes.winResult);
+        broadcastRoomViews(riotNamespace, room.id, service);
+      }
+
       if (room.phase !== "playing") continue;
 
       // Advance authoritative tick
