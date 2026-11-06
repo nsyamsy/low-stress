@@ -479,17 +479,40 @@ Lingkup: Verifikasi dan penyelesaian tugas RT-10, RT-11, RT-12, dan RT-13 [ROADM
 | **Latensi Input Server p95** | < 20.0 ms | **0.006 ms** | **0.002 ms** | **Seketika (Instant)** |
 | **Kebocoran Posisi di Luar Pandang (>12m)** | 0 kebocoran (keamanan deduksi) | **0 kebocoran** | **0 kebocoran** | **100% Terisolasi** |
 
+---
+
+## 2026-11-06 - Eksekusi Game Riot: Halaman Uji RT-14 & Fase 2 (RT-20..RT-24)
+
+Lingkup: Implementasi Halaman Uji Spike Mandiri RT-14 untuk ponsel nyata, penyelesaian Fase 2 (RT-20, RT-21, RT-22, RT-23, RT-24) sesuai [ROADMAP_RIOT.md](ROADMAP_RIOT.md), serta penerapan keputusan pemilik mengenai judul publik game. Berhenti setelah RT-24 sesuai instruksi (tidak memulai Fase 3).
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| RT-14 Halaman Uji Spike Ponsel Nyata | **Selesai** | Aplikasi mandiri Three.js di `games/riot/spike/` (entry HTML, Vite config mandiri port 5174 host `0.0.0.0`, tanpa login dan tanpa mengubah inti). Skrip `pnpm spike:riot` mencetak Network URL LAN untuk dibuka langsung pada browser ponsel (Safari iOS / Chrome Android). Memuat peta greybox 10 ruangan RT-11, 20/32 karakter `InstancedMesh` dengan variasi warna/pergerakan, joystick sentuh virtual RT-12 (≥44px), panel telemetri real-time (FPS avg/min, draw calls, triangles, DPR, ukuran layar, orientasi, userAgent), evaluasi otomatis anggaran R5 (>=30 fps, <=150 draw calls, <=100k segitiga), tombol toggle 20/32 karakter, tombol salin laporan JSON ke clipboard, dan dukungan dwibahasa `id`/`en`. Dokumentasi lengkap ditulis di `games/riot/README.md`. |
+| RT-20 Mesin Aturan Murni di `shared/` | **Selesai** | Modul `shared/rules.ts`: State machine lengkap (`lobby` → `playing` → `meeting` → `voting` → `finished` → `lobby`), pembagian peran R3 dengan bukti matematis `infiltrators < crew` untuk seluruh skala pemain (4, 5, 12, 20, 32 pemain), serta evaluasi kondisi menang (kru: semua tugas selesai atau seluruh penyusup tereliminasi; penyusup: paritas kru hidup atau sabotase kritis). Diuji 12 tes di `games/riot/test/rules.test.ts` lolos 100%. |
+| RT-21 Loop Game Server Otoritatif | **Selesai** | Modul server di `games/riot/server/`: implementasi `GameServerModule` terhubung ke kontrak SDK, loop 15 Hz dengan Socket.IO di namespace `/riot`, peran rahasia hanya dikirimkan ke pemilik socketnya sendiri (`role`), snapshot per-klien terlindungi tanpa bocoran data peran pemain lain, dan pembersihan room kedaluwarsa terintegrasi `computeExpirationCutoff`. Diuji 3 tes di `games/riot/test/server-loop.test.ts` lolos 100%. |
+| RT-22 Kerangka Tugas & 3 Tugas Awal | **Selesai** | Modul `shared/tasks.ts`: 3 tugas stasiun luar angkasa orisinal (*comms_calibrate*, *hydroponics_water*, *cargo_sort*) dengan verifikasi server terhadap posisi fisik/radius interaksi (menolak `TASK_OUT_OF_RANGE`), validasi batas minimum waktu manusia (menolak `TASK_COMPLETED_TOO_FAST`), serta penolakan tugas kru oleh penyusup (`INFILTRATOR_CANNOT_DO_CREW_TASK`). Diuji 5 tes di `games/riot/test/tasks.test.ts` lolos 100%. |
+| RT-23 Aksi Penyusup (Visual Netral) | **Selesai** | Modul `shared/actions.ts`: Aksi eliminasi berjarak dekat (<= 2.2m) dengan cooldown 25 detik (menolak `ACTION_ON_COOLDOWN`). Korban memudar menjadi hantu (`status: "ghost"`) dan meninggalkan penanda hologram di lokasi tanpa darah atau kekerasan visual. Penanda hologram dapat dilaporkan dalam radius 2.5m untuk memulai rapat darurat (*emergency meeting*). Diuji 4 tes di `games/riot/test/actions.test.ts` lolos 100%. |
+| RT-24 Alur Menang/Kalah & Uji Ronde Bot | **Selesai** | Modul `shared/scoring.ts`: kalkulasi poin R8 (+10 menang, +1 per tugas kru, +2 tebak penyusup). Dua simulasi bot ronde utuh end-to-end di `games/riot/test/round-e2e.test.ts` lolos 100%: (1) Kemenangan tugas kru (9 tugas diselesaikan oleh 3 bot kru, skor 13 pts per kru, 0 pts penyusup), (2) Kemenangan paritas penyusup (eliminasi bertahap hingga paritas tercapai, skor 10 pts penyusup). Status game bertransisi ke `finished` dan peran seluruh pemain terungkap di layar hasil. |
+
+### Pembaruan Keputusan Pemilik: Judul Publik Game (2026-11-06)
+
+- **Judul Publik Bahasa Inggris:** `Uproar on the Silent Station`
+- **Judul Publik Bahasa Indonesia:** `Gaduh di Stasiun Hening`
+- **Penerapan Tuntas:** Diterapkan pada `manifest.ts` (title & description), `locales/id.json` & `locales/en.json`, `thumbnail.svg` (vektor tipografi judul diubah tanpa teks "RIOT"), serta halaman uji spike `index.html`.
+- **Kepatuhan Aturan:** Kata "Riot" **tidak muncul** pada teks mana pun yang tampil ke pemain (teruji otomatis di `manifest.test.ts`). Pengenal teknis (slug `riot`, id game, namespace socket `/riot`, prefix tabel `riot_`) tetap dipertahankan.
+
 ### Pemeriksaan akhir
 
 ```
 pnpm lint            -> lolos (0 error, 0 warning di seluruh monorepo)
 pnpm typecheck       -> lolos (seluruh workspace lolos tsc --noEmit)
-pnpm test            -> lolos (seluruh workspace, 28 tes @low-stress/game-riot, 132 tes server, 100% lulus)
+pnpm test (riot)     -> lolos (54/54 tes lolos di 9 berkas tes games/riot)
 pnpm i18n:check      -> lolos (semua kunci id dan en cocok)
 pnpm check:assets    -> lolos (semua berkas aset terdaftar dan memenuhi lisensi CC0/orisinil)
 pnpm check:migrations-> lolos (semua tabel game menggunakan prefix yang benar)
-pnpm build (@low-stress/web) -> lolos (Three.js terpisah bersih sebagai dynamic chunk mandiri)
-Database low_stress (dev)   -> UTUH dan TIDAK TERSENTUH (baris data tetap identik)
+Database low_stress  -> UTUH dan TIDAK TERSENTUH (baris data tetap identik)
 ```
 
 

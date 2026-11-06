@@ -45,9 +45,16 @@ Masih terbuka: nama stasiun dan ruangan, dan daftar spesies/aksesori awal.
 
 ---
 
-### USULAN (RT-05, Menunggu Persetujuan Pemilik)
+### Keputusan RT-05 (diperbarui 2026-11-06)
 
-Berikut adalah usulan detail untuk keputusan terbuka di atas. Seluruh poin di bawah berstatus **USULAN, menunggu persetujuan pemilik** (belum disetujui sampai pemilik memutuskannya):
+Status persetujuan pemilik (disampaikan pemilik pada 2026-11-06):
+- **Disetujui:** poin B (nama stasiun), C (10 ruangan), D (6 spesies Mochi), E (8 aksesori).
+- **Judul publik (poin A): usulan di bawah TIDAK dipakai.** Pemilik meminta nama pengganti "Riot" yang menggambarkan keributan, demi menghindari risiko merek Riot Games. **Dipilih pemilik (2026-11-06): judul Inggris "Uproar on the Silent Station" dan judul Indonesia "Gaduh di Stasiun Hening".** Slug teknis, namespace, tabel, dan rute tetap `riot` (internal). Kata "Riot" tidak boleh muncul pada teks yang tampil ke pemain. Pemeriksaan merek atas judul ini bagian dari RT-54 (pemilik).
+- **Aset (ROADMAP_RIOT §0 butir 3):** pemilik mengizinkan unduhan aset CC0 dari halaman resmi pembuat, dengan lisensi dibaca dari halaman itu dan dicatat di `games/riot/assets/LICENSES.md`.
+- **Tinjauan RT-54:** dilakukan sendiri oleh pemilik.
+- **Gerbang Fase 1:** pemilik memutuskan lanjut ke Fase 2. Uji ponsel nyata (RT-14) menyusul lewat halaman uji; pemilik belum dapat menguji sendiri saat ini.
+
+Rincian poin A sampai E di bawah adalah teks usulan awal (poin A hanya arsip):
 
 #### A. Judul Publik Penuh (Mitigasi Risiko Merek Riot Games §10)
 - **Usulan 1 (Direkomendasikan):** `Low Stress: Riot di Stasiun Hening` (*Low Stress: Riot on Silent Station*) — Mempertahankan nama "Riot" dengan deskriptor stasiun luar angkasa dan payung Low Stress agar jelas tidak terafiliasi dengan Riot Games.

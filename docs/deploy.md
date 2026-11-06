@@ -66,9 +66,9 @@ Low Stress menggunakan basis kode monorepo yang sama untuk semua skenario deploy
    SESSION_SECRET=a8b3c4d5e6f7a8b3c4d5e6f7a8b3c4d5e6f7a8b3c4d5e6f7a8b3c4d5e6f7a8b3
 
    # Asal Publik Aplikasi (Origin)
-   # Untuk LAN: http://<ip-server>:8080 (misal: http://192.168.1.50:8080)
+   # Untuk LAN: http://<ip-server>:8080 (misal: http://<ip-server>:8080)
    # Untuk Public: https://game.perusahaan.com
-   APP_ORIGIN=http://192.168.1.50:8080
+   APP_ORIGIN=http://<ip-server>:8080
 
    # Domain publik (khusus profil public untuk sertifikat Caddy otomatis)
    APP_DOMAIN=game.perusahaan.com
@@ -150,7 +150,7 @@ Secara standar browser modern hanya mengizinkan registrasi Service Worker (PWA l
    }
    ```
 
-2. Tentukan domain lokal di `.env` (misalnya `lowstress.local` atau IP server LAN `192.168.1.50`):
+2. Tentukan domain lokal di `.env` (misalnya `lowstress.local` atau IP server LAN `<ip-server>`):
 
    ```env
    APP_DOMAIN=lowstress.local

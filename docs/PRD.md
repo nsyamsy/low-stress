@@ -216,7 +216,9 @@ Keputusan fitur:
    - Pemain tetap dapat membuat ruangan hingga **12 pemain** baik di mobile maupun desktop selama diizinkan oleh pengaturan admin.
    - Admin dapat membatasi batas atas ruangan melalui pengaturan `ludo.maxPlayers` (rentang 2–12, bawaan 12).
 
-Masih terbuka:
-1. Retensi pesan chat 7 hari dan batas 300 karakter: sesuai?
-2. Apakah panel chat publik ikut tampil di halaman game desktop, atau hanya di beranda dan leaderboard?
-3. Anti-cheat skor: cukup plausibility check, atau perlu replay atau simulasi server?
+Diputuskan 2026-11-06 (pemilik meminta asisten memilihkan; pilihan mengikuti nilai bawaan ROADMAP §0):
+1. Retensi chat 7 hari dan batas 300 karakter: **dipertahankan** (ROADMAP D5).
+2. Panel chat publik **tetap tampil di halaman game desktop dan terlipat secara bawaan** (ROADMAP D5).
+3. Anti-cheat skor: **cukup validasi kewajaran di server** (ROADMAP D6). Replay atau simulasi server hanya dipertimbangkan bila ditemukan kecurangan nyata.
+
+Tidak ada pertanyaan terbuka yang tersisa di PRD ini.

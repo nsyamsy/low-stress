@@ -12,7 +12,7 @@ Status: **belum dimulai**. Mulai hanya ketika pemilik menginstruksikannya, dan h
 
 1. **Dilarang** memakai nama, karakter, denah, antarmuka, suara, atau aset milik Among Us/Innersloth, atau meniru tugasnya (kabel, geser kartu, unduh/unggah data, bahan bakar mesin, buang sampah, dan sejenisnya). Denah peta digambar sendiri.
 2. **Judul "Riot"** punya risiko merek (konsep §10). Gunakan judul penuh yang mengandung deskriptor, tanpa logo atau gaya visual Riot Games. Jangan menyiratkan afiliasi.
-3. **Tidak ada unduhan aset tanpa izin pemilik** dan tanpa entri di `games/riot/assets/LICENSES.md` (nama, pembuat, URL halaman resmi, lisensi yang dibaca dari halaman resmi, tanggal, berkas yang dipakai). Utamakan CC0; hindari NonCommercial dan NoDerivatives.
+3. **Tidak ada unduhan aset tanpa izin pemilik** (izin untuk unduhan CC0 dari halaman resmi pembuat sudah diberikan pemilik pada 2026-11-06; tetap wajib tercatat) dan tanpa entri di `games/riot/assets/LICENSES.md` (nama, pembuat, URL halaman resmi, lisensi yang dibaca dari halaman resmi, tanggal, berkas yang dipakai). Utamakan CC0; hindari NonCommercial dan NoDerivatives.
 4. **Server otoritatif.** Peran, posisi di luar jangkauan pandang, dan hasil tugas tidak pernah dipercaya dari klien; informasi tersembunyi tidak dikirim ke klien yang tidak berhak.
 5. Semua teks lewat i18n (`id`, `en`); semua UI mobile-first (360px) dan terkena aturan token desain; chat disensor server; tanpa CDN.
 6. Setelah tiap tugas: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`. Catat di [progress.md](progress.md). Jangan commit kecuali diminta.

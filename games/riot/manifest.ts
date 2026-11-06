@@ -4,12 +4,12 @@ export const manifest: GameManifest = {
   id: "riot",
   version: "0.1.0",
   title: {
-    id: "Riot",
-    en: "Riot",
+    id: "Gaduh di Stasiun Hening",
+    en: "Uproar on the Silent Station",
   },
   description: {
-    id: "Game deduksi sosial 3D luar angkasa multipemain.",
-    en: "3D multiplayer social deduction space game.",
+    id: "Game deduksi sosial 3D luar angkasa multipemain di Stasiun Orbital Hening.",
+    en: "3D multiplayer social deduction space game on Silent Orbital Station.",
   },
   icon: "icon.svg",
   mode: "multiplayer",

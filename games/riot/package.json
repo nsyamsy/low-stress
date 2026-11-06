@@ -5,19 +5,25 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "spike": "vite --config spike/vite.config.ts spike --host 0.0.0.0 --port 5174"
   },
   "dependencies": {
     "@low-stress/i18n": "workspace:*",
     "@low-stress/sdk": "workspace:*",
     "@low-stress/ui": "workspace:*",
     "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "socket.io": "^4.8.4",
     "three": "^0.170.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@types/three": "^0.170.0",
+    "@vitejs/plugin-react": "^6.2.1",
     "typescript": "^5.9.3",
+    "vite": "^8.3.5",
     "vitest": "^5.1.0"
   }
 }

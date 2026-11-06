@@ -6,5 +6,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["manifest.ts", "client", "shared", "server", "test"]
+  "include": ["manifest.ts", "client", "shared", "server", "test", "spike"]
 }

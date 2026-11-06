@@ -1,5 +1,5 @@
 {
-  "title": "Riot",
+  "title": "Uproar on the Silent Station",
   "subtitle": "Silent Orbital Station",
   "lobby": "Game Lobby",
   "room": "Room",
@@ -32,5 +32,25 @@
     "observation": "Observation Dome",
     "power": "Power Grid",
     "tunnels": "Maintenance Tunnels"
+  },
+  "spike": {
+    "title": "Mobile Performance Spike (RT-14)",
+    "subtitle": "3D Viewport & R5 Budget Benchmark",
+    "fps": "FPS: {{current}} (Avg: {{avg}}, Min: {{min}})",
+    "drawCalls": "Draw Calls: {{count}}",
+    "triangles": "Triangles: {{count}}",
+    "r5Budget": "R5 Budget Evaluation",
+    "pass": "PASS",
+    "fail": "FAIL",
+    "test20": "20 Characters Mode",
+    "test32": "32 Characters Mode",
+    "copyReport": "Copy Report",
+    "copied": "Copied!",
+    "rtt": "Network RTT: {{rtt}} ms",
+    "rttUnavailable": "RTT: Server unreachable (offline / standalone spike)",
+    "instructions": "Use touch joystick or WASD to move character",
+    "dpr": "DPR: {{dpr}}",
+    "screen": "Screen: {{width}}x{{height}}",
+    "orientation": "Orientation: {{orientation}}"
   }
 }

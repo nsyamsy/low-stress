@@ -1,5 +1,5 @@
 {
-  "title": "Riot",
+  "title": "Gaduh di Stasiun Hening",
   "subtitle": "Stasiun Orbital Hening",
   "lobby": "Lobi Permainan",
   "room": "Room",
@@ -32,5 +32,25 @@
     "observation": "Kubah Observasi",
     "power": "Generator Daya",
     "tunnels": "Lorong Ventilasi"
+  },
+  "spike": {
+    "title": "Uji Performa Ponsel (RT-14)",
+    "subtitle": "Spike Tampilan Tiga Dimensi & Tolok Ukur R5",
+    "fps": "FPS: {{current}} (Rata-rata: {{avg}}, Min: {{min}})",
+    "drawCalls": "Draw Call: {{count}}",
+    "triangles": "Segitiga: {{count}}",
+    "r5Budget": "Evaluasi Anggaran R5",
+    "pass": "LULUS",
+    "fail": "GAGAL",
+    "test20": "Mode 20 Karakter",
+    "test32": "Mode 32 Karakter",
+    "copyReport": "Salin Laporan",
+    "copied": "Tersalin!",
+    "rtt": "RTT Jaringan: {{rtt}} ms",
+    "rttUnavailable": "RTT: Server tidak terjangkau (offline / spike mandiri)",
+    "instructions": "Gunakan joystick sentuh atau WASD untuk menggerakkan karakter",
+    "dpr": "DPR: {{dpr}}",
+    "screen": "Layar: {{width}}x{{height}}",
+    "orientation": "Orientasi: {{orientation}}"
   }
 }

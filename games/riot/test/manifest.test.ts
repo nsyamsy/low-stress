@@ -9,6 +9,14 @@ describe("RT-10: Riot Game Manifest & Scaffolding", () => {
     expect(manifest.permissions).toContain("scores");
     expect(manifest.permissions).toContain("realtime");
     expect(manifest.permissions).toContain("db");
+
+    // Public title check (owner decision 2026-11-06: no "Riot" in player-facing text)
+    expect(manifest.title.id).toBe("Gaduh di Stasiun Hening");
+    expect(manifest.title.en).toBe("Uproar on the Silent Station");
+    expect(manifest.title.id).not.toMatch(/riot/i);
+    expect(manifest.title.en).not.toMatch(/riot/i);
+    expect(manifest.description.id).not.toMatch(/riot/i);
+    expect(manifest.description.en).not.toMatch(/riot/i);
   });
 
   it("loads client lazily", async () => {

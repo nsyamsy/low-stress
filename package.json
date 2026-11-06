@@ -22,7 +22,8 @@
     "test:db:clean": "tsx tools/test-db/src/clean.ts",
     "create-admin": "tsx tools/create-admin/src/index.ts",
     "new-game": "tsx tools/new-game/src/index.ts",
-    "generate:icons": "tsx tools/generate-icons/src/index.ts"
+    "generate:icons": "tsx tools/generate-icons/src/index.ts",
+    "spike:riot": "pnpm --filter @low-stress/game-riot spike"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
