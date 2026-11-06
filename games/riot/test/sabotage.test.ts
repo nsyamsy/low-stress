@@ -47,9 +47,12 @@ describe("RT-31: Sabotage System", () => {
     p2Sim.x = 5.0; // Distance = 5.0m
     p2Sim.y = 0;
 
-    const p1 = room.players.get("p1")!;
-    p1.role = "crew";
-    const infiltrator = Array.from(room.players.values()).find((p) => p.role === "infiltrator")!;
+    // Peran dibagi acak saat startGame; tetapkan eksplisit agar tes deterministik
+    // (tanpa ini, p1 bisa menjadi satu-satunya penyusup lalu dipaksa jadi kru).
+    for (const [id, player] of room.players) {
+      player.role = id === "p4" ? "infiltrator" : "crew";
+    }
+    const infiltrator = room.players.get("p4")!;
 
     // In normal conditions with default 8m vision, p1 sees p2 (distance 5.0 <= 8.0)
     const normalSnapshot = service.getClientSnapshot(room.id, "p1", Date.now());
