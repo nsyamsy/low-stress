@@ -239,23 +239,19 @@ describe("Riot rematch & reveal peran (RT-42 lanjutan)", () => {
     let view = service.getClientRoomView(room.id, "p1")!;
     expect(view.ejectedRole ?? null).toBeNull();
 
-    // Simulasikan voting yang mengeluarkan penyusup
+    // Simulasikan voting yang mengeluarkan penyusup: SEMUA pemain hidup
+    // memilih tepat sekali (crew -> penyusup, penyusup -> skip). Peran acak,
+    // jadi pemilih tidak boleh diasumsikan id tertentu (hindari duplikat vote
+    // yang membuat voting tidak pernah selesai).
     room.phase = "voting";
-    room.votes.set("p2", infiltrator.id);
-    room.votes.set("p3", infiltrator.id);
-    room.votes.set("p4", "skip");
-    const crewVoter = Array.from(room.players.values()).find(
-      (p) => p.role === "crew" && p.id !== infiltrator.id,
-    )!;
-    room.votes.set(crewVoter.id, infiltrator.id);
-
-    // Picu resolusi via castVote terakhir? votes diisi manual; panggil resolve
-    // melalui castVote agar state konsisten.
-    room.votes.clear();
-    service.castVote(room.id, "p2", infiltrator.id);
-    service.castVote(room.id, "p3", infiltrator.id);
-    service.castVote(room.id, "p4", "skip");
-    service.castVote(room.id, crewVoter.id, infiltrator.id);
+    for (const player of room.players.values()) {
+      if (player.status !== "alive") continue;
+      service.castVote(
+        room.id,
+        player.id,
+        player.role === "infiltrator" ? "skip" : infiltrator.id,
+      );
+    }
 
     view = service.getClientRoomView(room.id, "p1")!;
     expect(view.votingResult?.ejectedId).toBe(infiltrator.id);
