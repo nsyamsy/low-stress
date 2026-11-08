@@ -19,13 +19,23 @@
     "close": "Close",
     "save": "Save",
     "back": "Back",
-    "retry": "Try again"
+    "retry": "Try again",
+    "confirm": "Confirm",
+    "tryAgain": "Try again",
+    "search": "Search",
+    "send": "Send",
+    "viewAll": "View all"
   },
   "state": {
     "loading": "Loading…",
     "empty": "Nothing here yet",
     "error": "Something went wrong. Try again.",
-    "offline": "You are offline"
+    "offline": "You are offline",
+    "notFoundTitle": "Page not found",
+    "notFoundDesc": "The page you are looking for is unavailable or has been moved.",
+    "backHome": "Back to home",
+    "forbidden": "Access denied. Admin accounts cannot play games.",
+    "networkError": "Failed to connect to server. Check your network connection."
   },
   "theme": {
     "label": "Theme",
@@ -183,7 +193,9 @@
       "menu": "Menu",
       "games": "Games",
       "chat": "Chat Moderation",
-      "leaderboard": "Score Moderation"
+      "leaderboard": "Score Moderation",
+      "ludo": "Ludo Moderation",
+      "riot": "Riot Moderation"
     },
     "header": {
       "deployMode": "Deploy mode: {{mode}}"
@@ -204,7 +216,9 @@
       "pendingSection": "Pending approval",
       "runsByGame": "Games played by game",
       "noPending": "No signups waiting for approval.",
-      "noRuns": "No games have been played today."
+      "noRuns": "No games have been played today.",
+      "viewAll": "View all →",
+      "playsCount": "{{count}} plays"
     },
     "approvals": {
       "title": "User Approvals",
@@ -219,6 +233,7 @@
     "users": {
       "title": "User Management",
       "searchPlaceholder": "Search username, name, email…",
+      "search": "Search",
       "all": "All",
       "pending": "Pending",
       "active": "Active",
@@ -261,6 +276,10 @@
       "smtpNotice": "Configured via .env. When active: email verification, forgot password, notifications.",
       "testEmail": "Send test email",
       "testEmailPrompt": "Enter recipient test email:",
+      "testEmailLabel": "Recipient email",
+      "testEmailPlaceholder": "admin@example.com",
+      "testEmailSuccess": "Test email sent successfully.",
+      "testEmailFailed": "Failed to send test email.",
       "saveSuccess": "Settings updated successfully."
     },
     "audit": {
@@ -270,7 +289,9 @@
       "colAction": "Action",
       "colTarget": "Target",
       "colDetail": "Detail",
-      "empty": "No audit records found."
+      "empty": "No audit records found.",
+      "filterAction": "All actions",
+      "filterTarget": "All targets"
     },
     "modal": {
       "confirmTitle": "Confirm Action",
@@ -294,14 +315,25 @@
       "modalTitle": "Edit Game Settings",
       "statusLabel": "Game Status",
       "maintMsgId": "Maintenance Message (Indonesian)",
+      "maintMsgIdPlaceholder": "Contoh: Sedang dalam perbaikan rutin.",
       "maintMsgEn": "Maintenance Message (English)",
+      "maintMsgEnPlaceholder": "Example: Under scheduled maintenance.",
       "badgeLabel": "Badge (e.g. new, hot)",
+      "badgePlaceholder": "Example: new, hot, popular",
       "orderLabel": "Sort order",
       "scheduleType": "Schedule Settings",
       "scheduleGlobal": "Follow Global Schedule",
       "scheduleCustom": "Custom Game Schedule",
       "save": "Save Changes",
       "empty": "No registered games."
+    },
+    "schedule": {
+      "windows": "Time windows (WIB)",
+      "addWindow": "Add time window",
+      "removeWindow": "Remove window",
+      "days": "Active days",
+      "start": "Start",
+      "end": "End"
     },
     "chat": {
       "title": "Chat Moderation",
@@ -316,6 +348,9 @@
       "addWord": "Add Word",
       "word": "Word",
       "lang": "Language",
+      "langAny": "All (Any)",
+      "langId": "Indonesian",
+      "langEn": "English",
       "status": "Status",
       "active": "Active",
       "inactive": "Inactive",
@@ -324,6 +359,8 @@
       "emptyWords": "No banned words yet.",
       "confirmDelete": "Permanently delete this message?",
       "confirmMute": "Mute this user?",
+      "confirmUnmute": "Unmute this user?",
+      "confirmDeleteWord": "Remove this banned word from the list?",
       "colTime": "Time",
       "colSender": "Sender",
       "colMessage": "Message",
@@ -353,6 +390,34 @@
       "confirmDeleteRun": "Delete this game run and recalculate the player's best score?",
       "confirmResetWeek": "Are you sure you want to reset the weekly board for this game? This will delete all runs in the current week.",
       "confirmResetMonth": "Are you sure you want to reset the monthly board for this game? This will delete all runs in the current month."
+    },
+    "ludo": {
+      "title": "Ludo Room Moderation",
+      "subtitle": "Monitor and manage active Ludo rooms",
+      "empty": "No active Ludo rooms.",
+      "roomCode": "Room code",
+      "host": "Host",
+      "status": "Status",
+      "players": "Players",
+      "messages": "Chat messages",
+      "resetRoom": "Reset room",
+      "deleteRoom": "Delete room",
+      "kickPlayer": "Kick player",
+      "inspect": "Inspect"
+    },
+    "riot": {
+      "title": "Riot Room Moderation",
+      "subtitle": "Monitor and manage active rooms and matches",
+      "empty": "No active rooms.",
+      "roomCode": "Room code",
+      "host": "Host",
+      "status": "Status",
+      "players": "Players",
+      "matches": "Matches",
+      "resetRoom": "Reset room",
+      "deleteRoom": "Delete room",
+      "kickPlayer": "Kick player",
+      "inspect": "Inspect"
     }
   },
   "home": {
@@ -430,14 +495,47 @@
     "charCount": "{{current}}/{{max}}"
   },
   "errors": {
+    "VALIDATION_FAILED": "The submitted data is invalid. Please check your input.",
+    "BAD_REQUEST": "Invalid request.",
+    "UNAUTHENTICATED": "Your session has expired or you are not logged in.",
+    "FORBIDDEN": "You do not have permission to perform this action.",
+    "ADMIN_CANNOT_PLAY": "Admin accounts cannot play games.",
+    "NOT_FOUND": "The requested resource was not found.",
+    "CONFLICT": "A resource state conflict occurred.",
+    "CSRF_INVALID": "Invalid security token. Please reload the page and try again.",
+    "INTERNAL": "An internal server error occurred. Please try again shortly.",
+    "INTERNAL_ERROR": "An internal server error occurred. Please try again shortly.",
+    "REGISTRATION_CLOSED": "Registration is currently closed by admin.",
+    "USERNAME_TAKEN": "Username is already taken.",
+    "EMAIL_TAKEN": "Email is already registered.",
+    "PASSWORD_TOO_WEAK": "Password must be at least 8 characters and cannot match username.",
+    "CAPTCHA_FAILED": "CAPTCHA verification failed. Please try again.",
+    "AUTH_INVALID_CREDENTIALS": "Incorrect username or password.",
+    "ACCOUNT_PENDING": "Your account is still pending admin approval.",
+    "ACCOUNT_REJECTED": "Your account registration was rejected by admin.",
+    "ACCOUNT_SUSPENDED": "Your account has been suspended.",
+    "ACCOUNT_BANNED": "Your account has been banned.",
+    "AUTH_LOCKED": "Too many failed attempts. Please try again shortly.",
     "SCORE_INVALID": "Invalid score",
     "SCORE_RATE_LIMITED": "Submitting too fast. Please wait a moment.",
+    "SCORE_SERVER_AUTHORITATIVE": "Scores for this game are calculated directly by the server.",
     "GAME_CLOSED": "Game is currently closed",
     "GAME_MAINTENANCE": "Game is under maintenance",
     "CHAT_DISABLED": "Public chat is currently disabled",
     "CHAT_MUTED": "You are currently muted",
     "CHAT_TOO_LONG": "Message is too long (max 300 characters)",
     "CHAT_EMPTY": "Message cannot be empty",
-    "RATE_LIMITED": "Too fast. Please wait a moment."
+    "RATE_LIMITED": "Too fast. Please wait a moment.",
+    "LUDO_ROOM_NOT_FOUND": "Ludo room not found.",
+    "LUDO_NOT_MEMBER": "You are not a member of this room.",
+    "LUDO_FORBIDDEN": "Only the room host can perform this action.",
+    "LUDO_ROOM_FULL": "Ludo room is full.",
+    "LUDO_BAD_STATE": "This action cannot be performed in the room's current state.",
+    "LUDO_NEED_TWO_PLAYERS": "At least 2 players are required to start the game.",
+    "LUDO_NOT_YOUR_TURN": "It is not your turn.",
+    "LUDO_ILLEGAL_MOVE": "Illegal pawn move.",
+    "INVALID_TRANSITION": "Status transition is not allowed.",
+    "SMTP_NOT_CONFIGURED": "Email service (SMTP) is not configured.",
+    "SCHEDULE_INVALID": "Invalid schedule configuration."
   }
 }

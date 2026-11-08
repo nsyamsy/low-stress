@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Input, Logo } from "@low-stress/ui";
 import { useAuth } from "../features/auth";
 import type { ApiError } from "../features/auth/api";
@@ -26,23 +27,12 @@ export function LoginPage() {
   }, [lockoutSec]);
 
   const mapErrorMessage = (error: ApiError): string => {
-    switch (error.code) {
-      case "AUTH_INVALID_CREDENTIALS":
-        return t("auth.error.invalidCredentials");
-      case "ACCOUNT_REJECTED":
-        return t("auth.error.accountRejected");
-      case "ACCOUNT_SUSPENDED":
-        return t("auth.error.accountSuspended");
-      case "ACCOUNT_BANNED":
-        return t("auth.error.accountBanned");
-      case "AUTH_LOCKED": {
-        const sec = (error.params?.retryAfterSec as number) ?? 60;
-        setLockoutSec(sec);
-        return t("auth.login.lockoutMessage", { seconds: sec });
-      }
-      default:
-        return t("auth.error.generic");
+    if (error.code === "AUTH_LOCKED") {
+      const sec = (error.params?.retryAfterSec as number) ?? 60;
+      setLockoutSec(sec);
+      return t("auth.login.lockoutMessage", { seconds: sec });
     }
+    return translateErrorCode(error.code, error.params);
   };
 
   const handleSubmit = async (e: FormEvent) => {

@@ -33,6 +33,7 @@ export interface GameUserDeletedContext {
   userId: string;
   /** Klien database yang hanya boleh menyentuh tabel berawalan id game. */
   db: unknown;
+  logger?: unknown;
 }
 
 /** Definisi job berkala milik game. */
@@ -50,6 +51,7 @@ export interface GameServerContext {
   env?: unknown;
   logger?: unknown;
   options?: Record<string, unknown>;
+  censorText?: (text: string) => string;
   checkGameGate?: (gameId: string) => Promise<unknown>;
   resolvePrincipal?: (cookieHeader?: string) => Promise<{
     kind: "user" | "admin" | "none";
@@ -75,6 +77,12 @@ export interface GameServerModule {
   registerJobs?: (ctx: GameServerContext) => GameJob[] | Promise<GameJob[]>;
   /** Bersihkan data milik pengguna yang menghapus akunnya. */
   onUserDeleted?: (context: GameUserDeletedContext) => void | Promise<void>;
+  /** Hook moderasi admin opsional untuk mereset room ke lobi. */
+  adminResetRoom?: (roomId: string) => void | Promise<void>;
+  /** Hook moderasi admin opsional untuk mengeluarkan pemain dari room. */
+  adminKickPlayer?: (roomId: string, userId: string) => void | Promise<void>;
+  /** Hook moderasi admin opsional untuk menghapus room dari memori. */
+  adminDeleteRoom?: (roomId: string) => void | Promise<void>;
   /** Cleanup saat server ditutup. */
   dispose?: () => void | Promise<void>;
 }

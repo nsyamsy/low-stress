@@ -18,15 +18,26 @@ export interface ExpireOptions {
 
 export async function expireInactiveRooms(
   db: Database,
-  optionsOrDays?: ExpireOptions | number,
+  optionsOrDaysOrNsp?:
+    | ExpireOptions
+    | number
+    | { emit?: (ev: string, data: unknown) => void },
+  autopilot?: { clearRoom?: (roomId: string) => void },
 ): Promise<number> {
+  const isExpireOpts =
+    typeof optionsOrDaysOrNsp === "object" &&
+    optionsOrDaysOrNsp !== null &&
+    ("days" in optionsOrDaysOrNsp || "now" in optionsOrDaysOrNsp);
+
   const days =
-    typeof optionsOrDays === "number"
-      ? optionsOrDays
-      : (optionsOrDays?.days ?? DEFAULT_INACTIVE_DAYS);
+    typeof optionsOrDaysOrNsp === "number"
+      ? optionsOrDaysOrNsp
+      : isExpireOpts
+        ? ((optionsOrDaysOrNsp as ExpireOptions).days ?? DEFAULT_INACTIVE_DAYS)
+        : DEFAULT_INACTIVE_DAYS;
   const now =
-    typeof optionsOrDays === "object" && optionsOrDays?.now
-      ? optionsOrDays.now
+    isExpireOpts && (optionsOrDaysOrNsp as ExpireOptions).now
+      ? (optionsOrDaysOrNsp as ExpireOptions).now!
       : new Date();
   const cutoff = computeExpirationCutoff(days, now);
 
@@ -51,6 +62,21 @@ export async function expireInactiveRooms(
     await tx.delete(ludoRooms).where(inArray(ludoRooms.id, roomIds));
   });
 
+  if (autopilot?.clearRoom) {
+    for (const id of roomIds) {
+      autopilot.clearRoom(id);
+    }
+  }
+
+  if (
+    typeof optionsOrDaysOrNsp === "object" &&
+    optionsOrDaysOrNsp !== null &&
+    "emit" in optionsOrDaysOrNsp &&
+    typeof optionsOrDaysOrNsp.emit === "function"
+  ) {
+    optionsOrDaysOrNsp.emit("rooms:purged", { count: expiredRooms.length });
+  }
+
   return expiredRooms.length;
 }
 
@@ -73,6 +99,7 @@ export function startLudoExpirationJob(
   };
 
   const timer = setInterval(() => void run(), intervalMs);
+  timer.unref?.();
   return {
     stop: () => clearInterval(timer),
     runNow: run,

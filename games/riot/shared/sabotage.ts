@@ -45,18 +45,44 @@ export function getEffectiveVisionRadius(
   return normalVisionRadius;
 }
 
+export function normalizeSabotageRoomId(roomId: string): string {
+  return roomId.trim().replace(/^room_/, "");
+}
+
 /**
  * Checks if a room's doors are currently locked by sabotage.
+ * Supports both (roomId, activeSabotage, serverTime) and (activeSabotage, roomId, serverTime).
  */
 export function isRoomDoorLocked(
-  roomId: string,
-  activeSabotage: ActiveSabotage | null,
+  roomIdOrSabotage: string | ActiveSabotage | null | undefined,
+  sabotageOrRoomId: ActiveSabotage | null | undefined | string,
   serverTime = Date.now(),
 ): boolean {
-  if (!activeSabotage || activeSabotage.kind !== "doors" || activeSabotage.resolved) {
+  let roomId: string | undefined;
+  let activeSabotage: ActiveSabotage | null | undefined;
+
+  if (typeof roomIdOrSabotage === "string") {
+    roomId = roomIdOrSabotage;
+    activeSabotage =
+      typeof sabotageOrRoomId === "object" ? sabotageOrRoomId : null;
+  } else if (typeof sabotageOrRoomId === "string") {
+    activeSabotage = roomIdOrSabotage;
+    roomId = sabotageOrRoomId;
+  }
+
+  if (
+    !roomId ||
+    !activeSabotage ||
+    activeSabotage.kind !== "doors" ||
+    activeSabotage.resolved ||
+    !activeSabotage.targetRoom
+  ) {
     return false;
   }
-  if (activeSabotage.targetRoom !== roomId) {
+  if (
+    normalizeSabotageRoomId(activeSabotage.targetRoom) !==
+    normalizeSabotageRoomId(roomId)
+  ) {
     return false;
   }
   return serverTime - activeSabotage.startedAt < activeSabotage.durationMs;

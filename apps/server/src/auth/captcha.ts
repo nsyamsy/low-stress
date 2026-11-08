@@ -1,4 +1,4 @@
-import { createHmac, createHash, randomBytes } from "node:crypto";
+import { createHmac, createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 export interface CaptchaChallenge {
   challenge: string;
@@ -15,6 +15,22 @@ export interface CaptchaSolution {
 
 const DEFAULT_DIFFICULTY = 3; // 3 hex zeros ('000') takes ~10-50ms in browser/node
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_USED_CHALLENGES = 10_000;
+
+const usedChallenges = new Map<string, number>();
+
+function pruneUsedChallenges(nowMs: number): void {
+  for (const [key, exp] of usedChallenges) {
+    if (exp <= nowMs) {
+      usedChallenges.delete(key);
+    }
+  }
+  while (usedChallenges.size >= MAX_USED_CHALLENGES) {
+    const oldestKey = usedChallenges.keys().next().value;
+    if (oldestKey === undefined) break;
+    usedChallenges.delete(oldestKey);
+  }
+}
 
 export function generateCaptchaChallenge(
   secret: string,
@@ -38,7 +54,7 @@ export function verifyCaptchaSolution(
   secret: string,
 ): boolean {
   const { challenge, nonce, signature } = solution;
-  if (!challenge || !nonce) return false;
+  if (!challenge || !nonce || !signature) return false;
 
   const parts = challenge.split(":");
   if (parts.length !== 3) return false;
@@ -47,13 +63,22 @@ export function verifyCaptchaSolution(
   const expiresAt = Number(expiresAtStr);
   const difficulty = Number(difficultyStr);
 
-  if (!Number.isFinite(expiresAt) || !Number.isFinite(difficulty)) return false;
-  if (Date.now() > expiresAt) return false;
+  if (!Number.isFinite(expiresAt) || !Number.isFinite(difficulty) || difficulty < 1) {
+    return false;
+  }
 
-  // Verify HMAC signature if provided
-  if (signature) {
-    const expectedSig = createHmac("sha256", secret).update(challenge).digest("hex");
-    if (signature !== expectedSig) return false;
+  const nowMs = Date.now();
+  if (nowMs > expiresAt) return false;
+
+  pruneUsedChallenges(nowMs);
+  if (usedChallenges.has(challenge)) return false;
+
+  // Verify HMAC signature (required)
+  const expectedSig = createHmac("sha256", secret).update(challenge).digest("hex");
+  const sigBuf = Buffer.from(signature, "utf8");
+  const expectedBuf = Buffer.from(expectedSig, "utf8");
+  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+    return false;
   }
 
   // Verify proof-of-work
@@ -62,7 +87,12 @@ export function verifyCaptchaSolution(
     .update(`${challenge}:${nonce}`)
     .digest("hex");
 
-  return hash.startsWith(targetPrefix);
+  if (!hash.startsWith(targetPrefix)) {
+    return false;
+  }
+
+  usedChallenges.set(challenge, expiresAt);
+  return true;
 }
 
 /** Helper untuk menyelesaikan challenge PoW di sisi klien / tes. */

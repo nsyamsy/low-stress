@@ -116,5 +116,22 @@
     "pass": "{{name}} cannot move",
     "skip": "{{name}}'s turn was skipped",
     "doubles3": "Three doubles in a row! {{name}}'s turn forfeited"
-  }
+  },
+  "status": {
+    "lobby": "Lobby",
+    "playing": "Playing",
+    "finished": "Finished"
+  },
+  "roomSettings": "Room Settings",
+  "pawnCountOption": "{{count}} pawns",
+  "searchUsersPh": "Search name or username...",
+  "errorLoadRooms": "Failed to load rooms",
+  "errorRespond": "Failed to respond to invitation",
+  "errorCreateRoom": "Failed to create room",
+  "errorJoinRoom": "Failed to join room",
+  "muteSound": "Mute sound",
+  "unmuteSound": "Unmute sound",
+  "close": "Close",
+  "boardAriaLabel": "Ludo board",
+  "pawnAriaLabel": "Pawn {{index}}"
 }

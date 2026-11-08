@@ -647,3 +647,45 @@ pnpm --filter @low-stress/web build -> lolos (29 entri precache PWA)
 - UI Riot belum diuji di browser nyata (360px/desktop terang/gelap) — sama seperti catatan Fase 4.
 - Halaman UI admin Riot belum dibuat (API selesai).
 - Game tetap `inactive` sampai RT-54 ditandatangani pemilik; setelah itu baru aktifkan via admin.
+
+---
+
+## 2026-11-08 — Audit Menyeluruh & Eksekusi Perbaikan Gelombang 1–5 (Serah-Terima)
+
+Lingkup: Audit menyeluruh seluruh monorepo (`apps/server`, `apps/web`, `packages/*`, `games/*`) dan eksekusi perbaikan bug kritis serta refactor pada server, DB, SDK, UI, i18n, keempat game, dan klien web.
+
+### Ringkasan Pekerjaan yang Selesai
+
+| Butir | Status | Bukti / Catatan |
+|---|---|---|
+| **T-01** Keamanan PoW CAPTCHA & CSRF | **Selesai** | `registerBodySchema` menyertakan `signature`; `verifyCaptchaSolution` mewajibkan HMAC `signature` valid (`timingSafeEqual`), `difficulty >= 1`, dan anti-replay `usedChallenges`; `createCsrfMiddleware` memeriksa fallback `Referer`, hostname `localhost`/`127.0.0.1` presisi, dan `timingSafeEqual`. |
+| **D-02a..d, D-03, D-08, R-02, R-03** Auth, Lockout 10m, Principal & Jobs Server | **Selesai** | Migrasi `0002_login_attempts_last_failed.sql` menambahkan `last_failed_at`; `recordFailedAttempt` menerapkan jendela 10 menit; `purgeExpiredSessions` & `purgeStaleLoginAttempts` dibuat; `createJobRunner` (`apps/server/src/jobs/index.ts`) menjadwalkan job inti dan `LoadedGame.jobs`; `resolvePrincipal` (`apps/server/src/auth/principal.ts`) menyatukan resolusi cookie pemain/admin; `onUserDeleted` memanggil `serverModule.onUserDeleted`; tes regresi ditambahkan di `apps/server/test/auth.test.ts` & `games-gate.test.ts`. |
+| **T-10 & T-18** Perbaikan Memory Match & Flappy Bird | **Selesai** | Fix bug combo pasangan ke-8 (`nextCombos`), pembersihan `flipTimeoutRef` saat restart/unmount, ukuran tombol 44×44px, ganti emoji trofi dengan SVG, simpan `bestScore` di `localStorage`, batasi tinggi kanvas Flappy Bird di mobile (`max-height: calc(100dvh - 210px)`), lokalisasi penuh, dan ganti class Material-3 dengan token `@low-stress/ui`. |
+| **T-04 & T-05** Perbaikan Ludo | **Selesai** | Endpoint `POST /api/games/ludo/rooms/:id/respond` + integrasi di `Lobby.tsx` dan `Room.tsx`, penghapusan `chatOpen` dari dependency `useEffect` socket, pencegahan suara menang berulang (`prevWinnerRef`), penanganan ticker `pass`/`doubles3`, penolakan admin di `/ludo`, sensor `censorText` DB, dan fallback autopilot saat akun dihapus. |
+| **T-06..T-09 & T-17** Perbaikan Riot | **Selesai** | Penegakan `ctx.checkGameGate("riot")` di socket `/riot`, sinkronisasi moderasi admin Riot dengan `globalService` in-memory, penghapusan pemain keluar dari `riot_room_players`, penyembunyian karakter di luar radius pandang pada `MochiCrowd.update` (tidak lagi menumpuk di `(0, 0)`), visual 3D hologram & fog blackout, penggantian 33 `WebGLRenderer` di daftar lobi dengan `<AvatarBadge>` 2D SVG, daur ulang `freeSlots` & disposal Three.js, sinkronisasi `role` saat reconnect, dukungan kode room 6 karakter, sabotase pintu (`isRoomDoorLocked`), multiplier `playerSpeed`, dan persistensi profil `/api/games/riot/profile`. |
+| **R-01, R-05, R-07, R-09, R-10, D-04..D-07, D-09, D-12, D-13** Web, Token CSS, i18n & Admin UI | **Selesai** | `apiFetch` terpusat (`apps/web/src/lib/apiFetch.ts`); perbaikan seluruh variabel CSS mati di `packages/ui/src/styles.css` & pemetaan `@theme` di `tailwind.css`; 41 kode error di `packages/i18n` + `translateErrorCode`; `usePreferences` hook; `formatNextOpenWib` berzona `Asia/Jakarta`; error state + tombol coba lagi di Beranda & Leaderboard; hapus paksaan `"memory-match"`; kontrak `AdminLeaderboardPage` & kartu mobile `.ls-admin-card-list` di halaman admin; halaman baru `AdminLudoPage` (`/admin/ludo`) & `AdminRiotPage` (`/admin/riot`); editor jadwal admin; halaman 404; pembatasan `/showcase` ke `import.meta.env.DEV`; pembuatan `.gitattributes`. |
+
+### Pemeriksaan Saat Ini
+
+```
+pnpm lint              -> lolos (0 error, 0 warning)
+pnpm typecheck         -> lolos (seluruh 19 proyek workspace)
+pnpm i18n:check        -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations  -> lolos
+pnpm check:assets      -> lolos
+pnpm --filter @low-stress/web test          -> lolos (5 berkas, 27 tes)
+pnpm --filter @low-stress/game-riot test    -> lolos (17 berkas, 100 tes)
+pnpm --filter @low-stress/game-ludo test    -> lolos
+pnpm --filter @low-stress/game-flappy-bird test -> lolos
+pnpm --filter @low-stress/game-memory-match test -> lolos
+pnpm --filter @low-stress/sdk test          -> lolos (4 berkas, 26 tes)
+pnpm --filter @low-stress/i18n test         -> lolos (14 tes)
+pnpm --filter @low-stress/ui test           -> lolos (10 tes)
+```
+
+### Panduan Langkah Berikutnya untuk Agent Selanjutnya
+
+Lihat bagian **§0A. Panduan Serah-Terima (Handoff 2026-11-08)** di awal [`docs/TASKS_DEBUG_REFACTOR.md`](TASKS_DEBUG_REFACTOR.md):
+1. Tambahkan berkas tes unit regresi web (`D-02e..i`, `D-04`, `D-05`, `D-07`) di `apps/web/test/`.
+2. Jalankan tes server ber-DB (`pnpm test:db:up && pnpm test`) terhadap `low_stress_test`.
+3. Lanjutkan sisa refactor & QA: pemeriksa otomatis teks literal JSX (`D-06`), update flow Service Worker & banner offline (`D-11`), pemecahan berkas besar (`R-06`), skema tipe API bersama (`R-08`), Playwright E2E (`D-15`), dan QA visual lintas viewport/tema (`D-09`, `D-10`).

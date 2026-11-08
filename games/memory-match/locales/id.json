@@ -19,5 +19,21 @@
   "rulesPairs": "Balik dua kartu untuk mencari pasangan yang cocok.",
   "rulesScore": "Selesaikan lebih cepat dengan langkah lebih sedikit untuk skor lebih tinggi. Kombo cocok berturut-turut memberi bonus poin.",
   "rulesAudio": "Suara disintesis langsung di peramban dan dapat dibisukan kapan saja.",
-  "leaderboardNote": "Skor terbaikmu akan otomatis tercatat di papan peringkat mingguan, bulanan, dan sepanjang waktu."
+  "leaderboard": "Leaderboard",
+  "periodWeek": "Minggu ini",
+  "periodMonth": "Bulan ini",
+  "periodAll": "Sepanjang waktu",
+  "loading": "Memuat…",
+  "empty": "Belum ada skor",
+  "leaderboardNote": "Skor terbaikmu akan otomatis tercatat di papan peringkat mingguan, bulanan, dan sepanjang waktu.",
+  "card": {
+    "rocket": "Roket",
+    "diamond": "Berlian",
+    "lightning": "Petir",
+    "target": "Target",
+    "star": "Bintang",
+    "clover": "Semanggi",
+    "crown": "Mahkota",
+    "flame": "Api"
+  }
 }

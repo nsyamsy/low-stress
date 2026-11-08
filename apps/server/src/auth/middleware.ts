@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Database } from "@low-stress/db";
 import { type admins, type users } from "@low-stress/db";
@@ -8,9 +9,8 @@ import {
   CSRF_COOKIE_NAME,
   deleteAllUserSessions,
   getAdminSession,
-  getSessionUser,
-  SESSION_COOKIE_NAME,
 } from "./session";
+import { resolvePrincipal } from "./principal";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -23,24 +23,15 @@ export function createAuthMiddleware(db: Database) {
   return async function requireAuth(
     request: FastifyRequest,
   ): Promise<void> {
-    const rawToken = request.cookies[SESSION_COOKIE_NAME];
-    if (!rawToken) {
-      const adminToken = request.cookies[ADMIN_COOKIE_NAME];
-      if (adminToken) {
-        const adminResult = await getAdminSession(db, adminToken);
-        if (adminResult) {
-          throw new AppError("FORBIDDEN", 403);
-        }
-      }
+    const principal = await resolvePrincipal(db, request.cookies);
+    if (principal.kind === "admin") {
+      throw new AppError("FORBIDDEN", 403);
+    }
+    if (principal.kind === "none") {
       throw new AppError("UNAUTHENTICATED", 401);
     }
 
-    const result = await getSessionUser(db, rawToken);
-    if (!result) {
-      throw new AppError("UNAUTHENTICATED", 401);
-    }
-
-    const { user } = result;
+    const { user } = principal;
 
     if (user.status === "banned") {
       await deleteAllUserSessions(db, user.id);
@@ -65,23 +56,20 @@ export function createAdminAuthMiddleware(db: Database) {
     request: FastifyRequest,
   ): Promise<void> {
     const rawToken = request.cookies[ADMIN_COOKIE_NAME];
-    if (!rawToken) {
-      const userToken = request.cookies[SESSION_COOKIE_NAME];
-      if (userToken) {
-        const userResult = await getSessionUser(db, userToken);
-        if (userResult) {
-          throw new AppError("FORBIDDEN", 403);
-        }
+    if (rawToken) {
+      const result = await getAdminSession(db, rawToken);
+      if (result) {
+        request.admin = result.admin;
+        return;
       }
       throw new AppError("UNAUTHENTICATED", 401);
     }
 
-    const result = await getAdminSession(db, rawToken);
-    if (!result) {
-      throw new AppError("UNAUTHENTICATED", 401);
+    const principal = await resolvePrincipal(db, request.cookies);
+    if (principal.kind === "user") {
+      throw new AppError("FORBIDDEN", 403);
     }
-
-    request.admin = result.admin;
+    throw new AppError("UNAUTHENTICATED", 401);
   };
 }
 
@@ -90,19 +78,11 @@ export function createGameGateMiddleware(db: Database) {
     request: FastifyRequest,
   ): Promise<void> {
     // Satu browser bisa memegang cookie pemain dan admin sekaligus (mis. admin
-    // yang juga mencoba akun pemain). Bila sesi pemain valid, permintaan ini
-    // diperlakukan sebagai pemain; cookie admin diabaikan.
-    const userToken = request.cookies[SESSION_COOKIE_NAME];
-    if (userToken && (await getSessionUser(db, userToken))) {
-      return;
-    }
-
-    const adminToken = request.cookies[ADMIN_COOKIE_NAME];
-    if (adminToken) {
-      const adminResult = await getAdminSession(db, adminToken);
-      if (adminResult) {
-        throw new AppError("FORBIDDEN", 403);
-      }
+    // yang juga mencoba akun pemain). Bila sesi pemain valid, resolvePrincipal
+    // mengembalikan kind: "user" sehingga permintaan diperlakukan sebagai pemain.
+    const principal = await resolvePrincipal(db, request.cookies);
+    if (principal.kind === "admin") {
+      throw new AppError("FORBIDDEN", 403);
     }
   };
 }
@@ -126,16 +106,17 @@ export function createCsrfMiddleware(env: Env) {
     }
 
     // Periksa origin / referer bila ada
-    const origin = request.headers.origin;
-    if (origin) {
+    const originOrReferer = request.headers.origin ?? request.headers.referer;
+    if (originOrReferer) {
       const allowedOrigin = new URL(env.APP_ORIGIN).origin;
       try {
-        const reqOrigin = new URL(origin).origin;
-        // Bolehkan origin sama persis atau localhost di test/dev
-        if (
-          reqOrigin !== allowedOrigin &&
-          !(env.NODE_ENV !== "production" && reqOrigin.includes("localhost"))
-        ) {
+        const reqUrl = new URL(originOrReferer);
+        const reqOrigin = reqUrl.origin;
+        const isLocalDev =
+          env.NODE_ENV !== "production" &&
+          (reqUrl.hostname === "localhost" || reqUrl.hostname === "127.0.0.1");
+        // Bolehkan origin sama persis atau localhost/127.0.0.1 di test/dev
+        if (reqOrigin !== allowedOrigin && !isLocalDev) {
           throw new AppError("CSRF_INVALID", 403);
         }
       } catch {
@@ -149,8 +130,16 @@ export function createCsrfMiddleware(env: Env) {
     if (
       !tokenFromHeader ||
       !tokenFromCookie ||
-      typeof tokenFromHeader !== "string" ||
-      tokenFromHeader !== tokenFromCookie
+      typeof tokenFromHeader !== "string"
+    ) {
+      throw new AppError("CSRF_INVALID", 403);
+    }
+
+    const headerBuf = Buffer.from(tokenFromHeader, "utf8");
+    const cookieBuf = Buffer.from(tokenFromCookie, "utf8");
+    if (
+      headerBuf.length !== cookieBuf.length ||
+      !timingSafeEqual(headerBuf, cookieBuf)
     ) {
       throw new AppError("CSRF_INVALID", 403);
     }

@@ -5,6 +5,7 @@ import {
   VolumeX,
   Sparkles,
   Timer,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@low-stress/ui";
 import { SoundEngine } from "./sound";
@@ -17,6 +18,25 @@ import {
 } from "./deck";
 
 const sounds = new SoundEngine();
+const BEST_KEY = "ls-memory-match-best";
+
+function readBestScore(fallback = 0): number {
+  try {
+    const val = localStorage.getItem(BEST_KEY);
+    if (val !== null) return Math.max(fallback, Number(val) || 0);
+  } catch {
+    // storage diblokir
+  }
+  return fallback;
+}
+
+function writeBestScore(value: number): void {
+  try {
+    localStorage.setItem(BEST_KEY, String(value));
+  } catch {
+    // storage diblokir
+  }
+}
 
 export interface MemoryMatchProps {
   onRunEnd?: (res: RunResult) => void;
@@ -38,12 +58,15 @@ export function MemoryMatch({
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [finalScore, setFinalScore] = useState<number>(0);
-  const [bestScore, setBestScore] = useState<number>(initialBestScore);
+  const [bestScore, setBestScore] = useState<number>(() =>
+    readBestScore(initialBestScore),
+  );
   const [isNewBest, setIsNewBest] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   const lockRef = useRef<boolean>(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const flipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Jalankan timer saat game aktif
   useEffect(() => {
@@ -57,8 +80,22 @@ export function MemoryMatch({
     };
   }, [startTime, isGameOver]);
 
+  // Bersihkan flip timeout saat unmount
+  useEffect(() => {
+    return () => {
+      if (flipTimeoutRef.current) {
+        clearTimeout(flipTimeoutRef.current);
+        flipTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const restartGame = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (flipTimeoutRef.current) {
+      clearTimeout(flipTimeoutRef.current);
+      flipTimeoutRef.current = null;
+    }
     setCards(generateShuffledDeck());
     setFlippedUids([]);
     setMoves(0);
@@ -78,7 +115,7 @@ export function MemoryMatch({
   };
 
   const handleVictory = useCallback(
-    (totalMoves: number) => {
+    (totalMoves: number, totalCombos: number) => {
       const durationMs = startTime
         ? Date.now() - startTime
         : elapsedSeconds * 1000;
@@ -92,7 +129,7 @@ export function MemoryMatch({
       // score       = max(200, floor(5000 - timePenalty - movePenalty + comboBonus))
       const timePenalty = Math.floor(totalSecs * 25);
       const movePenalty = Math.max(0, (totalMoves - 8) * 45);
-      const comboBonus = combos * 150;
+      const comboBonus = totalCombos * 150;
       const score = Math.max(
         200,
         Math.floor(5000 - timePenalty - movePenalty + comboBonus),
@@ -105,6 +142,7 @@ export function MemoryMatch({
       const isNew = score > bestScore;
       if (isNew) {
         setBestScore(score);
+        writeBestScore(score);
         setIsNewBest(true);
       }
 
@@ -113,12 +151,12 @@ export function MemoryMatch({
           score,
           durationMs,
           moves: totalMoves,
-          combos,
+          combos: totalCombos,
           timeSeconds: totalSecs,
         });
       }
     },
-    [startTime, elapsedSeconds, combos, bestScore, onRunEnd],
+    [startTime, elapsedSeconds, bestScore, onRunEnd],
   );
 
   const handleCardClick = useCallback((uid: number) => {
@@ -151,7 +189,8 @@ export function MemoryMatch({
 
       if (firstCard.defId === secondCard.defId) {
         // Cocok!
-        setTimeout(() => {
+        flipTimeoutRef.current = setTimeout(() => {
+          flipTimeoutRef.current = null;
           sounds.match();
           setCards((prev) =>
             prev.map((c) =>
@@ -161,7 +200,8 @@ export function MemoryMatch({
             ),
           );
           setFlippedUids([]);
-          setCombos((prev) => prev + 1);
+          const nextCombos = combos + 1;
+          setCombos(nextCombos);
 
           const nextMatched = matchedPairs + 1;
           setMatchedPairs(nextMatched);
@@ -169,12 +209,13 @@ export function MemoryMatch({
 
           // Periksa kemenangan (8 pasangan cocok)
           if (nextMatched === CARD_DEFS.length) {
-            handleVictory(nextMoves);
+            handleVictory(nextMoves, nextCombos);
           }
         }, 200); // 200 ms match lock Porting_Guide §3
       } else {
         // Tidak cocok
-        setTimeout(() => {
+        flipTimeoutRef.current = setTimeout(() => {
+          flipTimeoutRef.current = null;
           sounds.misMatch();
           setCards((prev) =>
             prev.map((c) =>
@@ -189,7 +230,7 @@ export function MemoryMatch({
         }, 450); // 450 ms misMatch flip delay Porting_Guide §3
       }
     }
-  }, [cards, flippedUids, moves, matchedPairs, handleVictory]);
+  }, [cards, flippedUids, moves, combos, matchedPairs, handleVictory]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -200,28 +241,28 @@ export function MemoryMatch({
   return (
     <div className="flex flex-col items-center w-full max-w-md mx-auto">
       {/* Top Header Card */}
-      <div className="flex w-full items-center justify-between rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-3 shadow-xs mb-3">
+      <div className="flex w-full items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-xs mb-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs">
-            <Timer className="h-4 w-4 text-primary" />
+            <Timer className="h-4 w-4 text-[var(--primary)]" />
             <span className="sr-only">{t("time")}</span>
-            <span className="font-extrabold tabular-nums text-on-surface">
+            <span className="font-extrabold tabular-nums text-[var(--text-primary)]">
               {formatTime(elapsedSeconds)}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-xs font-bold text-on-surface-variant">
+            <span className="text-xs font-bold text-[var(--text-secondary)]">
               {t("moves")}:
             </span>
-            <span className="font-extrabold tabular-nums text-on-surface">
+            <span className="font-extrabold tabular-nums text-[var(--text-primary)]">
               {moves}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-xs font-bold text-on-surface-variant">
+            <span className="text-xs font-bold text-[var(--text-secondary)]">
               {t("pairs")}:
             </span>
-            <span className="font-extrabold tabular-nums text-primary">
+            <span className="font-extrabold tabular-nums text-[var(--primary)]">
               {matchedPairs}/{CARD_DEFS.length}
             </span>
           </div>
@@ -231,30 +272,30 @@ export function MemoryMatch({
           <button
             type="button"
             onClick={toggleMute}
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-outline-variant/20 bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--bg-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             title={isMuted ? t("unmute") : t("mute")}
             aria-label={isMuted ? t("unmute") : t("mute")}
           >
             {isMuted ? (
-              <VolumeX className="h-3.5 w-3.5" />
+              <VolumeX className="h-4 w-4" />
             ) : (
-              <Volume2 className="h-3.5 w-3.5" />
+              <Volume2 className="h-4 w-4" />
             )}
           </button>
           <button
             type="button"
             onClick={restartGame}
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-outline-variant/20 bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--bg-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             title={t("reset")}
             aria-label={t("reset")}
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {/* Main 4x4 Grid Board */}
-      <div className="relative w-full aspect-square rounded-2xl border-2 border-outline-variant/15 bg-surface-container-low/40 p-3 shadow-lg">
+      <div className="relative w-full aspect-square rounded-2xl border-2 border-[var(--border)] bg-[var(--bg-inset)] p-3 shadow-lg">
         <div className="grid grid-cols-4 grid-rows-4 gap-2.5 h-full w-full">
           {cards.map((card) => {
             const def = CARD_DEFS.find((d) => d.id === card.defId)!;
@@ -271,14 +312,14 @@ export function MemoryMatch({
                   "relative flex items-center justify-center rounded-xl transition-all duration-300 transform select-none cursor-pointer active:scale-95",
                   isFlipped
                     ? "rotate-y-0 shadow-md"
-                    : "hover:border-primary/40 shadow-xs",
+                    : "hover:border-[var(--primary)] shadow-xs",
                   card.isMatched
                     ? "bg-emerald-500/10 border-2 border-emerald-500/40 ring-1 ring-emerald-500/20"
                     : isFlipped
-                      ? "bg-surface-container-lowest border-2 border-primary/40 ring-1 ring-primary/20"
-                      : "bg-gradient-to-br from-surface-container-high to-surface-container-highest border-2 border-outline-variant/30 hover:bg-surface-container-highest",
+                      ? "bg-[var(--bg-surface)] border-2 border-[var(--primary)]"
+                      : "bg-[var(--bg-surface)] border-2 border-[var(--border)] hover:bg-[var(--bg-inset)]",
                 )}
-                aria-label={isFlipped ? def.label : t("hiddenCard")}
+                aria-label={isFlipped ? t(`card.${def.id}`) : t("hiddenCard")}
               >
                 {isFlipped ? (
                   <div className="flex flex-col items-center justify-center animate-in zoom-in-75 duration-200">
@@ -292,7 +333,7 @@ export function MemoryMatch({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center text-outline-variant/70">
+                  <div className="flex items-center justify-center text-[var(--text-secondary)]">
                     <Sparkles className="h-4 w-4" />
                   </div>
                 )}
@@ -306,7 +347,8 @@ export function MemoryMatch({
           <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-black/75 backdrop-blur-sm p-6 text-center animate-in fade-in zoom-in-95 duration-200 z-10">
             {isNewBest && (
               <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-3 py-0.5 text-xs font-black uppercase text-amber-950 shadow-lg animate-pulse">
-                🏆 {t("newRecord")}
+                <Trophy className="h-3.5 w-3.5 inline-block mr-1" />
+                {t("newRecord")}
               </div>
             )}
             <h3 className="text-2xl font-black uppercase text-emerald-400 drop-shadow-md">

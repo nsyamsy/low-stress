@@ -5,8 +5,9 @@ import { Menu } from "lucide-react";
 import { Button, SegmentedControl } from "@low-stress/ui";
 import { useAdmin } from "../../features/admin";
 import { fetchPublicConfig } from "../../features/auth/api";
-import { changeLocale, readLocalePreference, type LocalePreference } from "../../i18n";
-import { applyTheme, readThemePreference, type ThemePreference } from "../../theme";
+import { usePreferences } from "../../features/preferences/usePreferences";
+import type { LocalePreference } from "../../i18n";
+import type { ThemePreference } from "../../theme";
 import { getAdminDashboardApi } from "../../features/admin/api";
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemePreference; key: string }> = [
@@ -24,8 +25,9 @@ export function AdminLayout() {
   const { t } = useTranslation();
   const location = useLocation();
   const { admin, loading, logout } = useAdmin();
-  const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
-  const [locale, setLocale] = useState<LocalePreference>(readLocalePreference);
+  const { theme, locale, setTheme, setLocale } = usePreferences({
+    persistToAccount: false,
+  });
   const [deployMode, setDeployMode] = useState<string>("lan");
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,16 +55,6 @@ export function AdminLayout() {
         .catch(() => undefined);
     }
   }, [admin, location.pathname]);
-
-  const onThemeChange = (value: ThemePreference) => {
-    setTheme(value);
-    applyTheme(value);
-  };
-
-  const onLocaleChange = (value: LocalePreference) => {
-    setLocale(value);
-    changeLocale(value);
-  };
 
   if (loading) {
     return (
@@ -173,6 +165,26 @@ export function AdminLayout() {
           </NavLink>
 
           <NavLink
+            to="/admin/ludo"
+            className={({ isActive }) =>
+              `ls-admin-nav-item ${isActive ? "active" : ""}`
+            }
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>{t("admin.nav.ludo")}</span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/riot"
+            className={({ isActive }) =>
+              `ls-admin-nav-item ${isActive ? "active" : ""}`
+            }
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <span>{t("admin.nav.riot")}</span>
+          </NavLink>
+
+          <NavLink
             to="/admin/settings"
             className={({ isActive }) =>
               `ls-admin-nav-item ${isActive ? "active" : ""}`
@@ -232,7 +244,7 @@ export function AdminLayout() {
                 label: t(opt.key),
               }))}
               value={locale}
-              onChange={onLocaleChange}
+              onChange={setLocale}
             />
             <SegmentedControl
               label={t("theme.label")}
@@ -241,12 +253,12 @@ export function AdminLayout() {
                 label: t(opt.key),
               }))}
               value={theme}
-              onChange={onThemeChange}
+              onChange={setTheme}
             />
             <Button
               variant="secondary"
               onClick={() => {
-                logout();
+                void logout();
               }}
             >
               {t("admin.nav.logout")}

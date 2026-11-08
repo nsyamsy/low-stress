@@ -7,6 +7,7 @@ import en from "../locales/en.json";
 import id from "../locales/id.json";
 import {
   DEFAULT_MOCHI_CUSTOMIZATION,
+  sanitizeCharacterCustomization,
   type RiotCharacterCustomization,
 } from "../shared/character";
 import type { RiotClientRoomView } from "../shared/protocol";
@@ -38,6 +39,48 @@ export default function Game({ locale, onExit }: GameProps) {
   }, [view]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (typeof fetch === "function") {
+      void fetch("/api/games/riot/profile", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { character?: unknown } | null) => {
+          if (!cancelled && data?.character) {
+            setCharacter(sanitizeCharacterCustomization(data.character));
+          }
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleCharacterSave = (next: RiotCharacterCustomization) => {
+    setCharacter(next);
+    if (typeof fetch === "function") {
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (typeof document !== "undefined" && document.cookie) {
+        const entry = document.cookie
+          .split("; ")
+          .find((c) => c.startsWith("ls_csrf="));
+        if (entry) {
+          headers["x-csrf-token"] = decodeURIComponent(
+            entry.slice("ls_csrf=".length),
+          );
+        }
+      }
+      void fetch("/api/games/riot/profile", {
+        method: "PUT",
+        credentials: "include",
+        headers,
+        body: JSON.stringify({ character: next }),
+      }).catch(() => undefined);
+    }
+  };
+
+  useEffect(() => {
     const s = connectRiot();
 
     s.on("connect", () => {
@@ -47,13 +90,18 @@ export default function Game({ locale, onExit }: GameProps) {
       // ke room yang sama bila klien masih memegang view-nya.
       const v = viewRef.current;
       if (v?.roomId) {
-        void emitAck<{ success?: boolean; room?: RiotClientRoomView }>(
-          s,
-          "player:reconnect",
-          { roomId: v.roomId },
-        )
+        void emitAck<{
+          ok?: boolean;
+          success?: boolean;
+          room?: RiotClientRoomView;
+          view?: RiotClientRoomView;
+        }>(s, "player:reconnect", { roomId: v.roomId })
           .then((res) => {
-            if (res?.success && res.room) setView(res.room);
+            const nextView = res?.view ?? res?.room;
+            if ((res?.ok || res?.success) && nextView) {
+              setView(nextView);
+              setRole(nextView.myRole ?? null);
+            }
           })
           .catch(() => undefined);
       }
@@ -62,6 +110,9 @@ export default function Game({ locale, onExit }: GameProps) {
     s.on("connect_error", () => setError("lobbyExtra.errorGeneric"));
     s.on("room:view", (v: RiotClientRoomView) => {
       setView(v);
+      if (v.myRole) {
+        setRole(v.myRole);
+      }
       setError(null);
     });
     s.on("role", (d: { role: PlayerRole }) => setRole(d.role));
@@ -84,7 +135,8 @@ export default function Game({ locale, onExit }: GameProps) {
   }, []);
 
   // Role hanya relevan selama pertandingan; di lobi selalu null.
-  const effectiveRole = view !== null && view.phase !== "lobby" ? role : null;
+  const effectiveRole =
+    view !== null && view.phase !== "lobby" ? (role ?? view.myRole ?? null) : null;
 
   const inGame = view !== null && view.phase !== "lobby";
 
@@ -105,7 +157,7 @@ export default function Game({ locale, onExit }: GameProps) {
           connected={connected}
           view={view}
           character={character}
-          onCharacterChange={setCharacter}
+          onCharacterChange={handleCharacterSave}
           error={error}
           t={t}
         />

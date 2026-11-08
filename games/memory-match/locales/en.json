@@ -19,5 +19,21 @@
   "rulesPairs": "Flip two cards to find matching pairs.",
   "rulesScore": "Finish faster with fewer moves for a higher score. Consecutive match combos give bonus points.",
   "rulesAudio": "Audio is synthesized directly in the browser and can be muted at any time.",
-  "leaderboardNote": "Your best score will be automatically recorded on the weekly, monthly, and all-time leaderboards."
+  "leaderboard": "Leaderboard",
+  "periodWeek": "This week",
+  "periodMonth": "This month",
+  "periodAll": "All time",
+  "loading": "Loading…",
+  "empty": "No scores yet",
+  "leaderboardNote": "Your best score will be automatically recorded on the weekly, monthly, and all-time leaderboards.",
+  "card": {
+    "rocket": "Rocket",
+    "diamond": "Diamond",
+    "lightning": "Lightning",
+    "target": "Target",
+    "star": "Star",
+    "clover": "Clover",
+    "crown": "Crown",
+    "flame": "Flame"
+  }
 }

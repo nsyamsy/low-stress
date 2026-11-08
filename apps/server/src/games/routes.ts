@@ -6,12 +6,7 @@ import {
   createAuthMiddleware,
   requireActiveUser,
 } from "../auth/middleware";
-import {
-  getSessionUser,
-  SESSION_COOKIE_NAME,
-  ADMIN_COOKIE_NAME,
-  getAdminSession,
-} from "../auth/session";
+import { resolvePrincipal } from "../auth/principal";
 import type { Env } from "../env";
 import { AppError } from "../errors";
 import type { LoadedGame } from "../registry/games";
@@ -47,6 +42,22 @@ export async function registerGameRoutes(
   const userLastSubmitAt = new Map<string, number>();
   const userSubmitTimestamps = new Map<string, number[]>();
 
+  function pruneSubmitMaps(nowMs: number): void {
+    for (const [key, lastAt] of userLastSubmitAt) {
+      if (nowMs - lastAt > 60_000) {
+        userLastSubmitAt.delete(key);
+      }
+    }
+    for (const [key, tsList] of userSubmitTimestamps) {
+      const active = tsList.filter((t) => nowMs - t < 60_000);
+      if (active.length === 0) {
+        userSubmitTimestamps.delete(key);
+      } else if (active.length !== tsList.length) {
+        userSubmitTimestamps.set(key, active);
+      }
+    }
+  }
+
   // Hook gate untuk rute game spesifik: /api/games/:id/*
   app.addHook("preHandler", async (request: FastifyRequest) => {
     const url = request.url;
@@ -75,15 +86,10 @@ export async function registerGameRoutes(
     }
 
     // 1. Admin dilarang mengakses API game. Bila browser juga memegang sesi
-    //    pemain yang valid, permintaan diperlakukan sebagai pemain.
-    const adminToken = request.cookies[ADMIN_COOKIE_NAME];
-    const userToken = request.cookies[SESSION_COOKIE_NAME];
-    const hasPlayerSession = userToken ? Boolean(await getSessionUser(db, userToken)) : false;
-    if (adminToken && !hasPlayerSession) {
-      const adminResult = await getAdminSession(db, adminToken);
-      if (adminResult) {
-        throw new AppError("FORBIDDEN", 403);
-      }
+    //    pemain yang valid, resolvePrincipal mengembalikan kind: "user".
+    const principal = await resolvePrincipal(db, request.cookies);
+    if (principal.kind === "admin") {
+      throw new AppError("FORBIDDEN", 403);
     }
 
     // 2. Pemain harus terautentikasi dan berstatus active
@@ -96,14 +102,11 @@ export async function registerGameRoutes(
 
   // GET /api/games (Daftar game yang aktif/maintenance untuk pemain)
   app.get("/api/games", async (request) => {
-    let userId: string | undefined;
-    const sessionToken = request.cookies[SESSION_COOKIE_NAME];
-    if (sessionToken) {
-      const session = await getSessionUser(db, sessionToken);
-      if (session?.user && session.user.status === "active") {
-        userId = session.user.id;
-      }
-    }
+    const principal = await resolvePrincipal(db, request.cookies);
+    const userId =
+      principal.kind === "user" && principal.user.status === "active"
+        ? principal.user.id
+        : undefined;
 
     return listPlayerGames(db, games, userId);
   });
@@ -119,20 +122,21 @@ export async function registerGameRoutes(
     const gameId = params.id;
     const query = leaderboardQuerySchema.parse(request.query);
 
-    let userId: string | undefined;
-    const sessionToken = request.cookies[SESSION_COOKIE_NAME];
-    if (sessionToken) {
-      const session = await getSessionUser(db, sessionToken);
-      if (session?.user && session.user.status === "active") {
-        userId = session.user.id;
-      }
-    }
+    const principal = await resolvePrincipal(db, request.cookies);
+    const userId =
+      principal.kind === "user" && principal.user.status === "active"
+        ? principal.user.id
+        : undefined;
+
+    const loaded = games.find((g) => g.manifest.id === gameId);
+    const direction = loaded?.manifest.scoring?.direction ?? "higher";
 
     return getLeaderboard({
       db,
       gameId,
       userId,
       period: query.period,
+      direction,
     });
   });
 
@@ -156,6 +160,7 @@ export async function registerGameRoutes(
     // Batas laju per pemain & game (API_Spec §6)
     const rateKey = `${userId}:${gameId}`;
     const nowMs = Date.now();
+    pruneSubmitMaps(nowMs);
     const lastAt = userLastSubmitAt.get(rateKey) ?? 0;
     if (nowMs - lastAt < 3000) {
       throw new AppError("SCORE_RATE_LIMITED", 429, {

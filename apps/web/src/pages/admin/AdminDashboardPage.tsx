@@ -40,12 +40,12 @@ export function AdminDashboardPage() {
 
   const handleQuickApprove = async (id: string) => {
     await updateAdminUserStatusApi(id, "approve");
-    loadDashboard();
+    void loadDashboard();
   };
 
   const handleQuickReject = async (id: string) => {
     await updateAdminUserStatusApi(id, "reject");
-    loadDashboard();
+    void loadDashboard();
   };
 
   if (loading) {
@@ -111,7 +111,7 @@ export function AdminDashboardPage() {
             {t("admin.dashboard.pendingSection")} ({data?.pending ?? 0})
           </h2>
           <Link to="/admin/approvals" className="ls-link" style={{ fontSize: "var(--font-small)" }}>
-            Lihat semua →
+            {t("admin.dashboard.viewAll")}
           </Link>
         </div>
 
@@ -175,7 +175,7 @@ export function AdminDashboardPage() {
               >
                 <span style={{ fontWeight: "var(--weight-medium)" }}>{gameId}</span>
                 <span style={{ color: "var(--primary)", fontWeight: "var(--weight-medium)" }}>
-                  {count} plays
+                  {t("admin.dashboard.playsCount", { count })}
                 </span>
               </div>
             ))}

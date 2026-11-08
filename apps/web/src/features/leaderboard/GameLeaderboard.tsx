@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Crown, Medal, Trophy } from "lucide-react";
-import { cn } from "@low-stress/ui";
+import { Button, cn } from "@low-stress/ui";
+import { translateErrorCode } from "@low-stress/i18n";
 import { useTranslation } from "react-i18next";
+import { apiFetch, type ApiError } from "../../lib/apiFetch";
 
 export type LeaderboardPeriod = "all" | "week" | "month";
 
@@ -33,9 +35,9 @@ function getInitials(name: string): string {
 }
 
 const PODIUM_COLORS = [
-  "text-amber-500 bg-amber-500/10 border-amber-500/30",
-  "text-slate-400 bg-slate-400/10 border-slate-400/30",
-  "text-amber-700 bg-amber-700/10 border-amber-700/30",
+  "text-[var(--warning-text)] bg-[var(--warning-bg)] border-[var(--border-strong)]",
+  "text-[var(--text-secondary)] bg-[var(--bg-inset)] border-[var(--border)]",
+  "text-[var(--accent-text)] bg-[var(--accent-subtle)] border-[var(--border)]",
 ];
 
 export function LeaderboardRow({
@@ -55,7 +57,7 @@ export function LeaderboardRow({
         "flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors",
         entry.isMe
           ? "bg-[var(--bg-inset)] border border-[var(--border)] shadow-xs"
-          : "hover:bg-black/5 dark:hover:bg-white/5",
+          : "hover:bg-[var(--bg-inset)]",
       )}
     >
       {/* Rank badge */}
@@ -64,7 +66,7 @@ export function LeaderboardRow({
           "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium border",
           isPodium
             ? podiumClass
-            : "border-transparent bg-black/5 dark:bg-white/5 text-[var(--text-secondary)]",
+            : "border-transparent bg-[var(--bg-inset)] text-[var(--text-secondary)]",
         )}
       >
         {entry.rank === 1 ? (
@@ -77,7 +79,7 @@ export function LeaderboardRow({
       </span>
 
       {/* Avatar Inisial */}
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary)]/15 text-xs font-bold text-[var(--primary)]">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary-subtle)] text-xs font-bold text-[var(--primary)]">
         {getInitials(entry.name)}
       </span>
 
@@ -129,23 +131,52 @@ export function GameLeaderboard({
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const mapFetchError = useCallback(
+    (err: unknown): string => {
+      const typed = err as { status?: number; apiError?: ApiError };
+      const code = typed?.apiError?.code;
+      if (code === "FORBIDDEN" || code === "ADMIN_CANNOT_PLAY") {
+        return t("state.forbidden");
+      }
+      if (code === "GAME_CLOSED") {
+        return t("errors.GAME_CLOSED");
+      }
+      if (code === "GAME_MAINTENANCE") {
+        return t("errors.GAME_MAINTENANCE");
+      }
+      if (typed?.status === 403) {
+        return t("state.forbidden");
+      }
+      if (code) {
+        return translateErrorCode(code, typed?.apiError?.params);
+      }
+      return t("state.error");
+    },
+    [t],
+  );
 
   useEffect(() => {
+    if (!gameId) {
+      return;
+    }
+
     let mounted = true;
-    fetch(`/api/games/${encodeURIComponent(gameId)}/leaderboard?period=${period}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: LeaderboardData) => {
+
+    apiFetch<LeaderboardData>(
+      `/api/games/${encodeURIComponent(gameId)}/leaderboard?period=${period}`,
+    )
+      .then((json) => {
         if (mounted) {
           setData(json);
+          setError(null);
           setLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (mounted) {
-          setError(t("state.error"));
+          setError(mapFetchError(err));
           setLoading(false);
         }
       });
@@ -153,7 +184,7 @@ export function GameLeaderboard({
     return () => {
       mounted = false;
     };
-  }, [gameId, period, refreshKey, t]);
+  }, [gameId, period, refreshKey, retryCount, mapFetchError]);
 
   return (
     <div
@@ -173,7 +204,7 @@ export function GameLeaderboard({
       </div>
 
       {/* Period Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-black/5 dark:bg-white/5 rounded-lg mb-3 text-xs">
+      <div className="flex items-center gap-1 p-1 bg-[var(--bg-inset)] rounded-lg mb-3 text-xs">
         {(["all", "week", "month"] as const).map((p) => {
           const isActive = period === p;
           const label =
@@ -209,14 +240,24 @@ export function GameLeaderboard({
           {t("state.loading")}
         </div>
       ) : error ? (
-        <div className="py-6 text-center text-xs text-red-500">{error}</div>
-      ) : data?.entries.length === 0 ? (
+        <div className="py-6 flex flex-col items-center gap-3 text-center">
+          <p className="text-xs text-[var(--danger-text)]" role="alert">
+            {error}
+          </p>
+          <Button
+            variant="secondary"
+            onClick={() => setRetryCount((c) => c + 1)}
+          >
+            {t("action.tryAgain")}
+          </Button>
+        </div>
+      ) : !data || data.entries.length === 0 ? (
         <div className="py-8 text-center text-xs text-[var(--text-muted)]">
           {t("leaderboard.empty")}
         </div>
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {data?.entries.map((entry) => (
+          {data.entries.map((entry) => (
             <LeaderboardRow
               key={entry.userId}
               entry={entry}
@@ -225,7 +266,7 @@ export function GameLeaderboard({
           ))}
 
           {/* Baris pemain sendiri bila berada di luar top 10 (Screens §8) */}
-          {data?.me && (
+          {data.me && (
             <>
               <li className="my-1 border-t border-dashed border-[var(--border)]" />
               <LeaderboardRow

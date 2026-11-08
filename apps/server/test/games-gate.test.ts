@@ -4,6 +4,7 @@ import {
   auditLog,
   createDb,
   games,
+  sessions,
   settings,
   users,
   type Database,
@@ -12,6 +13,15 @@ import { eq, inArray } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app";
 import { hashPassword } from "../src/auth/password";
+import { resolvePrincipal } from "../src/auth/principal";
+import {
+  ADMIN_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  createAdminSession,
+  createSession,
+  generateToken,
+  hashToken,
+} from "../src/auth/session";
 import { readEnv } from "../src/env";
 import type { LoadedGame } from "../src/registry/games";
 import type { GameProps } from "@low-stress/sdk";
@@ -146,6 +156,9 @@ describe("Game Gateway, Status & Schedule (Phase 4: P4-01 .. P4-04)", () => {
 
   afterAll(async () => {
     if (db) {
+      await db
+        .delete(sessions)
+        .where(inArray(sessions.subjectId, [playerId, pendingId, adminId]));
       await db.delete(users).where(inArray(users.id, [playerId, pendingId]));
       await db.delete(admins).where(eq(admins.id, adminId));
       await db.delete(games).where(inArray(games.id, [game1Id, game2Id]));
@@ -518,6 +531,95 @@ describe("Game Gateway, Status & Schedule (Phase 4: P4-01 .. P4-04)", () => {
       });
       expect(res.statusCode).toBe(403);
       expect(res.json().error.code).toBe("FORBIDDEN");
+    });
+
+    it("D-02d & R-02: matriks resolvePrincipal (tanpa cookie, hanya user, hanya admin, user + admin, user kedaluwarsa + admin)", async () => {
+      const userSess = await createSession(db, playerId);
+      const adminSess = await createAdminSession(db, adminId);
+
+      const expiredRawToken = generateToken();
+      await db.insert(sessions).values({
+        id: hashToken(expiredRawToken),
+        subjectType: "user",
+        subjectId: playerId,
+        expiresAt: new Date(Date.now() - 60_000),
+      });
+
+      // 1. Tanpa cookie -> none
+      const pNone = await resolvePrincipal(db, {});
+      expect(pNone).toEqual({ kind: "none" });
+
+      // 2. Hanya cookie pemain -> user
+      const pUser = await resolvePrincipal(db, {
+        [SESSION_COOKIE_NAME]: userSess.rawToken,
+      });
+      expect(pUser.kind).toBe("user");
+      if (pUser.kind === "user") {
+        expect(pUser.user.id).toBe(playerId);
+      }
+
+      // 3. Hanya cookie admin -> admin
+      const pAdmin = await resolvePrincipal(db, {
+        [ADMIN_COOKIE_NAME]: adminSess.rawToken,
+      });
+      expect(pAdmin.kind).toBe("admin");
+      if (pAdmin.kind === "admin") {
+        expect(pAdmin.admin.id).toBe(adminId);
+      }
+
+      // 4. Kedua cookie (pemain sah + admin sah) -> user menang (prioritas sesi pemain)
+      const pBoth = await resolvePrincipal(
+        db,
+        `${SESSION_COOKIE_NAME}=${userSess.rawToken}; ${ADMIN_COOKIE_NAME}=${adminSess.rawToken}`,
+      );
+      expect(pBoth.kind).toBe("user");
+      if (pBoth.kind === "user") {
+        expect(pBoth.user.id).toBe(playerId);
+      }
+
+      // 5. Cookie pemain kedaluwarsa + cookie admin sah -> jatuh ke admin
+      const pExpiredUserPlusAdmin = await resolvePrincipal(db, {
+        [SESSION_COOKIE_NAME]: expiredRawToken,
+        [ADMIN_COOKIE_NAME]: adminSess.rawToken,
+      });
+      expect(pExpiredUserPlusAdmin.kind).toBe("admin");
+      if (pExpiredUserPlusAdmin.kind === "admin") {
+        expect(pExpiredUserPlusAdmin.admin.id).toBe(adminId);
+      }
+    });
+
+    it("D-02d & R-02: GET /api/games dan GET /api/games/:id/ping dengan cookie pemain + admin mengembalikan 200 OK; hanya cookie admin mengembalikan 403 FORBIDDEN pada gerbang game", async () => {
+      const player = await loginAsPlayer();
+      const admin = await loginAsAdmin();
+      const combinedCookies = `${player.fullCookieHeader}; ${admin.fullCookieHeader}`;
+
+      // 1. Kedua cookie (pemain + admin) pada GET /api/games -> 200 OK
+      const listRes = await app.inject({
+        method: "GET",
+        url: "/api/games",
+        headers: { cookie: combinedCookies },
+      });
+      expect(listRes.statusCode).toBe(200);
+      const listJson = listRes.json() as { items: Array<{ id: string }> };
+      expect(listJson.items.some((g) => g.id === game1Id)).toBe(true);
+
+      // 2. Kedua cookie (pemain + admin) pada GET /api/games/:id/ping -> 200 OK
+      const pingBothRes = await app.inject({
+        method: "GET",
+        url: `/api/games/${game1Id}/ping`,
+        headers: { cookie: combinedCookies },
+      });
+      expect(pingBothRes.statusCode).toBe(200);
+      expect(pingBothRes.json()).toEqual({ ok: true });
+
+      // 3. Hanya cookie admin pada GET /api/games/:id/ping -> 403 FORBIDDEN
+      const pingAdminOnlyRes = await app.inject({
+        method: "GET",
+        url: `/api/games/${game1Id}/ping`,
+        headers: { cookie: admin.fullCookieHeader },
+      });
+      expect(pingAdminOnlyRes.statusCode).toBe(403);
+      expect(pingAdminOnlyRes.json().error.code).toBe("FORBIDDEN");
     });
   });
 });

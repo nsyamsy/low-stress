@@ -97,6 +97,52 @@ describe("RT-31: Sabotage System", () => {
     expect(room.activeSabotage?.resolved).toBe(true);
   });
 
+  it("blocks movement across doorways of locked rooms during door sabotage", () => {
+    const service = new RiotGameService();
+    const room = service.createRoom("p1", "Host", "room_door_block");
+    service.joinRoom(room.id, "p2", "Player 2");
+    service.joinRoom(room.id, "p3", "Player 3");
+    service.joinRoom(room.id, "p4", "Player 4");
+    service.startGame(room.id, "p1");
+
+    const infiltrator = Array.from(room.players.values()).find((p) => p.role === "infiltrator")!;
+    const crew = Array.from(room.players.values()).find((p) => p.role === "crew")!;
+
+    // Place crew inside command room (minY: 25) near south doorway at (0, 26)
+    const crewSim = room.simulation.getPlayer(crew.id)!;
+    crewSim.x = 0;
+    crewSim.y = 26;
+
+    const t0 = 100000;
+    const sabRes = service.triggerSabotage(room.id, infiltrator.id, "doors", "room_command", t0);
+    expect(sabRes.success).toBe(true);
+
+    // Crew tries to walk south out of command room (toward y < 25)
+    for (let seq = 1; seq <= 15; seq++) {
+      service.processMovementInput(
+        room.id,
+        crew.id,
+        { seq, dx: 0, dy: -1, dt: 0.05 },
+        t0 + seq * 50,
+      );
+    }
+
+    // Crew must remain inside command room (y >= 25)
+    expect(crewSim.y).toBeGreaterThanOrEqual(25);
+
+    // After door lock expires, crew can walk south out of command room
+    service.processServerTick(room.id, t0 + DOOR_LOCK_DURATION_MS);
+    for (let seq = 16; seq <= 30; seq++) {
+      service.processMovementInput(
+        room.id,
+        crew.id,
+        { seq, dx: 0, dy: -1, dt: 0.05 },
+        t0 + DOOR_LOCK_DURATION_MS + seq * 50,
+      );
+    }
+    expect(crewSim.y).toBeLessThan(25);
+  });
+
   it("handles critical alarm: dual-point disarm required; timer expiration leads to infiltrator win", () => {
     const service = new RiotGameService();
     const room = service.createRoom("p1", "Host", "room_crit_alarm");

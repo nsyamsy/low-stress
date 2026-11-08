@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button, Chip } from "@low-stress/ui";
@@ -6,34 +7,107 @@ import { useAuth } from "../features/auth";
 import { fetchGamesApi } from "../features/games/api";
 import { getGameThumbnail } from "../features/games/thumbnails";
 import type { GameItem } from "../features/games/types";
+import type { ApiError } from "../lib/apiFetch";
+
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function formatNextOpenWib(opensAtIso: string, t: TFunction): string {
+  const nextDate = new Date(opensAtIso);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jakarta",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(nextDate);
+
+  const weekdayShort = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
+  const dayIndex = WEEKDAY_INDEX[weekdayShort] ?? 0;
+  const hours = (parts.find((p) => p.type === "hour")?.value ?? "00").padStart(2, "0");
+  const minutes = (parts.find((p) => p.type === "minute")?.value ?? "00").padStart(2, "0");
+  const dayName = t(`days.${dayIndex}`);
+  return `${dayName} ${hours}:${minutes} WIB`;
+}
 
 export function HomePage({
   initialGames = null,
+  initialError = null,
 }: {
   initialGames?: GameItem[] | null;
+  initialError?: string | null;
 } = {}) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [games, setGames] = useState<GameItem[]>(initialGames ?? []);
-  const [loading, setLoading] = useState(initialGames === null);
+  const [loading, setLoading] = useState(
+    initialGames === null && initialError === null,
+  );
+  const [error, setError] = useState<string | null>(initialError);
+
+  const loadGames = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    fetchGamesApi()
+      .then((data) => {
+        setGames(data.items);
+      })
+      .catch((err: unknown) => {
+        const typed = err as { status?: number; apiError?: ApiError };
+        const code = typed?.apiError?.code;
+        if (
+          typed?.status === 403 ||
+          code === "FORBIDDEN" ||
+          code === "ADMIN_CANNOT_PLAY"
+        ) {
+          setError(t("state.forbidden"));
+        } else {
+          setError(t("state.error"));
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [t]);
 
   useEffect(() => {
-    if (initialGames !== null) return;
+    if (initialGames !== null || initialError !== null) return;
     let mounted = true;
     fetchGamesApi()
       .then((data) => {
         if (mounted) setGames(data.items);
       })
-      .catch(() => undefined)
+      .catch((err: unknown) => {
+        if (!mounted) return;
+        const typed = err as { status?: number; apiError?: ApiError };
+        const code = typed?.apiError?.code;
+        if (
+          typed?.status === 403 ||
+          code === "FORBIDDEN" ||
+          code === "ADMIN_CANNOT_PLAY"
+        ) {
+          setError(t("state.forbidden"));
+        } else {
+          setError(t("state.error"));
+        }
+      })
       .finally(() => {
         if (mounted) setLoading(false);
       });
     return () => {
       mounted = false;
     };
-  }, [initialGames]);
+  }, [initialGames, initialError, t]);
 
   const currentLang = i18n.language.startsWith("en") ? "en" : "id";
 
@@ -59,14 +133,16 @@ export function HomePage({
     }
 
     // Jika ada yang tutup, cari opensAt terdekat
-    const closedGames = games.filter((g) => g.status === "active" && !g.open && g.opensAt);
+    const closedGames = games
+      .filter((g) => g.status === "active" && !g.open && g.opensAt)
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(a.opensAt!).getTime() - new Date(b.opensAt!).getTime(),
+      );
     if (closedGames.length > 0 && closedGames[0]?.opensAt) {
-      const nextDate = new Date(closedGames[0].opensAt);
-      const dayName = t(`days.${nextDate.getDay()}`);
-      const hours = String(nextDate.getHours()).padStart(2, "0");
-      const minutes = String(nextDate.getMinutes()).padStart(2, "0");
       return t("home.scheduleClosed", {
-        time: `${dayName} ${hours}:${minutes} WIB`,
+        time: formatNextOpenWib(closedGames[0].opensAt, t),
       });
     }
 
@@ -92,6 +168,19 @@ export function HomePage({
       {loading ? (
         <div style={{ padding: "var(--space-6)", textAlign: "center" }}>
           <p className="ls-text-secondary">{t("state.loading")}</p>
+        </div>
+      ) : error ? (
+        <div
+          className="ls-card"
+          style={{ textAlign: "center", padding: "var(--space-6)" }}
+          role="alert"
+        >
+          <p className="ls-text-secondary" style={{ marginBottom: "var(--space-3)" }}>
+            {error}
+          </p>
+          <Button variant="secondary" onClick={loadGames}>
+            {t("action.tryAgain")}
+          </Button>
         </div>
       ) : games.length === 0 ? (
         <div className="ls-card" style={{ textAlign: "center", padding: "var(--space-6)" }}>

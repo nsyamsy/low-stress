@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Input, Logo } from "@low-stress/ui";
 import { useAuth } from "../features/auth";
 import {
@@ -24,20 +25,7 @@ export function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const mapErrorMessage = (error: ApiError): string => {
-    switch (error.code) {
-      case "USERNAME_TAKEN":
-        return t("auth.error.usernameTaken");
-      case "EMAIL_TAKEN":
-        return t("auth.error.emailTaken");
-      case "PASSWORD_TOO_WEAK":
-        return t("auth.error.passwordTooWeak");
-      case "REGISTRATION_CLOSED":
-        return t("auth.error.registrationClosed");
-      case "CAPTCHA_FAILED":
-        return t("auth.error.captchaFailed");
-      default:
-        return t("auth.error.generic");
-    }
+    return translateErrorCode(error.code, error.params);
   };
 
   const handleSubmit = async (e: FormEvent) => {

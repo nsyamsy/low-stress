@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Button, Logo, SegmentedControl } from "@low-stress/ui";
-import { useAuth, useSavePreferences } from "./features/auth";
+import { useAuth } from "./features/auth";
+import { usePreferences } from "./features/preferences/usePreferences";
 import { ProfilePage } from "./pages/ProfilePage";
-import { changeLocale, readLocalePreference, type LocalePreference } from "./i18n";
+import type { LocalePreference } from "./i18n";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PendingPage } from "./pages/PendingPage";
@@ -20,6 +21,8 @@ import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminAuditPage } from "./pages/admin/AdminAuditPage";
 import { AdminChatPage } from "./pages/admin/AdminChatPage";
 import { AdminLeaderboardPage } from "./pages/admin/AdminLeaderboardPage";
+import { AdminLudoPage } from "./pages/admin/AdminLudoPage";
+import { AdminRiotPage } from "./pages/admin/AdminRiotPage";
 import { GameStatusPage } from "./pages/GameStatusPage";
 import { GamePage } from "./pages/GamePage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
@@ -37,30 +40,35 @@ const LOCALE_OPTIONS: ReadonlyArray<{ value: LocalePreference; key: string }> = 
   { value: "en", key: "language.en" },
 ];
 
+export function NotFoundPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  return (
+    <div className="ls-status-screen">
+      <div className="ls-status-screen__card ls-stack" style={{ textAlign: "center", gap: "var(--space-3)" }}>
+        <h1 className="ls-heading-1">{t("state.notFoundTitle")}</h1>
+        <p className="ls-text-secondary">{t("state.notFoundDesc")}</p>
+        <div>
+          <Button variant="primary" onClick={() => navigate("/")}>
+            {t("state.backHome")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading, logout } = useAuth();
-  const savePreferences = useSavePreferences();
-  const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
-  const [locale, setLocale] = useState<LocalePreference>(readLocalePreference);
+  const { theme, locale, setTheme, setLocale } = usePreferences();
 
   useEffect(() => {
     applyTheme(readThemePreference());
   }, []);
-
-  const onThemeChange = (value: ThemePreference) => {
-    setTheme(value);
-    applyTheme(value);
-    void savePreferences({ theme: value });
-  };
-
-  const onLocaleChange = (value: LocalePreference) => {
-    setLocale(value);
-    changeLocale(value);
-    void savePreferences({ locale: value });
-  };
 
   const onLogout = async () => {
     await logout();
@@ -79,6 +87,8 @@ export function App() {
           <Route path="games" element={<AdminGamesPage />} />
           <Route path="leaderboard" element={<AdminLeaderboardPage />} />
           <Route path="chat" element={<AdminChatPage />} />
+          <Route path="ludo" element={<AdminLudoPage />} />
+          <Route path="riot" element={<AdminRiotPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
         </Route>
@@ -127,7 +137,7 @@ export function App() {
                 label: t(option.key),
               }))}
               value={locale}
-              onChange={onLocaleChange}
+              onChange={setLocale}
             />
             <SegmentedControl
               label={t("theme.label")}
@@ -136,7 +146,7 @@ export function App() {
                 label: t(option.key),
               }))}
               value={theme}
-              onChange={onThemeChange}
+              onChange={setTheme}
             />
             {user && (
               <Button variant="secondary" onClick={onLogout}>
@@ -201,7 +211,18 @@ export function App() {
               )
             }
           />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route
+            path="/leaderboard"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : user.status === "pending" ? (
+                <Navigate to="/pending" replace />
+              ) : (
+                <LeaderboardPage />
+              )
+            }
+          />
           <Route
             path="/profile"
             element={
@@ -250,8 +271,10 @@ export function App() {
               )
             }
           />
-          <Route path="/showcase" element={<ShowcasePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {import.meta.env.DEV && (
+            <Route path="/showcase" element={<ShowcasePage />} />
+          )}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <PublicChatPanel />
         <footer className="ls-footer">{t("app.tagline")}</footer>

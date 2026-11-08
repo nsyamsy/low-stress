@@ -12,6 +12,17 @@ export const LOCALE_STORAGE_KEY = "low-stress.locale";
 
 export type LocalePreference = "auto" | Locale;
 
+const localeListeners = new Set<(locale: LocalePreference) => void>();
+
+export function subscribeLocale(
+  listener: (locale: LocalePreference) => void,
+): () => void {
+  localeListeners.add(listener);
+  return () => {
+    localeListeners.delete(listener);
+  };
+}
+
 export function readLocalePreference(): LocalePreference {
   try {
     if (typeof window !== "undefined" && window.localStorage) {
@@ -80,12 +91,15 @@ export function changeLocale(preference: LocalePreference): void {
   }
   const next = preference === "auto" ? initialLocale() : preference;
   void i18n.changeLanguage(next);
-  if (typeof document !== "undefined") {
+  if (typeof document !== "undefined" && document.documentElement) {
     document.documentElement.lang = next;
+  }
+  for (const listener of localeListeners) {
+    listener(preference);
   }
 }
 
-if (typeof document !== "undefined") {
+if (typeof document !== "undefined" && document.documentElement) {
   document.documentElement.lang = startLocale;
 }
 

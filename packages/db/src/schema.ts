@@ -93,6 +93,9 @@ export const loginAttempts = pgTable("login_attempts", {
   key: text("key").primaryKey(),
   count: integer("count").notNull().default(0),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  lastFailedAt: timestamp("last_failed_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const settings = pgTable("settings", {

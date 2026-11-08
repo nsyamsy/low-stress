@@ -11,6 +11,8 @@ export interface LoadedGame {
   manifest: GameManifest;
   /** Path absolut ke `manifest.ts`. */
   path: string;
+  serverModule?: GameServerModule;
+  jobs?: GameJob[];
 }
 
 export interface GameManifestModule {
@@ -110,6 +112,35 @@ export interface InitializedGameServer {
   jobs: GameJob[];
 }
 
+export async function resolveGameServerModule(
+  game: LoadedGame,
+): Promise<GameServerModule | undefined> {
+  if (game.serverModule) {
+    return game.serverModule;
+  }
+  if (game.manifest.server) {
+    const mod = await game.manifest.server();
+    game.serverModule = mod;
+    return mod;
+  }
+  const serverPathTs = resolve(GAMES_DIR, game.manifest.id, "server/index.ts");
+  const serverPathJs = resolve(GAMES_DIR, game.manifest.id, "server/index.js");
+  const serverFile = existsSync(serverPathTs)
+    ? serverPathTs
+    : existsSync(serverPathJs)
+      ? serverPathJs
+      : null;
+  if (serverFile) {
+    const mod = await import(pathToFileURL(serverFile).href);
+    const serverModule = (mod.serverModule ?? mod.default) as GameServerModule | undefined;
+    if (serverModule) {
+      game.serverModule = serverModule;
+    }
+    return serverModule;
+  }
+  return undefined;
+}
+
 export async function loadGameServerModules(
   loaded: readonly LoadedGame[],
   ctx: GameServerContext,
@@ -118,25 +149,10 @@ export async function loadGameServerModules(
 ): Promise<InitializedGameServer[]> {
   const initialized: InitializedGameServer[] = [];
 
-  for (const { manifest } of loaded) {
+  for (const item of loaded) {
+    const { manifest } = item;
     try {
-      let serverModule: GameServerModule | undefined;
-      if (manifest.server) {
-        serverModule = await manifest.server();
-      } else {
-        const serverPathTs = resolve(GAMES_DIR, manifest.id, "server/index.ts");
-        const serverPathJs = resolve(GAMES_DIR, manifest.id, "server/index.js");
-        const serverFile = existsSync(serverPathTs)
-          ? serverPathTs
-          : existsSync(serverPathJs)
-            ? serverPathJs
-            : null;
-        if (serverFile) {
-          const mod = await import(pathToFileURL(serverFile).href);
-          serverModule = (mod.serverModule ?? mod.default) as GameServerModule;
-        }
-      }
-
+      const serverModule = await resolveGameServerModule(item);
       if (!serverModule) continue;
 
       if (serverModule.registerRoutes) {
@@ -151,6 +167,9 @@ export async function loadGameServerModules(
       if (serverModule.registerJobs) {
         jobs = await serverModule.registerJobs(ctx);
       }
+
+      item.serverModule = serverModule;
+      item.jobs = jobs;
 
       initialized.push({
         id: manifest.id,

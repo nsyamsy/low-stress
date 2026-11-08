@@ -14,7 +14,7 @@ for (const [path, url] of Object.entries(modules)) {
   if (match?.[1]) byGame.set(match[1], url);
 }
 
-/** URL thumbnail game, atau undefined bila game belum menyediakannya. */
-export function getGameThumbnail(gameId: string): string | undefined {
-  return byGame.get(gameId);
+/** URL thumbnail game, atau null bila game belum menyediakannya. */
+export function getGameThumbnail(gameId: string): string | null {
+  return byGame.get(gameId) ?? null;
 }

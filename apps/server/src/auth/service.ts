@@ -9,7 +9,7 @@ import {
   settings,
   users,
 } from "@low-stress/db";
-import type { LoadedGame } from "../registry/games";
+import { resolveGameServerModule, type LoadedGame } from "../registry/games";
 import { AppError } from "../errors";
 import type { Env } from "../env";
 import { smtpConfigured } from "../env";
@@ -25,7 +25,9 @@ import {
   createSession,
   deleteAllUserSessions,
   deleteSession,
+  hashToken,
   type Me,
+  purgeExpiredSessions,
   userToMe,
 } from "./session";
 import type {
@@ -292,6 +294,7 @@ export async function changePassword(
   db: Database,
   userId: string,
   body: ChangePasswordBody,
+  currentRawToken?: string,
 ): Promise<void> {
   const [user] = await db
     .select()
@@ -317,6 +320,21 @@ export async function changePassword(
     .update(users)
     .set({ passwordHash: newHash })
     .where(eq(users.id, userId));
+
+  // Bersihkan sesi kedaluwarsa dan cabut sesi perangkat lain milik pengguna ini
+  await purgeExpiredSessions(db);
+  if (currentRawToken) {
+    const currentHash = hashToken(currentRawToken);
+    await db
+      .delete(sessions)
+      .where(
+        and(
+          eq(sessions.subjectId, userId),
+          eq(sessions.subjectType, "user"),
+          ne(sessions.id, currentHash),
+        ),
+      );
+  }
 }
 
 export async function deleteAccount(
@@ -366,15 +384,14 @@ export async function deleteAccount(
 
     // 6. Jalankan hook onUserDeleted game bila tersedia
     for (const game of games) {
-      if (game.manifest.server) {
-        try {
-          const serverMod = await game.manifest.server();
-          if (serverMod.onUserDeleted) {
-            await serverMod.onUserDeleted({ userId, db: tx });
-          }
-        } catch {
-          // Gagal hook game tidak membatalkan transaksi inti
+      try {
+        const serverMod =
+          game.serverModule ?? (await resolveGameServerModule(game));
+        if (serverMod?.onUserDeleted) {
+          await serverMod.onUserDeleted({ userId, db: tx, logger: console });
         }
+      } catch {
+        // Gagal hook game tidak membatalkan transaksi inti
       }
     }
 

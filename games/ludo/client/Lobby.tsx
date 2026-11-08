@@ -21,6 +21,17 @@ interface LobbyProps extends GameProps {
   onOpenRoom: (roomId: string) => void;
 }
 
+function getCsrfHeader(): Record<string, string> {
+  if (typeof document === "undefined") return {};
+  const match = document.cookie
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("ls_csrf="));
+  if (!match) return {};
+  const token = decodeURIComponent(match.slice("ls_csrf=".length));
+  return token ? { "x-csrf-token": token } : {};
+}
+
 export function Lobby({ onOpenRoom }: LobbyProps) {
   const { t } = useTranslation("game.ludo");
   const [rooms, setRooms] = useState<RoomSummary[] | null>(null);
@@ -36,14 +47,14 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
         headers: { Accept: "application/json" },
         credentials: "same-origin",
       });
-      if (!res.ok) throw new Error("Gagal memuat ruangan");
+      if (!res.ok) throw new Error(t("errorLoadRooms"));
       const data = await res.json();
       setRooms(data.items ?? []);
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal memuat");
+      setError(e instanceof Error ? e.message : t("errorLoadRooms"));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -73,13 +84,29 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
   const respond = async (roomId: string, accept: boolean) => {
     setBusy(true);
     try {
+      const res = await fetch(
+        `/api/games/ludo/rooms/${encodeURIComponent(roomId)}/respond`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getCsrfHeader(),
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({ accept }),
+        },
+      );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || t("errorRespond"));
+      }
       if (accept) {
         onOpenRoom(roomId);
       } else {
         await fetchRooms();
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal merespons");
+      setError(e instanceof Error ? e.message : t("errorRespond"));
     } finally {
       setBusy(false);
     }
@@ -92,18 +119,21 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
     try {
       const res = await fetch("/api/games/ludo/rooms", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getCsrfHeader(),
+        },
         credentials: "same-origin",
         body: JSON.stringify({ name: name.trim(), maxPlayers, play }),
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Gagal membuat ruangan");
+        throw new Error(errData.message || t("errorCreateRoom"));
       }
       const data = await res.json();
       onOpenRoom(data.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal membuat ruangan");
+      setError(err instanceof Error ? err.message : t("errorCreateRoom"));
       setBusy(false);
     }
   };
@@ -214,10 +244,10 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
                           }`}
                         >
                           {r.status === "playing"
-                            ? "Berlangsung"
+                            ? t("status.playing")
                             : r.status === "finished"
-                              ? "Selesai"
-                              : "Lobi"}
+                              ? t("status.finished")
+                              : t("status.lobby")}
                         </span>
                       </button>
                     </li>

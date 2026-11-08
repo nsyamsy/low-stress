@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   createDb,
   bannedWords,
@@ -8,7 +8,8 @@ import {
   eq,
   type Database,
 } from "@low-stress/sdk/server";
-import { createRoom, performAction } from "../server/service";
+import { createRoom, performAction, setLudoCensor } from "../server/service";
+import { setupLudoSocket } from "../server/socket";
 
 if (typeof process.loadEnvFile === "function") {
   try {
@@ -24,7 +25,65 @@ if (typeof process.loadEnvFile === "function") {
 
 const dbUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
-describe("P8-06: Sensor pada Ludo Chat", () => {
+describe("T-04 & T-05: Ludo Server Security & Censor Injection", () => {
+  it("setLudoCensor memungkinkan injeksi fungsi sensor kustom dari ctx.censorText", () => {
+    const customFn = vi.fn((text: string) => text.replace(/rahasia/gi, "*******"));
+    setLudoCensor(customFn);
+    expect(customFn("kata rahasia")).toBe("kata *******");
+    setLudoCensor(undefined);
+  });
+
+  it("setupLudoSocket menolak koneksi dari principal admin (FORBIDDEN)", async () => {
+    let middlewareFn:
+      | ((socket: unknown, next: (err?: Error) => void) => Promise<void>)
+      | undefined;
+
+    const fakeNsp = {
+      use: (fn: (socket: unknown, next: (err?: Error) => void) => Promise<void>) => {
+        middlewareFn = fn;
+      },
+      on: vi.fn(),
+      in: vi.fn(),
+      to: vi.fn(),
+    };
+    const fakeIo = {
+      of: vi.fn(() => fakeNsp),
+    };
+    const fakeDb = {
+      select: () => ({
+        from: () => ({
+          where: () => Promise.resolve([]),
+        }),
+      }),
+    };
+
+    setupLudoSocket(
+      fakeIo as never,
+      fakeDb as never,
+      {},
+      {
+        db: fakeDb,
+        resolvePrincipal: async () => ({
+          kind: "admin",
+          admin: { id: "adm-1", username: "superadmin" },
+        }),
+      },
+    );
+
+    expect(middlewareFn).toBeDefined();
+    let capturedErr: Error | undefined;
+    await middlewareFn!(
+      { handshake: { headers: { cookie: "ls_admin=tok" } }, data: {} },
+      (err?: Error) => {
+        capturedErr = err;
+      },
+    );
+    expect(capturedErr).toBeDefined();
+    expect(capturedErr?.message).toBe("FORBIDDEN");
+  });
+});
+
+describe.skipIf(!dbUrl)("P8-06: Sensor pada Ludo Chat", () => {
   let dbHandle: ReturnType<typeof createDb>;
   let db: Database;
 
@@ -54,14 +113,16 @@ describe("P8-06: Sensor pada Ludo Chat", () => {
   });
 
   afterAll(async () => {
-    if (ludoRoomId) {
+    if (db && ludoRoomId) {
       await db.delete(ludoMessages).where(eq(ludoMessages.roomId, ludoRoomId));
       await db.delete(ludoRooms).where(eq(ludoRooms.id, ludoRoomId));
     }
-    if (profaneUser) {
+    if (db && profaneUser) {
       await db.delete(users).where(eq(users.id, profaneUser.id));
     }
-    await db.delete(bannedWords).where(eq(bannedWords.word, customBadWord));
+    if (db) {
+      await db.delete(bannedWords).where(eq(bannedWords.word, customBadWord));
+    }
     if (dbHandle) {
       await dbHandle.sql.end();
     }

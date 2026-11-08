@@ -6,6 +6,7 @@ import { fetchGamesApi } from "../features/games/api";
 import type { GameItem } from "../features/games/types";
 import { findGame } from "../games/registry";
 import { useAuth } from "../features/auth/useAuth";
+import { apiFetch } from "../lib/apiFetch";
 import { GameStatusPage } from "./GameStatusPage";
 
 export function GamePage() {
@@ -125,9 +126,8 @@ export function GamePage() {
         combos: (run.meta as Record<string, unknown> | undefined)?.combos,
         ...run.meta,
       };
-      await fetch(`/api/games/${encodeURIComponent(id)}/scores`, {
+      await apiFetch(`/api/games/${encodeURIComponent(id)}/scores`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
     },

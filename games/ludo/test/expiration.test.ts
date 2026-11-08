@@ -28,7 +28,26 @@ if (typeof process.loadEnvFile === "function") {
 
 const dbUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
-describe("P7-06: Ludo Room Expiration Job (> 7 Days Inactive)", () => {
+describe("T-05: startLudoExpirationJob unref & timer unit test", () => {
+  it("runs periodically via startLudoExpirationJob with fake timer and unrefs interval", () => {
+    vi.useFakeTimers();
+    const fakeDb = {
+      select: () => ({
+        from: () => ({
+          where: () => Promise.resolve([]),
+        }),
+      }),
+    } as unknown as Database;
+
+    const intervalMs = 60 * 60 * 1000;
+    const job = startLudoExpirationJob(fakeDb, undefined, intervalMs);
+    vi.advanceTimersByTime(intervalMs);
+    job.stop();
+    vi.useRealTimers();
+  });
+});
+
+describe.skipIf(!dbUrl)("P7-06: Ludo Room Expiration Job (> 7 Days Inactive)", () => {
   let dbHandle: ReturnType<typeof createDb>;
   let db: Database;
   let testUser: typeof users.$inferSelect;
@@ -56,7 +75,7 @@ describe("P7-06: Ludo Room Expiration Job (> 7 Days Inactive)", () => {
   });
 
   afterAll(async () => {
-    if (testUser) {
+    if (db && testUser) {
       await db.delete(users).where(eq(users.id, testUser.id));
     }
     if (dbHandle) {

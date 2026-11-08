@@ -1,17 +1,19 @@
 import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
+import { sql } from "drizzle-orm";
 import type { Database } from "@low-stress/db";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { Server as SocketIOServer } from "socket.io";
 import { applySecurityHeaders } from "./auth/middleware";
+import { resolvePrincipal } from "./auth/principal";
 import { registerAuthRoutes } from "./auth/routes";
 import { registerAdminRoutes } from "./admin/routes";
 import { registerGameRoutes } from "./games/routes";
 import { registerChatRoutes } from "./chat/routes";
 import { setupPublicChatSocket } from "./chat/socket";
-import { startPurgeChatJob } from "./chat/purge";
-import { initBannedWords } from "./chat/profanity-service";
+import { censorServerText, initBannedWords } from "./chat/profanity-service";
+import { createJobRunner } from "./jobs";
 
 export type AutopilotOptions = Record<string, unknown>;
 
@@ -21,12 +23,6 @@ import { createErrorHandler, notFoundHandler } from "./errors";
 import { scanGameManifests, loadGameServerModules, type LoadedGame } from "./registry/games";
 import { checkGameGate } from "./games/service";
 import { recordScore } from "./games/scores";
-import {
-  getSessionUser,
-  getAdminSession,
-  SESSION_COOKIE_NAME,
-  ADMIN_COOKIE_NAME,
-} from "./auth/session";
 import type { GameServerContext } from "@low-stress/sdk/server";
 
 
@@ -117,6 +113,13 @@ export async function buildApp({
   });
 
   if (db) {
+    // Pastikan kolom last_failed_at tersedia (idempoten untuk lingkungan tes)
+    await db
+      .execute(
+        sql`ALTER TABLE "login_attempts" ADD COLUMN IF NOT EXISTS "last_failed_at" timestamptz NOT NULL DEFAULT now()`,
+      )
+      .catch(() => {});
+
     const io = new SocketIOServer(app.server, {
       path: "/ws",
       cors: {
@@ -126,59 +129,45 @@ export async function buildApp({
     });
 
     const chatSocket = setupPublicChatSocket(io, db);
-    const purgeChatJob = startPurgeChatJob(db);
+    const jobRunner = createJobRunner({ db, logger: app.log });
     app.decorate("io", io);
     app.decorate("chatSocket", chatSocket);
+    app.decorate("jobRunner", jobRunner);
 
-    // Inisialisasi banned words cache
-    void initBannedWords(db);
+    // Inisialisasi banned words cache sebelum memproses request
+    await initBannedWords(db);
 
     const gameList = games ?? (await scanGameManifests().catch(() => []));
-    const parseCookieHeader = (header?: string): Record<string, string> => {
-      if (!header) return {};
-      const res: Record<string, string> = {};
-      for (const pair of header.split(";")) {
-        const [k, ...v] = pair.trim().split("=");
-        if (k) res[k] = decodeURIComponent(v.join("="));
-      }
-      return res;
-    };
 
     const gameContext: GameServerContext = {
       db,
       io,
       env,
+      logger: app.log,
       options: { ludoAutopilot },
+      censorText: censorServerText,
       checkGameGate: async (gameId: string) => {
         await checkGameGate(db, gameId);
       },
       recordScore: async (params) => recordScore({ ...params, db }),
       resolvePrincipal: async (cookieHeader?: string) => {
-        const cookies = parseCookieHeader(cookieHeader);
-        const sessionToken = cookies[SESSION_COOKIE_NAME];
-        const adminToken = cookies[ADMIN_COOKIE_NAME];
-        if (sessionToken) {
-          const res = await getSessionUser(db, sessionToken);
-          if (res && res.user.status === "active") {
-            return {
-              kind: "user" as const,
-              user: {
-                id: res.user.id,
-                username: res.user.username,
-                displayName: res.user.displayName,
-                status: res.user.status,
-              },
-            };
-          }
+        const principal = await resolvePrincipal(db, cookieHeader);
+        if (principal.kind === "user" && principal.user.status === "active") {
+          return {
+            kind: "user" as const,
+            user: {
+              id: principal.user.id,
+              username: principal.user.username,
+              displayName: principal.user.displayName,
+              status: principal.user.status,
+            },
+          };
         }
-        if (adminToken) {
-          const res = await getAdminSession(db, adminToken);
-          if (res) {
-            return {
-              kind: "admin" as const,
-              admin: { id: res.admin.id, username: res.admin.username },
-            };
-          }
+        if (principal.kind === "admin") {
+          return {
+            kind: "admin" as const,
+            admin: { id: principal.admin.id, username: principal.admin.username },
+          };
         }
         return { kind: "none" as const };
       },
@@ -186,14 +175,16 @@ export async function buildApp({
 
     const initializedGameServers = await loadGameServerModules(gameList, gameContext, app, io);
 
+    for (const ig of initializedGameServers) {
+      if (ig.jobs && ig.jobs.length > 0) {
+        jobRunner.registerGameJobs(ig.jobs, gameContext);
+      }
+    }
+    jobRunner.startAll();
+
     app.addHook("onClose", async () => {
-      purgeChatJob.stop();
+      jobRunner.stopAll();
       for (const ig of initializedGameServers) {
-        if (ig.jobs) {
-          for (const job of ig.jobs) {
-            if (job.stop) job.stop();
-          }
-        }
         if (ig.module.dispose) {
           await ig.module.dispose();
         }

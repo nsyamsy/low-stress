@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, lt } from "drizzle-orm";
 import type { Database } from "@low-stress/db";
 import { admins, sessions, users, type userStatus } from "@low-stress/db";
 import { censorServerText } from "../chat/profanity-service";
@@ -150,6 +150,7 @@ export async function getSessionUser(
     .where(
       and(
         eq(sessions.id, tokenHash),
+        eq(sessions.subjectType, "user"),
         gt(sessions.expiresAt, now),
       ),
     )
@@ -254,5 +255,17 @@ export async function getAdminSession(
   }
 
   return { session, admin };
+}
+
+export async function purgeExpiredSessions(
+  db: Database,
+  now: Date = new Date(),
+): Promise<number> {
+  const deleted = await db
+    .delete(sessions)
+    .where(lt(sessions.expiresAt, now))
+    .returning({ id: sessions.id });
+
+  return deleted.length;
 }
 

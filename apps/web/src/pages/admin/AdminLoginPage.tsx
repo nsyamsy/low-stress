@@ -1,18 +1,40 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Input, Logo } from "@low-stress/ui";
 import { useAdmin } from "../../features/admin";
 
-export function AdminLoginPage() {
+export function AdminLoginPage({
+  initialErrorCode,
+  initialRetryAfterSec,
+}: {
+  initialErrorCode?: string;
+  initialRetryAfterSec?: number;
+} = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { admin, login } = useAdmin();
 
+  const mapError = (code?: string, params?: Record<string, unknown>): string => {
+    if (code === "AUTH_LOCKED") {
+      const seconds = (params?.retryAfterSec as number | undefined) ?? 60;
+      return t("auth.login.lockoutMessage", { seconds });
+    }
+    if (code) {
+      return translateErrorCode(code, params);
+    }
+    return t("auth.error.generic");
+  };
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(
+    initialErrorCode
+      ? mapError(initialErrorCode, { retryAfterSec: initialRetryAfterSec })
+      : null,
+  );
 
   if (admin) {
     return <Navigate to="/admin" replace />;
@@ -29,17 +51,10 @@ export function AdminLoginPage() {
       await login(username.trim(), password);
       navigate("/admin");
     } catch (err: unknown) {
-      const apiError = (err as { apiError?: { code?: string; params?: Record<string, unknown> } })
-        ?.apiError;
-      const code = apiError?.code;
-      if (code === "AUTH_INVALID_CREDENTIALS") {
-        setErrorMsg(t("auth.error.invalidCredentials"));
-      } else if (code === "AUTH_LOCKED") {
-        const seconds = (apiError?.params?.retryAfterSec as number | undefined) ?? 60;
-        setErrorMsg(t("auth.login.lockoutMessage", { seconds }));
-      } else {
-        setErrorMsg(t("auth.error.generic"));
-      }
+      const apiError = (
+        err as { apiError?: { code?: string; params?: Record<string, unknown> } }
+      )?.apiError;
+      setErrorMsg(mapError(apiError?.code, apiError?.params));
     } finally {
       setSubmitting(false);
     }

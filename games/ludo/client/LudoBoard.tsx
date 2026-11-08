@@ -1,5 +1,6 @@
 /* eslint-disable low-stress/no-raw-design-values */
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   armAngle,
   geometry,
@@ -146,6 +147,7 @@ export function LudoBoard({
   onPawn,
   className = "",
 }: BoardProps) {
+  const { t } = useTranslation("game.ludo");
   const g = useMemo(() => geometry(state.arms), [state.arms]);
   const total =
     Math.max(
@@ -299,7 +301,7 @@ export function LudoBoard({
       viewBox={`${-total} ${-total} ${2 * total} ${2 * total}`}
       className={`block w-full select-none ${className}`}
       role="img"
-      aria-label="Ludo board"
+      aria-label={t("boardAriaLabel", { defaultValue: "Ludo board" })}
       style={{ touchAction: "manipulation" }}
     >
       <rect
@@ -439,7 +441,14 @@ export function LudoBoard({
               }}
               role={canMove ? "button" : undefined}
               tabIndex={canMove ? 0 : undefined}
-              aria-label={canMove ? `Pion ${it.pawn + 1}` : undefined}
+              aria-label={
+                canMove
+                  ? t("pawnAriaLabel", {
+                      index: it.pawn + 1,
+                      defaultValue: `Pion ${it.pawn + 1}`,
+                    })
+                  : undefined
+              }
               className={canMove ? "cursor-pointer" : undefined}
               onClick={canMove ? () => onPawn?.(it.pawn) : undefined}
               onKeyDown={

@@ -33,6 +33,7 @@ export const registerBodySchema = z
       .object({
         challenge: z.string().min(1),
         nonce: z.string().min(1),
+        signature: z.string().min(1).optional(),
       })
       .optional(),
   })

@@ -164,7 +164,8 @@ export async function registerAuthRoutes(
     },
     async (request, reply) => {
       const body = changePasswordSchema.parse(request.body);
-      await changePassword(db, request.user!.id, body);
+      const rawToken = request.cookies[SESSION_COOKIE_NAME];
+      await changePassword(db, request.user!.id, body, rawToken);
       return reply.status(204).send();
     },
   );

@@ -1,6 +1,11 @@
 import type { Server as SocketIOServer, Socket } from "socket.io";
+import { censorProfanity } from "@low-stress/sdk";
 import {
+  and,
+  bannedWords,
   type Database,
+  eq,
+  inArray,
   riotMatches,
   riotRoomPlayers,
   riotRooms,
@@ -16,6 +21,9 @@ import type { SabotageKind } from "../shared/sabotage";
 export interface SetupRiotSocketResult {
   service: RiotGameService;
   stopTickLoop: () => void;
+  adminResetRoom: (roomId: string) => boolean;
+  adminKickPlayer: (roomId: string, userId: string) => boolean;
+  adminDeleteRoom: (roomId: string) => boolean;
 }
 
 interface RiotSocketUser {
@@ -23,6 +31,21 @@ interface RiotSocketUser {
   username: string;
   displayName: string;
   status: string;
+}
+
+function extractErrorCode(err: unknown, fallback = "GAME_UNAVAILABLE"): string {
+  if (
+    err &&
+    typeof err === "object" &&
+    "code" in err &&
+    typeof (err as { code: unknown }).code === "string"
+  ) {
+    return (err as { code: string }).code;
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return fallback;
 }
 
 export function setupRiotSocket(
@@ -33,18 +56,93 @@ export function setupRiotSocket(
   const riotNamespace = io.of("/riot");
   const db = ctx?.db as Database | undefined;
 
+  // Setup profanity censor function (ctx.censorText -> DB banned_words -> censorProfanity)
+  const ctxWithCensor = ctx as
+    | (GameServerContext & { censorText?: (text: string) => string })
+    | undefined;
+  let dbBannedWords: string[] = [];
+  if (ctxWithCensor?.censorText) {
+    service.setCensorFn(ctxWithCensor.censorText);
+  } else if (db) {
+    service.setCensorFn((text: string) =>
+      censorProfanity(
+        text,
+        dbBannedWords.length > 0 ? { extraWords: dbBannedWords } : undefined,
+      ),
+    );
+    void (async () => {
+      try {
+        const rows = await db
+          .select({ word: bannedWords.word })
+          .from(bannedWords);
+        dbBannedWords = rows.map((r) => r.word);
+      } catch {
+        // Ignore if table not ready
+      }
+    })();
+  }
+
   // --- Persistensi opsional (RT-41): room & match ke tabel riot_* ---
   // Throttle per room agar broadcast view tidak membanjiri DB.
   const lastPersistAt = new Map<string, number>();
   const recordedMatches = new Set<string>();
 
-  const persistRoom = (room: RiotRoom): void => {
+  const pruneRoomTracking = (roomId: string): void => {
+    lastPersistAt.delete(roomId);
+    for (const key of [...recordedMatches]) {
+      if (key.startsWith(`${roomId}:`)) {
+        recordedMatches.delete(key);
+      }
+    }
+  };
+
+  const deleteRoomFromDb = (roomId: string): void => {
+    pruneRoomTracking(roomId);
     if (!db) return;
-    const now = Date.now();
-    if (now - (lastPersistAt.get(room.id) ?? 0) < 5000) return;
-    lastPersistAt.set(room.id, now);
     void (async () => {
       try {
+        await db.delete(riotRooms).where(eq(riotRooms.id, roomId));
+      } catch {
+        // Persistensi tidak boleh menjatuhkan gameplay
+      }
+    })();
+  };
+
+  const deletePlayerFromDb = (roomId: string, userId: string): void => {
+    if (!db) return;
+    void (async () => {
+      try {
+        await db
+          .delete(riotRoomPlayers)
+          .where(
+            and(
+              eq(riotRoomPlayers.roomId, roomId),
+              eq(riotRoomPlayers.userId, userId),
+            ),
+          );
+      } catch {
+        // Persistensi tidak boleh menjatuhkan gameplay
+      }
+    })();
+  };
+
+  const persistRoom = (room: RiotRoom, force = false): void => {
+    if (!db) return;
+    if (room.players.size === 0 || !service.getRoom(room.id)) {
+      deleteRoomFromDb(room.id);
+      return;
+    }
+    const now = Date.now();
+    if (!force && now - (lastPersistAt.get(room.id) ?? 0) < 5000) return;
+    lastPersistAt.set(room.id, now);
+    const currentPlayers = Array.from(room.players.values());
+    const currentPlayerIds = new Set(currentPlayers.map((p) => p.id));
+
+    void (async () => {
+      try {
+        // Pastikan room masih ada di memori sebelum menulis ke DB
+        if (!service.getRoom(room.id)) return;
+
         await db
           .insert(riotRooms)
           .values({
@@ -59,13 +157,14 @@ export function setupRiotSocket(
           .onConflictDoUpdate({
             target: riotRooms.id,
             set: {
+              hostId: room.hostId,
               status: room.phase,
               options: room.options as unknown as Record<string, unknown>,
               lastActivityAt: new Date(room.updatedAt),
               updatedAt: new Date(),
             },
           });
-        for (const p of room.players.values()) {
+        for (const p of currentPlayers) {
           await db
             .insert(riotRoomPlayers)
             .values({
@@ -82,6 +181,25 @@ export function setupRiotSocket(
               },
             });
         }
+
+        // Hapus baris riot_room_players yang sudah keluar/dikick dari room.players
+        const existingRows = await db
+          .select({ userId: riotRoomPlayers.userId })
+          .from(riotRoomPlayers)
+          .where(eq(riotRoomPlayers.roomId, room.id));
+        const staleUserIds = existingRows
+          .map((r) => r.userId)
+          .filter((uid) => !currentPlayerIds.has(uid));
+        if (staleUserIds.length > 0) {
+          await db
+            .delete(riotRoomPlayers)
+            .where(
+              and(
+                eq(riotRoomPlayers.roomId, room.id),
+                inArray(riotRoomPlayers.userId, staleUserIds),
+              ),
+            );
+        }
       } catch {
         // Persistensi tidak boleh menjatuhkan gameplay; dicatat untuk diagnosa.
       }
@@ -92,6 +210,7 @@ export function setupRiotSocket(
     const key = matchRecordKey(room);
     if (recordedMatches.has(key)) return;
     recordedMatches.add(key);
+    persistRoom(room, true);
     // RT-50: catat poin ronde ke leaderboard generik lewat ctx.recordScore.
     // Skor SELALU dihitung server dari room.scores; klien tidak dapat mengirim skor.
     void (async () => {
@@ -134,6 +253,13 @@ export function setupRiotSocket(
       if (ctx?.resolvePrincipal) {
         const principal = await ctx.resolvePrincipal(socket.handshake.headers.cookie);
         if (principal.kind === "user" && principal.user) {
+          if (ctx.checkGameGate) {
+            try {
+              await ctx.checkGameGate("riot");
+            } catch (err) {
+              return next(new Error(extractErrorCode(err)));
+            }
+          }
           socket.data.user = principal.user satisfies RiotSocketUser;
           return next();
         }
@@ -148,6 +274,44 @@ export function setupRiotSocket(
   // Track socket to player & room mapping
   const socketPlayerMap = new Map<string, { playerId: string; roomId: string }>();
 
+  const registerPlayerSocket = (
+    socket: Socket,
+    playerId: string,
+    roomId: string,
+  ): void => {
+    for (const [sockId, map] of [...socketPlayerMap.entries()]) {
+      if (map.playerId === playerId && sockId !== socket.id) {
+        socketPlayerMap.delete(sockId);
+        if (map.roomId !== roomId) {
+          riotNamespace.sockets.get(sockId)?.leave(map.roomId);
+        }
+      }
+    }
+    socket.join(roomId);
+    socketPlayerMap.set(socket.id, { playerId, roomId });
+  };
+
+  const hasAnotherActiveSocket = (playerId: string, roomId: string, excludeSocketId: string): boolean => {
+    for (const [sockId, map] of socketPlayerMap.entries()) {
+      if (sockId !== excludeSocketId && map.playerId === playerId && map.roomId === roomId) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const checkGateForEvent = async (callback?: (res: unknown) => void): Promise<boolean> => {
+    if (!ctx?.checkGameGate) return true;
+    try {
+      await ctx.checkGameGate("riot");
+      return true;
+    } catch (err) {
+      const code = extractErrorCode(err);
+      if (callback) callback({ ok: false, success: false, error: code, reason: code });
+      return false;
+    }
+  };
+
   riotNamespace.on("connection", (socket: Socket) => {
     // Identitas sudah diverifikasi middleware; admin ditolak.
     const user = socket.data.user as RiotSocketUser | undefined;
@@ -160,7 +324,12 @@ export function setupRiotSocket(
 
     socket.on(
       "room:create",
-      (data?: { options?: Partial<RiotHostOptions>; character?: unknown }, callback?: (res: unknown) => void) => {
+      async (
+        data?: { options?: Partial<RiotHostOptions>; character?: unknown },
+        callback?: (res: unknown) => void,
+      ) => {
+        if (!(await checkGateForEvent(callback))) return;
+
         const room = service.createRoom(
           userId,
           displayName,
@@ -168,13 +337,14 @@ export function setupRiotSocket(
           data?.options,
           sanitizeCharacterCustomization(data?.character),
         );
-      socket.join(room.id);
-      socketPlayerMap.set(socket.id, { playerId: userId, roomId: room.id });
+        registerPlayerSocket(socket, userId, room.id);
+        persistRoom(room, true);
 
-      const view = service.getClientRoomView(room.id, userId);
-      if (callback) callback({ success: true, room: view });
-      socket.emit("room:view", view);
-    });
+        const view = service.getClientRoomView(room.id, userId);
+        if (callback) callback({ success: true, room: view });
+        socket.emit("room:view", view);
+      },
+    );
 
     socket.on("room:options", (data: { options: Partial<RiotHostOptions> }, callback?: (res: unknown) => void) => {
       const mapping = socketPlayerMap.get(socket.id);
@@ -183,33 +353,41 @@ export function setupRiotSocket(
       const res = service.updateHostOptions(mapping.roomId, mapping.playerId, data.options);
       if (callback) callback(res);
       if (res.success) {
+        const room = service.getRoom(mapping.roomId);
+        if (room) persistRoom(room, true);
         broadcastRoomViews(riotNamespace, mapping.roomId, service);
       }
     });
 
     socket.on(
       "room:join",
-      (data: { roomId: string; character?: unknown }, callback?: (res: unknown) => void) => {
+      async (
+        data: { roomId: string; character?: unknown },
+        callback?: (res: unknown) => void,
+      ) => {
+        if (!(await checkGateForEvent(callback))) return;
+
         const res = service.joinRoom(
           data.roomId,
           userId,
           displayName,
           sanitizeCharacterCustomization(data.character),
         );
-      if (!res.success || !res.room) {
-        if (callback) callback({ success: false, reason: res.reason });
-        return;
-      }
+        if (!res.success || !res.room) {
+          if (callback) callback({ success: false, reason: res.reason });
+          return;
+        }
 
-      socket.join(res.room.id);
-      socketPlayerMap.set(socket.id, { playerId: userId, roomId: res.room.id });
+        registerPlayerSocket(socket, userId, res.room.id);
+        persistRoom(res.room, true);
 
-      const view = service.getClientRoomView(res.room.id, userId);
-      if (callback) callback({ success: true, room: view });
+        const view = service.getClientRoomView(res.room.id, userId);
+        if (callback) callback({ success: true, room: view });
 
-      // Notify all players in room with their personalized safe views
-      broadcastRoomViews(riotNamespace, res.room.id, service);
-    });
+        // Notify all players in room with their personalized safe views
+        broadcastRoomViews(riotNamespace, res.room.id, service);
+      },
+    );
 
     socket.on(
       "character:update",
@@ -228,7 +406,9 @@ export function setupRiotSocket(
       },
     );
 
-    socket.on("game:start", (_data: unknown, callback?: (res: unknown) => void) => {
+    socket.on("game:start", async (_data: unknown, callback?: (res: unknown) => void) => {
+      if (!(await checkGateForEvent(callback))) return;
+
       const mapping = socketPlayerMap.get(socket.id);
       if (!mapping) return;
 
@@ -237,6 +417,9 @@ export function setupRiotSocket(
         if (callback) callback({ success: false, reason: res.reason });
         return;
       }
+
+      const room = service.getRoom(mapping.roomId);
+      if (room) persistRoom(room, true);
 
       if (callback) callback({ success: true });
 
@@ -277,6 +460,8 @@ export function setupRiotSocket(
         if (res.success) {
           broadcastRoomViews(riotNamespace, mapping.roomId, service);
           if (res.winResult) {
+            const room = service.getRoom(mapping.roomId);
+            if (room) persistRoom(room, true);
             riotNamespace.to(mapping.roomId).emit("game:finished", res.winResult);
           }
         }
@@ -296,6 +481,8 @@ export function setupRiotSocket(
           riotNamespace.to(mapping.roomId).emit("hologram:spawned", res.marker);
         }
         if (res.winResult) {
+          const room = service.getRoom(mapping.roomId);
+          if (room) persistRoom(room, true);
           riotNamespace.to(mapping.roomId).emit("game:finished", res.winResult);
         }
       }
@@ -332,7 +519,13 @@ export function setupRiotSocket(
       const mapping = socketPlayerMap.get(socket.id);
       if (!mapping) return;
 
-      const res = service.sendChatMessage(mapping.roomId, mapping.playerId, data.text);
+      const res = service.sendMeetingChat(
+        mapping.roomId,
+        mapping.playerId,
+        data.text,
+        Date.now(),
+        ctxWithCensor?.censorText,
+      );
       if (callback) callback({ success: res.success, reason: res.reason });
 
       if (res.success && res.message) {
@@ -383,6 +576,8 @@ export function setupRiotSocket(
         if (res.concluded) {
           riotNamespace.to(mapping.roomId).emit("voting:result", res.votingResult);
           if (res.winResult) {
+            const room = service.getRoom(mapping.roomId);
+            if (room) persistRoom(room, true);
             riotNamespace.to(mapping.roomId).emit("game:finished", res.winResult);
           }
         }
@@ -422,21 +617,26 @@ export function setupRiotSocket(
     });
 
     // --- RT-32: Putus Koneksi & Reconnect & Kick ---
-    socket.on("player:reconnect", (data: { roomId: string }, callback?: (res: unknown) => void) => {
-      const res = service.reconnectPlayer(data.roomId, userId);
-      if (!res.success) {
-        if (callback) callback({ success: false });
-        return;
-      }
+    socket.on(
+      "player:reconnect",
+      async (data: { roomId: string }, callback?: (res: unknown) => void) => {
+        if (!(await checkGateForEvent(callback))) return;
 
-      socket.join(data.roomId);
-      socketPlayerMap.set(socket.id, { playerId: userId, roomId: data.roomId });
+        const res = service.reconnectPlayer(data.roomId, userId);
+        if (!res.success || !res.view) {
+          if (callback) callback({ success: false });
+          return;
+        }
 
-      if (callback) callback({ success: true, room: res.view });
-      broadcastRoomViews(riotNamespace, data.roomId, service);
-    });
+        const canonicalRoomId = res.view.roomId;
+        registerPlayerSocket(socket, userId, canonicalRoomId);
 
-    socket.on("room:kick", (data: { targetId: string }, callback?: (res: unknown) => void) => {
+        if (callback) callback({ success: true, room: res.view, view: res.view });
+        broadcastRoomViews(riotNamespace, canonicalRoomId, service);
+      },
+    );
+
+    const handleKick = (data: { targetId: string }, callback?: (res: unknown) => void) => {
       const mapping = socketPlayerMap.get(socket.id);
       if (!mapping) return;
 
@@ -444,7 +644,11 @@ export function setupRiotSocket(
       if (callback) callback(res);
 
       if (res.success) {
-        for (const [sockId, map] of socketPlayerMap.entries()) {
+        deletePlayerFromDb(mapping.roomId, data.targetId);
+        const room = service.getRoom(mapping.roomId);
+        if (room) persistRoom(room, true);
+
+        for (const [sockId, map] of [...socketPlayerMap.entries()]) {
           if (map.roomId === mapping.roomId && map.playerId === data.targetId) {
             const kickedSock = riotNamespace.sockets.get(sockId);
             kickedSock?.emit("room:kicked");
@@ -454,7 +658,10 @@ export function setupRiotSocket(
         }
         broadcastRoomViews(riotNamespace, mapping.roomId, service);
       }
-    });
+    };
+
+    socket.on("room:kick", handleKick);
+    socket.on("player:kick", handleKick);
 
     socket.on("room:rematch", (_data: unknown, callback?: (res: unknown) => void) => {
       const mapping = socketPlayerMap.get(socket.id);
@@ -463,6 +670,8 @@ export function setupRiotSocket(
       const res = service.returnToLobby(mapping.roomId, mapping.playerId);
       if (callback) callback(res);
       if (res.success) {
+        const room = service.getRoom(mapping.roomId);
+        if (room) persistRoom(room, true);
         broadcastRoomViews(riotNamespace, mapping.roomId, service);
       }
     });
@@ -473,9 +682,19 @@ export function setupRiotSocket(
         socketPlayerMap.delete(socket.id);
         const room = service.getRoom(mapping.roomId);
         if (room && room.phase === "lobby") {
-          service.leaveRoom(mapping.roomId, mapping.playerId);
+          const leaveRes = service.leaveRoom(mapping.roomId, mapping.playerId);
+          deletePlayerFromDb(mapping.roomId, mapping.playerId);
+          if (leaveRes.roomClosed) {
+            deleteRoomFromDb(mapping.roomId);
+          } else {
+            const updatedRoom = service.getRoom(mapping.roomId);
+            if (updatedRoom) persistRoom(updatedRoom, true);
+            broadcastRoomViews(riotNamespace, mapping.roomId, service);
+          }
         } else if (room) {
           service.handleDisconnect(mapping.roomId, mapping.playerId);
+          persistRoom(room, true);
+          broadcastRoomViews(riotNamespace, mapping.roomId, service);
         }
         socket.leave(mapping.roomId);
       }
@@ -486,9 +705,20 @@ export function setupRiotSocket(
       const mapping = socketPlayerMap.get(socket.id);
       if (mapping) {
         socketPlayerMap.delete(socket.id);
+        // Guard against multi-socket disconnect race: only disconnect player if no other socket is active
+        if (hasAnotherActiveSocket(mapping.playerId, mapping.roomId, socket.id)) {
+          return;
+        }
         const room = service.getRoom(mapping.roomId);
         if (room && room.phase === "lobby") {
-          service.leaveRoom(mapping.roomId, mapping.playerId);
+          const leaveRes = service.leaveRoom(mapping.roomId, mapping.playerId);
+          deletePlayerFromDb(mapping.roomId, mapping.playerId);
+          if (leaveRes.roomClosed) {
+            deleteRoomFromDb(mapping.roomId);
+          } else {
+            const updatedRoom = service.getRoom(mapping.roomId);
+            if (updatedRoom) persistRoom(updatedRoom, true);
+          }
         } else if (room) {
           service.handleDisconnect(mapping.roomId, mapping.playerId);
         }
@@ -500,12 +730,14 @@ export function setupRiotSocket(
   // 15 Hz Authoritative Tick Loop broadcasting interest-managed snapshots and advancing timers
   const tickInterval = setInterval(() => {
     const now = Date.now();
+    const activeRoomIds = new Set<string>();
     for (const room of service.getAllRooms()) {
-      persistRoom(room); // throttled 5 dtk per room; menjaga riot_rooms sinkron
+      activeRoomIds.add(room.id);
       if (room.phase === "finished") {
         recordMatch(room);
         continue;
       }
+      persistRoom(room); // throttled 5 dtk per room; menjaga riot_rooms sinkron
       // Handle server tick timers: sabotage expiration, discussion/voting timer, disconnect timeout
       const tickRes = service.processServerTick(room.id, now);
       if (tickRes.phaseAdvanced) {
@@ -517,6 +749,7 @@ export function setupRiotSocket(
         broadcastRoomViews(riotNamespace, room.id, service);
       }
       if (tickRes.winResult) {
+        persistRoom(room, true);
         riotNamespace.to(room.id).emit("game:finished", tickRes.winResult);
         broadcastRoomViews(riotNamespace, room.id, service);
       }
@@ -539,11 +772,64 @@ export function setupRiotSocket(
         }
       }
     }
+
+    // Prune tracking state for rooms that were removed
+    for (const trackedRoomId of [...lastPersistAt.keys()]) {
+      if (!activeRoomIds.has(trackedRoomId)) {
+        pruneRoomTracking(trackedRoomId);
+      }
+    }
   }, SERVER_TICK_MS);
+  tickInterval.unref?.();
+
+  const adminResetRoom = (roomId: string): boolean => {
+    lastPersistAt.delete(roomId);
+    const reset = service.adminResetRoom(roomId);
+    if (reset) {
+      broadcastRoomViews(riotNamespace, roomId, service);
+    }
+    return reset;
+  };
+
+  const adminKickPlayer = (roomId: string, userId: string): boolean => {
+    lastPersistAt.delete(roomId);
+    const res = service.adminKickPlayer(roomId, userId);
+    for (const [sockId, map] of [...socketPlayerMap.entries()]) {
+      if (map.roomId === roomId && map.playerId === userId) {
+        const kickedSock = riotNamespace.sockets.get(sockId);
+        kickedSock?.emit("room:kicked");
+        kickedSock?.leave(roomId);
+        socketPlayerMap.delete(sockId);
+      }
+    }
+    if (res.roomClosed) {
+      pruneRoomTracking(roomId);
+    } else if (res.removed) {
+      broadcastRoomViews(riotNamespace, roomId, service);
+    }
+    return res.removed;
+  };
+
+  const adminDeleteRoom = (roomId: string): boolean => {
+    pruneRoomTracking(roomId);
+    const deleted = service.adminDeleteRoom(roomId);
+    for (const [sockId, map] of [...socketPlayerMap.entries()]) {
+      if (map.roomId === roomId) {
+        const sock = riotNamespace.sockets.get(sockId);
+        sock?.emit("room:kicked");
+        sock?.leave(roomId);
+        socketPlayerMap.delete(sockId);
+      }
+    }
+    return deleted;
+  };
 
   return {
     service,
     stopTickLoop: () => clearInterval(tickInterval),
+    adminResetRoom,
+    adminKickPlayer,
+    adminDeleteRoom,
   };
 }
 

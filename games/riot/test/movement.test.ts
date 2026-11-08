@@ -228,5 +228,17 @@ describe("Riot Multiplayer Movement & Authoritative Simulation (RT-12)", () => {
       // Shortest angle turn crosses PI (~3.1415), so at t=0.5 heading should be near PI / -PI
       expect(Math.abs(mid!.heading)).toBeGreaterThan(3.0);
     });
+
+    it("applies playerSpeed multiplier in AuthoritativeSimulation and ClientPredictionManager", () => {
+      const sim = new AuthoritativeSimulation({ speedMultiplier: 2.0 });
+      sim.addPlayer("p1", { x: 0, y: 30 });
+      const res = sim.processInput("p1", { seq: 1, dx: 1, dy: 0, dt: 0.05 });
+      expect(res.accepted).toBe(true);
+      expect(res.state!.x).toBeCloseTo(0.5, 2); // 5.0 * 2.0 * 0.05 = 0.5m
+
+      const pred = new ClientPredictionManager(0, 30, 2.0);
+      pred.applyInput(1, 0, 0.05);
+      expect(pred.getPosition().x).toBeCloseTo(0.5, 2);
+    });
   });
 });

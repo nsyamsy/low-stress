@@ -35,6 +35,7 @@ export function processChatMessage(
   rawBody: string,
   lastSentAt: number,
   serverTime = Date.now(),
+  censorFn: (text: string) => string = censorProfanity,
 ): { valid: boolean; message?: MeetingChatMessage; reason?: string } {
   // 1. Rate limit check
   if (serverTime - lastSentAt < CHAT_RATE_LIMIT_MS) {
@@ -50,8 +51,8 @@ export function processChatMessage(
     return { valid: false, reason: "MESSAGE_TOO_LONG" };
   }
 
-  // 3. Server-authoritative profanity censoring via sdk.profanity
-  const censored = censorProfanity(trimmed);
+  // 3. Server-authoritative profanity censoring via sdk.profanity / ctx.censorText
+  const censored = censorFn(trimmed);
 
   const message: MeetingChatMessage = {
     id: `msg_${serverTime}_${Math.random().toString(36).slice(2, 6)}`,
@@ -64,6 +65,8 @@ export function processChatMessage(
 
   return { valid: true, message };
 }
+
+export const addChatMessage = processChatMessage;
 
 /**
  * Resolves votes cast during the voting phase.

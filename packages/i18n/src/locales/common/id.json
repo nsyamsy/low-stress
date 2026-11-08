@@ -19,13 +19,23 @@
     "close": "Tutup",
     "save": "Simpan",
     "back": "Kembali",
-    "retry": "Coba lagi"
+    "retry": "Coba lagi",
+    "confirm": "Konfirmasi",
+    "tryAgain": "Coba lagi",
+    "search": "Cari",
+    "send": "Kirim",
+    "viewAll": "Lihat semua"
   },
   "state": {
     "loading": "Memuat…",
     "empty": "Belum ada apa-apa di sini",
     "error": "Ada yang tidak berjalan. Coba lagi.",
-    "offline": "Kamu sedang luring"
+    "offline": "Kamu sedang luring",
+    "notFoundTitle": "Halaman tidak ditemukan",
+    "notFoundDesc": "Halaman yang kamu cari tidak tersedia atau sudah dipindahkan.",
+    "backHome": "Ke beranda",
+    "forbidden": "Akses ditolak. Akun admin tidak dapat bermain game.",
+    "networkError": "Gagal terhubung ke server. Periksa koneksi jaringanmu."
   },
   "theme": {
     "label": "Tema",
@@ -183,7 +193,9 @@
       "menu": "Menu",
       "games": "Kelola Game",
       "chat": "Moderasi Chat",
-      "leaderboard": "Moderasi Skor"
+      "leaderboard": "Moderasi Skor",
+      "ludo": "Moderasi Ludo",
+      "riot": "Moderasi Riot"
     },
     "header": {
       "deployMode": "Mode deploy: {{mode}}"
@@ -204,7 +216,9 @@
       "pendingSection": "Menunggu persetujuan",
       "runsByGame": "Game dimainkan per game",
       "noPending": "Tidak ada pendaftar yang menunggu persetujuan.",
-      "noRuns": "Belum ada game yang dimainkan hari ini."
+      "noRuns": "Belum ada game yang dimainkan hari ini.",
+      "viewAll": "Lihat semua →",
+      "playsCount": "{{count}}× dimainkan"
     },
     "approvals": {
       "title": "Persetujuan Pengguna",
@@ -219,6 +233,7 @@
     "users": {
       "title": "Manajemen Pengguna",
       "searchPlaceholder": "Cari username, nama, email…",
+      "search": "Cari",
       "all": "Semua",
       "pending": "Menunggu",
       "active": "Aktif",
@@ -261,6 +276,10 @@
       "smtpNotice": "Diisi lewat .env. Saat aktif: verifikasi email, lupa password, notifikasi.",
       "testEmail": "Kirim email uji",
       "testEmailPrompt": "Masukkan email tujuan uji:",
+      "testEmailLabel": "Email tujuan",
+      "testEmailPlaceholder": "admin@contoh.com",
+      "testEmailSuccess": "Email uji berhasil dikirim.",
+      "testEmailFailed": "Gagal mengirim email uji.",
       "saveSuccess": "Pengaturan disimpan."
     },
     "audit": {
@@ -270,7 +289,9 @@
       "colAction": "Aksi",
       "colTarget": "Target",
       "colDetail": "Detail",
-      "empty": "Belum ada catatan audit."
+      "empty": "Belum ada catatan audit.",
+      "filterAction": "Semua aksi",
+      "filterTarget": "Semua target"
     },
     "modal": {
       "confirmTitle": "Konfirmasi Aksi",
@@ -294,14 +315,25 @@
       "modalTitle": "Ubah Pengaturan Game",
       "statusLabel": "Status Game",
       "maintMsgId": "Pesan Pemeliharaan (Indonesia)",
+      "maintMsgIdPlaceholder": "Contoh: Sedang dalam perbaikan rutin.",
       "maintMsgEn": "Pesan Pemeliharaan (English)",
+      "maintMsgEnPlaceholder": "Example: Under scheduled maintenance.",
       "badgeLabel": "Badge (contoh: new, hot)",
+      "badgePlaceholder": "Contoh: new, hot, popular",
       "orderLabel": "Urutan Tampil",
       "scheduleType": "Pengaturan Jadwal",
       "scheduleGlobal": "Ikuti Jadwal Global",
       "scheduleCustom": "Jadwal Khusus Game Ini",
       "save": "Simpan Perubahan",
       "empty": "Belum ada game terdaftar."
+    },
+    "schedule": {
+      "windows": "Jendela waktu (WIB)",
+      "addWindow": "Tambah jendela waktu",
+      "removeWindow": "Hapus jendela",
+      "days": "Hari aktif",
+      "start": "Mulai",
+      "end": "Selesai"
     },
     "chat": {
       "title": "Moderasi Chat",
@@ -316,6 +348,9 @@
       "addWord": "Tambah Kata",
       "word": "Kata",
       "lang": "Bahasa",
+      "langAny": "Semua (Any)",
+      "langId": "Indonesia",
+      "langEn": "English",
       "status": "Status",
       "active": "Aktif",
       "inactive": "Nonaktif",
@@ -324,6 +359,8 @@
       "emptyWords": "Belum ada kata terlarang.",
       "confirmDelete": "Hapus pesan ini secara permanen?",
       "confirmMute": "Bisukan pengguna ini?",
+      "confirmUnmute": "Cabut status bisu pengguna ini?",
+      "confirmDeleteWord": "Hapus kata terlarang ini dari daftar?",
       "colTime": "Waktu",
       "colSender": "Pengirim",
       "colMessage": "Pesan",
@@ -353,6 +390,34 @@
       "confirmDeleteRun": "Hapus catatan permainan ini dan hitung ulang skor terbaik pemain?",
       "confirmResetWeek": "Apakah kamu yakin ingin mereset papan mingguan untuk game ini? Tindakan ini akan menghapus semua permainan pada minggu berjalan.",
       "confirmResetMonth": "Apakah kamu yakin ingin mereset papan bulanan untuk game ini? Tindakan ini akan menghapus semua permainan pada bulan berjalan."
+    },
+    "ludo": {
+      "title": "Moderasi Room Ludo",
+      "subtitle": "Pantau dan kelola room Ludo yang sedang berjalan",
+      "empty": "Belum ada room Ludo aktif.",
+      "roomCode": "Kode room",
+      "host": "Host",
+      "status": "Status",
+      "players": "Pemain",
+      "messages": "Pesan chat",
+      "resetRoom": "Reset room",
+      "deleteRoom": "Hapus room",
+      "kickPlayer": "Keluarkan pemain",
+      "inspect": "Lihat detail"
+    },
+    "riot": {
+      "title": "Moderasi Room Riot",
+      "subtitle": "Pantau dan kelola room serta pertandingan yang sedang berjalan",
+      "empty": "Belum ada room aktif.",
+      "roomCode": "Kode room",
+      "host": "Host",
+      "status": "Status",
+      "players": "Pemain",
+      "matches": "Pertandingan",
+      "resetRoom": "Reset room",
+      "deleteRoom": "Hapus room",
+      "kickPlayer": "Keluarkan pemain",
+      "inspect": "Lihat detail"
     }
   },
   "home": {
@@ -430,14 +495,47 @@
     "charCount": "{{current}}/{{max}}"
   },
   "errors": {
+    "VALIDATION_FAILED": "Data yang dimasukkan belum valid. Periksa kembali isianmu.",
+    "BAD_REQUEST": "Permintaan tidak valid.",
+    "UNAUTHENTICATED": "Sesi berakhir atau kamu belum masuk.",
+    "FORBIDDEN": "Kamu tidak memiliki izin untuk melakukan tindakan ini.",
+    "ADMIN_CANNOT_PLAY": "Akun admin tidak dapat bermain game.",
+    "NOT_FOUND": "Data yang diminta tidak ditemukan.",
+    "CONFLICT": "Terjadi konflik status data.",
+    "CSRF_INVALID": "Sesi keamanan tidak valid. Muat ulang halaman lalu coba lagi.",
+    "INTERNAL": "Terjadi kesalahan pada server. Coba beberapa saat lagi.",
+    "INTERNAL_ERROR": "Terjadi kesalahan pada server. Coba beberapa saat lagi.",
+    "REGISTRATION_CLOSED": "Pendaftaran sedang ditutup oleh admin.",
+    "USERNAME_TAKEN": "Username sudah digunakan.",
+    "EMAIL_TAKEN": "Email sudah terdaftar.",
+    "PASSWORD_TOO_WEAK": "Password minimal 8 karakter dan tidak boleh sama dengan username.",
+    "CAPTCHA_FAILED": "Verifikasi CAPTCHA gagal. Coba lagi.",
+    "AUTH_INVALID_CREDENTIALS": "Username atau password salah.",
+    "ACCOUNT_PENDING": "Akunmu masih menunggu persetujuan admin.",
+    "ACCOUNT_REJECTED": "Pendaftaran akunmu ditolak admin.",
+    "ACCOUNT_SUSPENDED": "Akunmu sedang ditangguhkan.",
+    "ACCOUNT_BANNED": "Akunmu telah diblokir.",
+    "AUTH_LOCKED": "Terlalu banyak percobaan gagal. Coba lagi sebentar.",
     "SCORE_INVALID": "Skor tidak valid",
     "SCORE_RATE_LIMITED": "Terlalu cepat mengirim skor. Tunggu sebentar.",
+    "SCORE_SERVER_AUTHORITATIVE": "Skor untuk game ini dihitung langsung oleh server.",
     "GAME_CLOSED": "Game sedang ditutup",
     "GAME_MAINTENANCE": "Game sedang dalam perbaikan",
     "CHAT_DISABLED": "Chat publik sedang dimatikan",
     "CHAT_MUTED": "Kamu sedang dibisukan",
     "CHAT_TOO_LONG": "Pesan terlalu panjang (maks. 300 karakter)",
     "CHAT_EMPTY": "Pesan tidak boleh kosong",
-    "RATE_LIMITED": "Terlalu cepat. Tunggu sebentar."
+    "RATE_LIMITED": "Terlalu cepat. Tunggu sebentar.",
+    "LUDO_ROOM_NOT_FOUND": "Room Ludo tidak ditemukan.",
+    "LUDO_NOT_MEMBER": "Kamu bukan anggota room ini.",
+    "LUDO_FORBIDDEN": "Hanya host room yang dapat melakukan aksi ini.",
+    "LUDO_ROOM_FULL": "Room Ludo sudah penuh.",
+    "LUDO_BAD_STATE": "Aksi tidak dapat dilakukan pada status room saat ini.",
+    "LUDO_NEED_TWO_PLAYERS": "Minimal 2 pemain diperlukan untuk memulai permainan.",
+    "LUDO_NOT_YOUR_TURN": "Belum giliranmu.",
+    "LUDO_ILLEGAL_MOVE": "Langkah pion tidak sah.",
+    "INVALID_TRANSITION": "Perubahan status tidak diizinkan.",
+    "SMTP_NOT_CONFIGURED": "Layanan email (SMTP) belum dikonfigurasi.",
+    "SCHEDULE_INVALID": "Pengaturan jadwal tidak valid."
   }
 }

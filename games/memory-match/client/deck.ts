@@ -134,6 +134,19 @@ export function generateShuffledDeck(): CardState[] {
   }));
 }
 
+function getNestedValue(obj: Record<string, unknown>, path: string): string | undefined {
+  const parts = path.split(".");
+  let cur: unknown = obj;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in cur) {
+      cur = (cur as Record<string, unknown>)[p];
+    } else {
+      return undefined;
+    }
+  }
+  return typeof cur === "string" ? cur : undefined;
+}
+
 export function useGameTranslation() {
   const { t, i18n: i18nInstance } = useTranslation();
   const lang = i18nInstance?.language?.startsWith("en") ? "en" : "id";
@@ -149,7 +162,7 @@ export function useGameTranslation() {
       ) {
         return translated;
       }
-      let val = (dict as Record<string, string>)[key] || key;
+      let val = getNestedValue(dict as Record<string, unknown>, key) || key;
       if (params) {
         for (const [k, v] of Object.entries(params)) {
           val = val.replace(new RegExp(`{{${k}}}`, "g"), String(v));

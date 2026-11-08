@@ -67,6 +67,19 @@ describe("RT-30: Meetings and Voting", () => {
     const profanityRes = processChatMessage("p1", "Alice", "alive", "You are an idiot anjing", 0, now);
     expect(profanityRes.valid).toBe(true);
     expect(profanityRes.message?.body).not.toContain("anjing");
+
+    // 4. Custom censor function (ctx.censorText for DB banned_words)
+    const customRes = processChatMessage(
+      "p1",
+      "Alice",
+      "alive",
+      "kata rahasia dilarang",
+      0,
+      now,
+      (txt) => txt.replace(/rahasia/g, "*******"),
+    );
+    expect(customRes.valid).toBe(true);
+    expect(customRes.message?.body).toBe("kata ******* dilarang");
   });
 
   it("isolates ghost chat so alive players never receive messages from ghosts", () => {

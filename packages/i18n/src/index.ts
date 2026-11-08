@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import commonEn from "./locales/common/en.json";
 import commonId from "./locales/common/id.json";
 
@@ -140,4 +141,34 @@ export function buildResources(
   return result;
 }
 
+if (!i18next.isInitialized) {
+  void i18next.init({
+    resources: {
+      id: { translation: commonId },
+      en: { translation: commonEn },
+    },
+    lng: DEFAULT_LOCALE,
+    fallbackLng: DEFAULT_LOCALE,
+    supportedLngs: ["id", "en"],
+    interpolation: { escapeValue: false },
+    returnNull: false,
+  });
+}
+
+/**
+ * Terjemahkan kode error server (`errors.${code}`) via `i18next.t`,
+ * dan jatuh ke `state.error` bila kode tidak dikenal.
+ */
+export function translateErrorCode(
+  code: string,
+  params?: Record<string, unknown>,
+): string {
+  const key = `errors.${code}`;
+  if (code && i18next.exists(key)) {
+    return String(i18next.t(key, params));
+  }
+  return String(i18next.t("state.error", params));
+}
+
 export { commonEn, commonId };
+export default i18next;

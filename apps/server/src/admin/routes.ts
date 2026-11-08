@@ -365,7 +365,7 @@ export async function registerAdminRoutes(
     { preHandler: [requireAdminAuth, verifyCsrf] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      await deleteGameRun(db, request.admin!.id, id);
+      await deleteGameRun(db, request.admin!.id, id, games);
       return reply.status(204).send();
     },
   );
@@ -386,6 +386,7 @@ export async function registerAdminRoutes(
         request.admin!.id,
         gameId,
         parseResult.data.period,
+        games,
       );
     },
   );
@@ -479,7 +480,7 @@ export async function registerAdminRoutes(
     { preHandler: [requireAdminAuth, verifyCsrf] },
     async (request) => {
       const { id } = request.params as { id: string };
-      return adminResetRiotRoom(db, request.admin!.id, id);
+      return adminResetRiotRoom(db, request.admin!.id, id, games);
     },
   );
 
@@ -493,7 +494,7 @@ export async function registerAdminRoutes(
       if (!parseResult.success) {
         throw new AppError("VALIDATION_FAILED", 400);
       }
-      return adminKickRiotPlayer(db, request.admin!.id, id, parseResult.data.userId);
+      return adminKickRiotPlayer(db, request.admin!.id, id, parseResult.data.userId, games);
     },
   );
 
@@ -503,7 +504,7 @@ export async function registerAdminRoutes(
     { preHandler: [requireAdminAuth, verifyCsrf] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      await adminDeleteRiotRoom(db, request.admin!.id, id);
+      await adminDeleteRiotRoom(db, request.admin!.id, id, games);
       return reply.status(204).send();
     },
   );

@@ -40,6 +40,7 @@ export interface GetLeaderboardOptions {
   userId?: string;
   period?: LeaderboardPeriod;
   now?: Date;
+  direction?: ScoreDirection;
 }
 
 /**
@@ -73,7 +74,16 @@ export async function getLeaderboardBounds(
 export async function getLeaderboard(
   options: GetLeaderboardOptions,
 ): Promise<LeaderboardResponse> {
-  const { db, gameId, userId, period = "all", now = new Date() } = options;
+  const {
+    db,
+    gameId,
+    userId,
+    period = "all",
+    now = new Date(),
+    direction = "higher",
+  } = options;
+
+  const scoreOrder = direction === "lower" ? sql`ASC` : sql`DESC`;
 
   let periodStart: string | null = null;
   let periodEnd: string | null = null;
@@ -95,7 +105,7 @@ export async function getLeaderboard(
              s.plays,
              s.best_play AS "bestPlay",
              s.best_reached_at AS at,
-             RANK() OVER (ORDER BY s.best_score DESC, s.best_reached_at ASC) AS rank
+             RANK() OVER (ORDER BY s.best_score ${scoreOrder}, s.best_reached_at ASC) AS rank
         FROM game_scores s
         JOIN users u ON u.id = s.user_id
        WHERE s.game_id = ${gameId}
@@ -124,7 +134,7 @@ export async function getLeaderboard(
       best AS (
         SELECT DISTINCT ON (user_id) user_id, score, played_at, play_no, plays
           FROM runs
-         ORDER BY user_id, score DESC, played_at ASC
+         ORDER BY user_id, score ${scoreOrder}, played_at ASC
       )
       SELECT b.user_id AS "userId",
              u.display_name AS "name",
@@ -132,7 +142,7 @@ export async function getLeaderboard(
              b.plays,
              b.play_no AS "bestPlay",
              b.played_at AS at,
-             RANK() OVER (ORDER BY b.score DESC, b.played_at ASC) AS rank
+             RANK() OVER (ORDER BY b.score ${scoreOrder}, b.played_at ASC) AS rank
         FROM best b
         JOIN users u ON u.id = b.user_id
        WHERE b.score > 0
@@ -489,6 +499,7 @@ export async function recomputeGameScore(
   db: Database,
   userId: string,
   gameId: string,
+  direction: ScoreDirection = "higher",
 ): Promise<void> {
   const runs = await db
     .select({
@@ -518,7 +529,7 @@ export async function recomputeGameScore(
     return;
   }
 
-  let bestScore = 0;
+  let bestScore: number | null = null;
   let bestPlay: number | null = null;
   let bestReachedAt: Date = runs[0]!.createdAt;
   let plays = 0;
@@ -529,14 +540,20 @@ export async function recomputeGameScore(
       continue;
     }
     plays++;
-    if (run.score > bestScore) {
+    const isBetter =
+      bestScore === null
+        ? run.score > 0
+        : direction === "lower"
+          ? run.score > 0 && run.score < bestScore
+          : run.score > bestScore;
+    if (isBetter) {
       bestScore = run.score;
       bestPlay = plays;
       bestReachedAt = run.createdAt;
     }
   }
 
-  if (plays === 0) {
+  if (plays === 0 || bestScore === null) {
     await db
       .delete(gameScores)
       .where(

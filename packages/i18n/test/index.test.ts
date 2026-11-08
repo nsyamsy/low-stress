@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
-import {
+import i18n, {
   buildResources,
+  commonEn,
+  commonId,
   detectLocale,
   formatDateTime,
   formatNumber,
   loadNamespace,
   normalizeLocale,
   translate,
+  translateErrorCode,
 } from "../src/index";
 
 describe("detectLocale", () => {
@@ -99,5 +102,74 @@ describe("buildResources", () => {
     });
     expect(resources.id.translation.common).toEqual({ a: "A" });
     expect(resources.en.translation.auth).toEqual({ b: "B" });
+  });
+});
+
+describe("translateErrorCode", () => {
+  const SERVER_ERROR_CODES = [
+    "VALIDATION_FAILED",
+    "BAD_REQUEST",
+    "UNAUTHENTICATED",
+    "FORBIDDEN",
+    "ADMIN_CANNOT_PLAY",
+    "NOT_FOUND",
+    "CONFLICT",
+    "CSRF_INVALID",
+    "INTERNAL",
+    "INTERNAL_ERROR",
+    "REGISTRATION_CLOSED",
+    "USERNAME_TAKEN",
+    "EMAIL_TAKEN",
+    "PASSWORD_TOO_WEAK",
+    "CAPTCHA_FAILED",
+    "AUTH_INVALID_CREDENTIALS",
+    "ACCOUNT_PENDING",
+    "ACCOUNT_REJECTED",
+    "ACCOUNT_SUSPENDED",
+    "ACCOUNT_BANNED",
+    "AUTH_LOCKED",
+    "SCORE_INVALID",
+    "SCORE_RATE_LIMITED",
+    "SCORE_SERVER_AUTHORITATIVE",
+    "GAME_CLOSED",
+    "GAME_MAINTENANCE",
+    "CHAT_DISABLED",
+    "CHAT_MUTED",
+    "CHAT_TOO_LONG",
+    "CHAT_EMPTY",
+    "RATE_LIMITED",
+    "LUDO_ROOM_NOT_FOUND",
+    "LUDO_NOT_MEMBER",
+    "LUDO_FORBIDDEN",
+    "LUDO_ROOM_FULL",
+    "LUDO_BAD_STATE",
+    "LUDO_NEED_TWO_PLAYERS",
+    "LUDO_NOT_YOUR_TURN",
+    "LUDO_ILLEGAL_MOVE",
+    "INVALID_TRANSITION",
+    "SMTP_NOT_CONFIGURED",
+    "SCHEDULE_INVALID",
+  ] as const;
+
+  it("memiliki terjemahan id dan en untuk seluruh kode galat server", () => {
+    for (const code of SERVER_ERROR_CODES) {
+      expect(commonId.errors[code]).toBeTruthy();
+      expect(commonEn.errors[code]).toBeTruthy();
+    }
+  });
+
+  it("menerjemahkan kode galat yang dikenal dan jatuh ke state.error bila tidak dikenal", async () => {
+    await i18n.changeLanguage("id");
+    expect(translateErrorCode("AUTH_INVALID_CREDENTIALS")).toBe(
+      commonId.errors.AUTH_INVALID_CREDENTIALS,
+    );
+    expect(translateErrorCode("UNKNOWN_SERVER_CODE")).toBe(commonId.state.error);
+
+    await i18n.changeLanguage("en");
+    expect(translateErrorCode("AUTH_INVALID_CREDENTIALS")).toBe(
+      commonEn.errors.AUTH_INVALID_CREDENTIALS,
+    );
+    expect(translateErrorCode("UNKNOWN_SERVER_CODE")).toBe(commonEn.state.error);
+    await i18n.changeLanguage("id");
   });
 });

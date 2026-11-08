@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Group, Scene, WebGLRenderer } from "three";
+import type { Group, Material, Mesh, Scene, WebGLRenderer } from "three";
 import type { RiotCharacterCustomization } from "../shared/character";
 import { buildHumanoidAvatar } from "./characters/humanoid";
 import { buildMochiAvatar } from "./characters/mochi";
@@ -8,6 +8,19 @@ interface AvatarPreviewProps {
   custom: RiotCharacterCustomization;
   size?: number;
   ghost?: boolean;
+}
+
+function disposeAvatarMaterials(group: Group): void {
+  group.traverse((obj) => {
+    const mesh = obj as Mesh;
+    if (!mesh.isMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const m of mats) {
+      if (m && typeof (m as Material).dispose === "function") {
+        (m as Material).dispose();
+      }
+    }
+  });
 }
 
 /**
@@ -64,8 +77,12 @@ export function AvatarPreview({ custom, size = 96, ghost = false }: AvatarPrevie
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
+      if (avatarRef.current) {
+        sceneRef.current?.remove(avatarRef.current);
+        disposeAvatarMaterials(avatarRef.current);
+        avatarRef.current = null;
+      }
       sceneRef.current = null;
-      avatarRef.current = null;
       if (renderer) {
         renderer.dispose();
         renderer.domElement.remove();
@@ -75,8 +92,6 @@ export function AvatarPreview({ custom, size = 96, ghost = false }: AvatarPrevie
 
   // Bangun ulang avatar saat kustomisasi berubah.
   useEffect(() => {
-    const scene = sceneRef.current;
-    if (!scene) return;
     let cancelled = false;
 
     void (async () => {
@@ -84,10 +99,16 @@ export function AvatarPreview({ custom, size = 96, ghost = false }: AvatarPrevie
         custom.type === "mochi"
           ? await buildMochiAvatar(custom, { ghost })
           : await buildHumanoidAvatar(custom);
-      if (cancelled) return;
-      if (avatarRef.current) scene.remove(avatarRef.current);
+      if (cancelled || !sceneRef.current) {
+        disposeAvatarMaterials(avatar);
+        return;
+      }
+      if (avatarRef.current) {
+        sceneRef.current.remove(avatarRef.current);
+        disposeAvatarMaterials(avatarRef.current);
+      }
       avatarRef.current = avatar;
-      scene.add(avatar);
+      sceneRef.current.add(avatar);
     })();
 
     return () => {

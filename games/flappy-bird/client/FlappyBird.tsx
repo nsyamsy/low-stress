@@ -290,11 +290,11 @@ export function FlappyBird({
 
       <div className="ls-flappy-scores-row">
         <span>
-          {t("best")}: <b className="text-on-surface">{best}</b>
+          {t("best")}: <b className="text-[var(--text-primary)]">{best}</b>
         </span>
         {lastScore !== null && (
           <span>
-            {t("last")}: <b className="text-on-surface">{lastScore}</b>
+            {t("last")}: <b className="text-[var(--text-primary)]">{lastScore}</b>
           </span>
         )}
       </div>

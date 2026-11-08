@@ -98,15 +98,20 @@ function resolveSingleStep(
   return { x: current.x, y: current.y };
 }
 
+function isPointInAABB(x: number, y: number, box: AABB): boolean {
+  return x >= box.minX && x <= box.maxX && y >= box.minY && y <= box.maxY;
+}
+
 /**
  * Resolves movement with continuous collision detection (substepping) and wall sliding.
- * Prevents tunneling through thin walls.
+ * Prevents tunneling through thin walls and blocks crossing locked room doorways.
  */
 export function resolveMovement(
   current: { x: number; y: number },
   desired: { x: number; y: number },
   radius: number,
   walls: readonly AABB[] = MAP_DATA.walls,
+  lockedRoomIds?: ReadonlySet<string> | readonly string[],
 ): { x: number; y: number } {
   const dx = desired.x - current.x;
   const dy = desired.y - current.y;
@@ -114,6 +119,41 @@ export function resolveMovement(
 
   if (dist < 1e-5) {
     return { x: current.x, y: current.y };
+  }
+
+  let effectiveWalls = walls;
+  const lockedInsideRooms: RoomDefinition[] = [];
+  const lockedOutsideRooms: RoomDefinition[] = [];
+
+  if (lockedRoomIds) {
+    const rawList = Array.isArray(lockedRoomIds)
+      ? lockedRoomIds
+      : Array.from(lockedRoomIds);
+    if (rawList.length > 0) {
+      const normalizedSet = new Set(
+        rawList.map((id) => id.trim().replace(/^room_/, "")),
+      );
+      const extraWalls: AABB[] = [];
+      for (const room of MAP_DATA.rooms) {
+        if (!normalizedSet.has(room.id)) continue;
+        if (isPointInAABB(current.x, current.y, room.bounds)) {
+          lockedInsideRooms.push(room);
+        } else {
+          lockedOutsideRooms.push(room);
+          if (
+            !checkCircleAABBCollision(
+              { x: current.x, y: current.y, radius },
+              room.bounds,
+            )
+          ) {
+            extraWalls.push(room.bounds);
+          }
+        }
+      }
+      if (extraWalls.length > 0) {
+        effectiveWalls = [...walls, ...extraWalls];
+      }
+    }
   }
 
   // Use substepping smaller than player radius to prevent tunneling
@@ -127,7 +167,33 @@ export function resolveMovement(
       x: current.x + dx * fraction,
       y: current.y + dy * fraction,
     };
-    const next = resolveSingleStep(curr, target, radius, walls);
+    let next = resolveSingleStep(curr, target, radius, effectiveWalls);
+
+    // Clamp inside locked rooms so players inside cannot exit
+    for (const room of lockedInsideRooms) {
+      const minX = Math.min(current.x, room.bounds.minX + radius);
+      const maxX = Math.max(current.x, room.bounds.maxX - radius);
+      const minY = Math.min(current.y, room.bounds.minY + radius);
+      const maxY = Math.max(current.y, room.bounds.maxY - radius);
+      next = {
+        x: Math.max(minX, Math.min(maxX, next.x)),
+        y: Math.max(minY, Math.min(maxY, next.y)),
+      };
+    }
+
+    // Prevent center from crossing into locked outside rooms (if player started within radius of threshold)
+    for (const room of lockedOutsideRooms) {
+      if (isPointInAABB(next.x, next.y, room.bounds)) {
+        if (!isPointInAABB(next.x, curr.y, room.bounds)) {
+          next = { x: next.x, y: curr.y };
+        } else if (!isPointInAABB(curr.x, next.y, room.bounds)) {
+          next = { x: curr.x, y: next.y };
+        } else {
+          next = { x: curr.x, y: curr.y };
+        }
+      }
+    }
+
     if (Math.abs(next.x - curr.x) < 1e-5 && Math.abs(next.y - curr.y) < 1e-5) {
       // Cannot move any further in this direction
       break;

@@ -113,7 +113,21 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
   const socketRef = useRef<Socket | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatOpenRef = useRef(chatOpen);
   const wasMyTurn = useRef(false);
+  const prevWinnerRef = useRef<number | null>(null);
+  const lastEventKindRef = useRef<LastEvent["kind"] | null>(null);
+  const tRef = useRef(t);
+  const userIdRef = useRef(user.id);
+
+  useEffect(() => {
+    chatOpenRef.current = chatOpen;
+  }, [chatOpen]);
+
+  useEffect(() => {
+    tRef.current = t;
+    userIdRef.current = user.id;
+  }, [t, user.id]);
 
   const toggleSound = () => {
     const next = !sound;
@@ -130,13 +144,30 @@ export function Room({ roomId, onBack, user }: RoomProps) {
     });
     socketRef.current = s;
 
+    const autoAcceptIfInvited = (view: RoomView) => {
+      if (view.status !== "lobby") return;
+      const me = view.players.find((p) => p.userId === userIdRef.current);
+      if (me?.status === "invited") {
+        s.emit(
+          "room:action",
+          { roomId, action: "respond", accept: true },
+          (resp: { ok: boolean; view?: RoomView }) => {
+            if (resp.ok && resp.view) {
+              setRoom(resp.view);
+            }
+          },
+        );
+      }
+    };
+
     s.on("connect", () => {
       s.emit("room:join", { roomId }, (res: { ok: boolean; view?: RoomView; code?: string }) => {
         if (res.ok && res.view) {
           setRoom(res.view);
           setPawnsSetting(res.view.pawns || 4);
+          autoAcceptIfInvited(res.view);
         } else {
-          setError(res.code || "Gagal bergabung ke ruangan");
+          setError(res.code || tRef.current("errorJoinRoom"));
         }
       });
     });
@@ -150,10 +181,22 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
     s.on("room:event", (ev: LastEvent) => {
       setLastEvent(ev);
-      if (ev.kind === "roll") {
+      const prevKind = lastEventKindRef.current;
+      lastEventKindRef.current = ev.kind;
+
+      const rollJustOccurred =
+        ev.kind === "roll" ||
+        ev.kind === "pass" ||
+        ev.kind === "doubles3" ||
+        ((ev.kind === "move" || ev.kind === "capture" || ev.kind === "home") &&
+          Boolean(ev.dice) &&
+          prevKind !== "roll");
+
+      if (rollJustOccurred) {
         setRollId((n) => n + 1);
         playRoll();
-      } else if (ev.kind === "capture") {
+      }
+      if (ev.kind === "capture") {
         playCapture();
       } else if (ev.kind === "home") {
         playHome();
@@ -163,7 +206,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
     s.on("room:chat", (msg: ChatMessage) => {
       playChat();
       setRoom((prev) => (prev ? { ...prev, messages: [...prev.messages, msg] } : prev));
-      if (!chatOpen) {
+      if (!chatOpenRef.current) {
         setUnreadCount((c) => c + 1);
       }
       setTimeout(() => {
@@ -181,6 +224,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
             if (res.ok && res.view) {
               setRoom(res.view);
               setPawnsSetting(res.view.pawns || 4);
+              autoAcceptIfInvited(res.view);
             }
           });
         }
@@ -193,11 +237,14 @@ export function Room({ roomId, onBack, user }: RoomProps) {
       s.emit("room:leave", { roomId });
       s.disconnect();
     };
-  }, [roomId, chatOpen]);
+  }, [roomId]);
 
   // Sound cues on turn change and victory
   useEffect(() => {
-    if (!room || !room.state) return;
+    if (!room || !room.state) {
+      prevWinnerRef.current = null;
+      return;
+    }
     const isMyTurn =
       room.mySeat !== null &&
       room.state.winner === null &&
@@ -208,9 +255,10 @@ export function Room({ roomId, onBack, user }: RoomProps) {
     }
     wasMyTurn.current = isMyTurn;
 
-    if (room.state.winner !== null) {
+    if (room.state.winner !== null && prevWinnerRef.current === null) {
       playVictory();
     }
+    prevWinnerRef.current = room.state.winner;
   }, [room]);
 
   const sendAction = useCallback(
@@ -313,7 +361,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
               type="button"
               onClick={toggleSound}
               className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-              aria-label="Sound"
+              aria-label={sound ? t("muteSound") : t("unmuteSound")}
             >
               {sound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-white/50" />}
             </button>
@@ -340,7 +388,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
         {error && (
           <div className="mb-3 flex items-center justify-between rounded-lg bg-red-500/90 p-2.5 text-xs text-white">
             <span>{error}</span>
-            <button type="button" onClick={() => setError(null)}>
+            <button type="button" onClick={() => setError(null)} aria-label={t("close")}>
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -379,7 +427,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                       <div
                         key={p.userId}
                         className={`flex items-center justify-between rounded-lg border p-2.5 ${
-                          p.isMe ? "border-[var(--border-strong)] bg-[var(--primary)]/10" : "border-[var(--border)] bg-white"
+                          p.isMe ? "border-[var(--border-strong)] bg-[var(--primary)]/10" : "border-[var(--border)] bg-[var(--bg-surface)]"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -449,7 +497,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                 {room.isHost && (
                   <div className="space-y-3 border-t border-[var(--border)] pt-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                      Pengaturan Ruangan
+                      {t("roomSettings")}
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div>
@@ -463,7 +511,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                         >
                           {[1, 2, 3, 4].map((n) => (
                             <option key={n} value={n}>
-                              {n} pion
+                              {t("pawnCountOption", { count: n })}
                             </option>
                           ))}
                         </select>
@@ -529,6 +577,17 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                       >
                         <Dices className="h-4 w-4" />
                         {t("start")}
+                      </button>
+                    </div>
+                  ) : myPlayer?.status === "invited" ? (
+                    <div className="flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => sendAction({ action: "respond", accept: true })}
+                        disabled={busy}
+                        className="inline-flex h-10 items-center justify-center rounded-lg bg-[var(--primary)] px-4 text-xs font-bold text-[var(--text-on-primary)] shadow hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                      >
+                        {t("accept")}
                       </button>
                     </div>
                   ) : (
@@ -609,36 +668,33 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                 {/* Event ticker feed */}
                 {lastEvent && (
                   <div className="rounded-lg border border-[var(--border)] bg-[var(--primary)]/10 px-3 py-1.5 text-center text-xs font-medium text-[var(--primary)] shadow-xs">
-                    {lastEvent.kind === "roll" && lastEvent.dice
-                      ? t("event.roll", {
-                          name:
-                            room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                            t("playerFallback"),
+                    {(() => {
+                      const actorName =
+                        room.players.find((p) => p.seat === lastEvent.seat)?.name ??
+                        t("playerFallback");
+                      if (lastEvent.kind === "roll" && lastEvent.dice) {
+                        return t("event.roll", {
+                          name: actorName,
                           dice: `${lastEvent.dice[0]}+${lastEvent.dice[1]}`,
-                        })
-                      : lastEvent.kind === "capture"
-                        ? t("event.capture", {
-                            name:
-                              room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                              t("playerFallback"),
-                          })
-                        : lastEvent.kind === "home"
-                          ? t("event.home", {
-                              name:
-                                room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                                t("playerFallback"),
-                            })
-                          : lastEvent.kind === "skip"
-                            ? t("event.skip", {
-                                name:
-                                  room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                                  t("playerFallback"),
-                              })
-                            : t("event.move", {
-                                name:
-                                  room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                                  t("playerFallback"),
-                              })}
+                        });
+                      }
+                      if (lastEvent.kind === "capture") {
+                        return t("event.capture", { name: actorName });
+                      }
+                      if (lastEvent.kind === "home") {
+                        return t("event.home", { name: actorName });
+                      }
+                      if (lastEvent.kind === "skip") {
+                        return t("event.skip", { name: actorName });
+                      }
+                      if (lastEvent.kind === "pass") {
+                        return t("event.pass", { name: actorName });
+                      }
+                      if (lastEvent.kind === "doubles3") {
+                        return t("event.doubles3", { name: actorName });
+                      }
+                      return t("event.move", { name: actorName });
+                    })()}
                   </div>
                 )}
 
@@ -743,6 +799,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
               <button
                 type="button"
                 onClick={() => setChatOpen(false)}
+                aria-label={t("close")}
                 className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
               >
                 <X className="h-5 w-5" />
@@ -855,6 +912,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                 <button
                   type="button"
                   onClick={() => setInviteModalOpen(false)}
+                  aria-label={t("close")}
                   className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 >
                   <X className="h-4 w-4" />
@@ -864,7 +922,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
               <input
                 value={searchQuery}
                 onChange={(e) => void handleSearchUsers(e.target.value)}
-                placeholder="Cari nama atau username..."
+                placeholder={t("searchUsersPh")}
                 className="mb-3 h-8 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
               />
 

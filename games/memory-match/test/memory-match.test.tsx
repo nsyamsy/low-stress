@@ -53,27 +53,39 @@ describe("P5-03: Memory Match Game Port", () => {
     expect(() => sounds.victory()).not.toThrow();
   });
 
-  it("merender komponen MemoryMatch tanpa melempar error", () => {
+  it("merender komponen MemoryMatch tanpa melempar error dengan tombol >= 44px (h-11 w-11) dan token CSS @low-stress/ui", () => {
     const html = renderToString(
       <I18nextProvider i18n={i18n}>
         <MemoryMatch />
       </I18nextProvider>,
     );
 
-    // Memiliki 16 tombol kartu
+    // Memiliki 16 tombol kartu + 2 tombol kontrol
     const buttonMatches = html.match(/<button/g);
     expect(buttonMatches).toBeDefined();
     expect(buttonMatches!.length).toBeGreaterThanOrEqual(16);
+    expect(html).toContain("h-11 w-11");
+    expect(html).toContain("bg-[var(--bg-surface)]");
+    expect(html).not.toContain("bg-surface-container");
   });
 
   it("merender wrapper game lengkap (MemoryMatchGame) dengan layout tiga kolom (Screens §8)", () => {
     const html = renderToString(
       <I18nextProvider i18n={i18n}>
-        <MemoryMatchGame onScore={async () => {}} />
+        <MemoryMatchGame
+          gameId="memory-match"
+          user={{ id: "u1", username: "p1", displayName: "Player 1", locale: "id" }}
+          locale="id"
+          theme="light"
+          isMobile={false}
+          onScore={async () => {}}
+          onExit={() => {}}
+        />
       </I18nextProvider>,
     );
 
     expect(html).toContain("Leaderboard");
     expect(html).toContain("Memory Match");
+    expect(html).not.toContain("bg-surface-container");
   });
 });

@@ -24,5 +24,11 @@
   "rules": "Setiap pipa yang berhasil dilewati bernilai 1 poin. Jangan menabrak pipa atau tanah.",
   "medals": "Raih medali perunggu (10+), perak (20+), atau emas (30+).",
   "bestNote": "Hanya run dengan skor minimal 1 yang dicatat ke papan peringkat.",
+  "leaderboard": "Leaderboard",
+  "periodWeek": "Minggu ini",
+  "periodMonth": "Bulan ini",
+  "periodAll": "Sepanjang waktu",
+  "loading": "Memuat…",
+  "empty": "Belum ada skor",
   "leaderboardNote": "Skor terbaikmu akan otomatis tercatat di papan peringkat mingguan, bulanan, dan sepanjang waktu."
 }

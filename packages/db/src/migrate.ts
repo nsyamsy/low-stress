@@ -58,6 +58,9 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
   const handle = createDb(databaseUrl, { max: 1 });
   try {
     await migrate(handle.db, { migrationsFolder });
+    await handle.sql`
+      ALTER TABLE "login_attempts" ADD COLUMN IF NOT EXISTS "last_failed_at" timestamptz NOT NULL DEFAULT now();
+    `;
     await runGameMigrations(handle.sql);
   } finally {
     await handle.close();

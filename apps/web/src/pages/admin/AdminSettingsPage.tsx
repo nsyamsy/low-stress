@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Chip, Input, Modal, SegmentedControl, Toast } from "@low-stress/ui";
 import {
   getAdminSettingsApi,
@@ -7,11 +8,15 @@ import {
   updateAdminSettingsApi,
   type AdminSettings,
 } from "../../features/admin";
+import type { ApiError } from "../../lib/apiFetch";
+
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 export function AdminSettingsPage() {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<AdminSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -20,13 +25,41 @@ export function AdminSettingsPage() {
   const [smtpTargetEmail, setSmtpTargetEmail] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
 
+  const loadSettings = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    getAdminSettingsApi()
+      .then((res) => {
+        setSettings(res);
+      })
+      .catch((err: unknown) => {
+        const apiError = (err as { apiError?: ApiError })?.apiError;
+        setError(
+          apiError?.code
+            ? translateErrorCode(apiError.code, apiError.params)
+            : t("state.error"),
+        );
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [t]);
+
   useEffect(() => {
     let mounted = true;
     getAdminSettingsApi()
       .then((res) => {
         if (mounted) setSettings(res);
       })
-      .catch(() => undefined)
+      .catch((err: unknown) => {
+        if (!mounted) return;
+        const apiError = (err as { apiError?: ApiError })?.apiError;
+        setError(
+          apiError?.code
+            ? translateErrorCode(apiError.code, apiError.params)
+            : t("state.error"),
+        );
+      })
       .finally(() => {
         if (mounted) setLoading(false);
       });
@@ -34,7 +67,7 @@ export function AdminSettingsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
 
   const handleUpdate = async (patch: Partial<Omit<AdminSettings, "smtp">>) => {
     setSaving(true);
@@ -42,6 +75,13 @@ export function AdminSettingsPage() {
       const res = await updateAdminSettingsApi(patch);
       setSettings(res);
       setToastMessage(t("admin.settings.saveSuccess"));
+    } catch (err: unknown) {
+      const apiError = (err as { apiError?: ApiError })?.apiError;
+      setToastMessage(
+        apiError?.code
+          ? translateErrorCode(apiError.code, apiError.params)
+          : t("state.error"),
+      );
     } finally {
       setSaving(false);
     }
@@ -53,17 +93,43 @@ export function AdminSettingsPage() {
     try {
       await sendAdminSmtpTestApi(smtpTargetEmail.trim());
       setSmtpModalOpen(false);
-      setToastMessage("Email uji berhasil dikirim.");
+      setToastMessage(t("admin.settings.testEmailSuccess"));
     } catch {
-      setToastMessage("Gagal mengirim email uji.");
+      setToastMessage(t("admin.settings.testEmailFailed"));
     } finally {
       setSendingTest(false);
     }
   };
 
-  if (loading || !settings) {
+  if (loading) {
     return <p className="ls-text-secondary">{t("state.loading")}</p>;
   }
+
+  if (error || !settings) {
+    return (
+      <div className="ls-admin-card" style={{ textAlign: "center", padding: "var(--space-6)" }}>
+        <p className="ls-text-secondary" style={{ marginBottom: "var(--space-3)" }}>
+          {error ?? t("state.error")}
+        </p>
+        <Button variant="secondary" onClick={loadSettings}>
+          {t("action.tryAgain")}
+        </Button>
+      </div>
+    );
+  }
+
+  const toggleDay = (day: number) => {
+    const current = settings.globalSchedule.days;
+    const nextDays = current.includes(day)
+      ? current.filter((d) => d !== day)
+      : [...current, day].sort();
+    void handleUpdate({
+      globalSchedule: {
+        ...settings.globalSchedule,
+        days: nextDays,
+      },
+    });
+  };
 
   return (
     <div>
@@ -85,7 +151,7 @@ export function AdminSettingsPage() {
               { value: "closed", label: t("admin.settings.regClosed") },
             ]}
             value={settings.registration}
-            onChange={(val) => handleUpdate({ registration: val as AdminSettings["registration"] })}
+            onChange={(val) => void handleUpdate({ registration: val as AdminSettings["registration"] })}
           />
         </div>
 
@@ -102,7 +168,7 @@ export function AdminSettingsPage() {
               { value: "en", label: t("admin.settings.localeEn") },
             ]}
             value={settings.defaultLocale}
-            onChange={(val) => handleUpdate({ defaultLocale: val as AdminSettings["defaultLocale"] })}
+            onChange={(val) => void handleUpdate({ defaultLocale: val as AdminSettings["defaultLocale"] })}
           />
         </div>
 
@@ -117,7 +183,7 @@ export function AdminSettingsPage() {
               checked={settings.globalSchedule.enabled}
               disabled={saving}
               onChange={(e) =>
-                handleUpdate({
+                void handleUpdate({
                   globalSchedule: {
                     ...settings.globalSchedule,
                     enabled: e.target.checked,
@@ -127,6 +193,112 @@ export function AdminSettingsPage() {
             />
             <span style={{ fontSize: "var(--font-body)" }}>{t("admin.settings.scheduleActive")}</span>
           </label>
+
+          {settings.globalSchedule.enabled && (
+            <div className="ls-stack" style={{ gap: "var(--space-3)", marginTop: "var(--space-4)" }}>
+              <div className="ls-stack" style={{ gap: "var(--space-2)" }}>
+                <span style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                  {t("admin.schedule.windows")}
+                </span>
+                {settings.globalSchedule.windows.map((win, idx) => (
+                  <div key={idx} className="ls-row" style={{ gap: "var(--space-2)", alignItems: "flex-end" }}>
+                    <div style={{ flex: 1 }}>
+                      <Input
+                        label={t("admin.schedule.start")}
+                        type="time"
+                        value={win.start}
+                        onChange={(e) => {
+                          const next = [...settings.globalSchedule.windows];
+                          next[idx] = { ...win, start: e.target.value };
+                          void handleUpdate({
+                            globalSchedule: {
+                              ...settings.globalSchedule,
+                              windows: next,
+                            },
+                          });
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <Input
+                        label={t("admin.schedule.end")}
+                        type="time"
+                        value={win.end}
+                        onChange={(e) => {
+                          const next = [...settings.globalSchedule.windows];
+                          next[idx] = { ...win, end: e.target.value };
+                          void handleUpdate({
+                            globalSchedule: {
+                              ...settings.globalSchedule,
+                              windows: next,
+                            },
+                          });
+                        }}
+                      />
+                    </div>
+                    {settings.globalSchedule.windows.length > 1 && (
+                      <Button
+                        variant="secondary"
+                        disabled={saving}
+                        onClick={() =>
+                          void handleUpdate({
+                            globalSchedule: {
+                              ...settings.globalSchedule,
+                              windows: settings.globalSchedule.windows.filter((_, i) => i !== idx),
+                            },
+                          })
+                        }
+                      >
+                        {t("admin.schedule.removeWindow")}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <div>
+                  <Button
+                    variant="secondary"
+                    disabled={saving}
+                    onClick={() =>
+                      void handleUpdate({
+                        globalSchedule: {
+                          ...settings.globalSchedule,
+                          windows: [
+                            ...settings.globalSchedule.windows,
+                            { start: "17:00", end: "22:00" },
+                          ],
+                        },
+                      })
+                    }
+                  >
+                    {t("admin.schedule.addWindow")}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="ls-stack" style={{ gap: "var(--space-2)" }}>
+                <span style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                  {t("admin.schedule.days")}
+                </span>
+                <div className="ls-row" style={{ flexWrap: "wrap", gap: "var(--space-2)" }}>
+                  {ALL_DAYS.map((day) => {
+                    const active = settings.globalSchedule.days.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        disabled={saving}
+                        className={`ls-chip ${active ? "ls-chip--success" : "ls-chip--neutral"}`}
+                        style={{ cursor: "pointer", border: "none" }}
+                        onClick={() => toggleDay(day)}
+                      >
+                        {t(`days.${day}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 4. Chat Publik */}
@@ -139,7 +311,7 @@ export function AdminSettingsPage() {
               type="checkbox"
               checked={settings.chatEnabled}
               disabled={saving}
-              onChange={(e) => handleUpdate({ chatEnabled: e.target.checked })}
+              onChange={(e) => void handleUpdate({ chatEnabled: e.target.checked })}
             />
             <span style={{ fontSize: "var(--font-body)" }}>{t("admin.settings.chatEnabled")}</span>
           </label>
@@ -158,7 +330,7 @@ export function AdminSettingsPage() {
               onChange={(e) => {
                 const val = parseInt(e.target.value, 10);
                 if (val >= 2 && val <= 12) {
-                  handleUpdate({ ludoMaxPlayers: val });
+                  void handleUpdate({ ludoMaxPlayers: val });
                 }
               }}
             />
@@ -201,19 +373,19 @@ export function AdminSettingsPage() {
           {t("admin.settings.testEmailPrompt")}
         </p>
         <Input
-          label="Email Tujuan"
+          label={t("admin.settings.testEmailLabel")}
           type="email"
           value={smtpTargetEmail}
           onChange={(e) => setSmtpTargetEmail(e.target.value)}
-          placeholder="admin@example.com"
+          placeholder={t("admin.settings.testEmailPlaceholder")}
           autoFocus
         />
         <div className="ls-row" style={{ justifyContent: "flex-end", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
           <Button variant="secondary" onClick={() => setSmtpModalOpen(false)}>
             {t("action.cancel")}
           </Button>
-          <Button disabled={sendingTest || !smtpTargetEmail.trim()} onClick={handleSendTestEmail}>
-            {sendingTest ? t("state.loading") : "Kirim"}
+          <Button disabled={sendingTest || !smtpTargetEmail.trim()} onClick={() => void handleSendTestEmail()}>
+            {sendingTest ? t("state.loading") : t("action.send")}
           </Button>
         </div>
       </Modal>

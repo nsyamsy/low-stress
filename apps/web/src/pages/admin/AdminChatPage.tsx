@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Chip, Input, Modal, SegmentedControl } from "@low-stress/ui";
 import {
   deleteAdminBannedWordApi,
@@ -15,8 +16,17 @@ import {
   type AdminChatMessageItem,
   type AdminChatMuteItem,
 } from "../../features/admin/api";
+import type { ApiError } from "../../lib/apiFetch";
 
 type ChatTab = "messages" | "mutes" | "words";
+
+function getErrorText(err: unknown, fallback: string): string {
+  const apiError = (err as { apiError?: ApiError })?.apiError;
+  if (apiError?.code) {
+    return translateErrorCode(apiError.code, apiError.params);
+  }
+  return fallback;
+}
 
 export function AdminChatPage() {
   const { t, i18n } = useTranslation();
@@ -62,7 +72,7 @@ export function AdminChatPage() {
         setBannedWords(res);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data");
+      setError(getErrorText(err, t("state.error")));
     } finally {
       setLoading(false);
     }
@@ -71,6 +81,8 @@ export function AdminChatPage() {
   useEffect(() => {
     let mounted = true;
     const fetchTab = async () => {
+      setLoading(true);
+      setError(null);
       try {
         if (activeTab === "messages") {
           const res = await getAdminChatMessagesApi(page, 25);
@@ -87,7 +99,7 @@ export function AdminChatPage() {
         }
       } catch (err: unknown) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Gagal memuat data");
+          setError(getErrorText(err, t("state.error")));
         }
       } finally {
         if (mounted) setLoading(false);
@@ -98,7 +110,7 @@ export function AdminChatPage() {
     return () => {
       mounted = false;
     };
-  }, [activeTab, page]);
+  }, [activeTab, page, t]);
 
   // Actions
   const handleDeleteMessage = async () => {
@@ -108,7 +120,7 @@ export function AdminChatPage() {
       setDeleteTargetMessage(null);
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus pesan");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
@@ -124,7 +136,7 @@ export function AdminChatPage() {
       setMuteReason("");
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal membisukan pengguna");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
@@ -135,7 +147,7 @@ export function AdminChatPage() {
       setUnmuteTargetUser(null);
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal mencabut status bisu");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
@@ -150,7 +162,7 @@ export function AdminChatPage() {
       setNewWord("");
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menambahkan kata terlarang");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
@@ -159,7 +171,7 @@ export function AdminChatPage() {
       await updateAdminBannedWordApi(id, !currentlyEnabled);
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal memperbarui status kata");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
@@ -170,7 +182,7 @@ export function AdminChatPage() {
       setDeleteTargetWord(null);
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus kata terlarang");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
@@ -198,7 +210,7 @@ export function AdminChatPage() {
 
       <div style={{ marginBottom: "var(--space-6)" }}>
         <SegmentedControl
-          label=""
+          label={t("admin.chat.title")}
           options={[
             { value: "messages", label: t("admin.chat.tabMessages") },
             { value: "mutes", label: t("admin.chat.tabMutes") },
@@ -227,57 +239,101 @@ export function AdminChatPage() {
               {t("admin.chat.emptyMessages")}
             </p>
           ) : (
-            <div className="ls-admin-table-container">
-              <table className="ls-admin-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("admin.chat.colTime")}</th>
-                    <th scope="col">{t("admin.chat.colSender")}</th>
-                    <th scope="col">{t("admin.chat.colMessage")}</th>
-                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {messages.map((m) => (
-                    <tr key={m.id}>
-                      <td style={{ whiteSpace: "nowrap", fontSize: "var(--font-caption)" }}>
-                        {formatDate(m.createdAt)}
-                      </td>
-                      <td>
+            <>
+              <div className="ls-admin-table-container">
+                <table className="ls-admin-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("admin.chat.colTime")}</th>
+                      <th scope="col">{t("admin.chat.colSender")}</th>
+                      <th scope="col">{t("admin.chat.colMessage")}</th>
+                      <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {messages.map((m) => (
+                      <tr key={m.id}>
+                        <td style={{ whiteSpace: "nowrap", fontSize: "var(--font-caption)" }}>
+                          {formatDate(m.createdAt)}
+                        </td>
+                        <td>
+                          <strong>{m.name}</strong>
+                          {m.username !== "deleted" && (
+                            <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                              @{m.username}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ wordBreak: "break-word" }}>
+                          {m.body}
+                        </td>
+                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          {m.userId && (
+                            <Button
+                              variant="secondary"
+                              style={{ marginRight: "var(--space-2)" }}
+                              onClick={() =>
+                                setMuteTargetUser({ id: m.userId!, name: m.name })
+                              }
+                            >
+                              {t("admin.chat.mute")}
+                            </Button>
+                          )}
+                          <Button
+                            variant="danger"
+                            onClick={() => setDeleteTargetMessage(m.id)}
+                          >
+                            {t("admin.chat.delete")}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards for Messages */}
+              <div className="ls-admin-card-list">
+                {messages.map((m) => (
+                  <div key={m.id} className="ls-admin-mobile-card">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
                         <strong>{m.name}</strong>
                         {m.username !== "deleted" && (
-                          <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
-                            @{m.username}
-                          </div>
+                          <span style={{ marginLeft: "var(--space-1)", fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                            (@{m.username})
+                          </span>
                         )}
-                      </td>
-                      <td style={{ wordBreak: "break-word" }}>
-                        {m.body}
-                      </td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        {m.userId && (
-                          <Button
-                            variant="secondary"
-                            style={{ marginRight: "var(--space-2)" }}
-                            onClick={() =>
-                              setMuteTargetUser({ id: m.userId!, name: m.name })
-                            }
-                          >
-                            {t("admin.chat.mute")}
-                          </Button>
-                        )}
+                      </div>
+                      <span style={{ fontSize: "var(--font-caption)", color: "var(--text-muted)" }}>
+                        {formatDate(m.createdAt)}
+                      </span>
+                    </div>
+                    <div style={{ wordBreak: "break-word", fontSize: "var(--font-body)" }}>
+                      {m.body}
+                    </div>
+                    <div className="ls-row" style={{ gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
+                      {m.userId && (
                         <Button
-                          variant="danger"
-                          onClick={() => setDeleteTargetMessage(m.id)}
+                          variant="secondary"
+                          onClick={() =>
+                            setMuteTargetUser({ id: m.userId!, name: m.name })
+                          }
                         >
-                          {t("admin.chat.delete")}
+                          {t("admin.chat.mute")}
                         </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                      <Button
+                        variant="danger"
+                        onClick={() => setDeleteTargetMessage(m.id)}
+                      >
+                        {t("admin.chat.delete")}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {totalPages > 1 && (
@@ -309,40 +365,72 @@ export function AdminChatPage() {
               {t("admin.chat.emptyMutes")}
             </p>
           ) : (
-            <div className="ls-admin-table-container">
-              <table className="ls-admin-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("admin.chat.colUser")}</th>
-                    <th scope="col">{t("admin.chat.colMutedUntil")}</th>
-                    <th scope="col">{t("admin.chat.colReason")}</th>
-                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mutes.map((m) => (
-                    <tr key={m.userId}>
-                      <td>
-                        <strong>{m.displayName}</strong>
-                        <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
-                          @{m.username}
-                        </div>
-                      </td>
-                      <td>{formatDate(m.mutedUntil)}</td>
-                      <td>{m.reason || "—"}</td>
-                      <td style={{ textAlign: "right" }}>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setUnmuteTargetUser(m.userId)}
-                        >
-                          {t("admin.chat.unmute")}
-                        </Button>
-                      </td>
+            <>
+              <div className="ls-admin-table-container">
+                <table className="ls-admin-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("admin.chat.colUser")}</th>
+                      <th scope="col">{t("admin.chat.colMutedUntil")}</th>
+                      <th scope="col">{t("admin.chat.colReason")}</th>
+                      <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {mutes.map((m) => (
+                      <tr key={m.userId}>
+                        <td>
+                          <strong>{m.displayName}</strong>
+                          <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                            @{m.username}
+                          </div>
+                        </td>
+                        <td>{formatDate(m.mutedUntil)}</td>
+                        <td>{m.reason || "—"}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <Button
+                            variant="secondary"
+                            onClick={() => setUnmuteTargetUser(m.userId)}
+                          >
+                            {t("admin.chat.unmute")}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards for Mutes */}
+              <div className="ls-admin-card-list">
+                {mutes.map((m) => (
+                  <div key={m.userId} className="ls-admin-mobile-card">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
+                        <strong>{m.displayName}</strong>{" "}
+                        <span style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                          (@{m.username})
+                        </span>
+                      </div>
+                      <span style={{ fontSize: "var(--font-caption)", color: "var(--text-muted)" }}>
+                        {formatDate(m.mutedUntil)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "var(--font-small)", color: "var(--text-secondary)" }}>
+                      {t("admin.chat.colReason")}: {m.reason || "—"}
+                    </div>
+                    <div style={{ marginTop: "var(--space-2)" }}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setUnmuteTargetUser(m.userId)}
+                      >
+                        {t("admin.chat.unmute")}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       ) : (
@@ -352,58 +440,91 @@ export function AdminChatPage() {
               {t("admin.chat.emptyWords")}
             </p>
           ) : (
-            <div className="ls-admin-table-container">
-              <table className="ls-admin-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("admin.chat.word")}</th>
-                    <th scope="col">{t("admin.chat.lang")}</th>
-                    <th scope="col">{t("admin.chat.colSource")}</th>
-                    <th scope="col">{t("admin.chat.status")}</th>
-                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bannedWords.map((w) => (
-                    <tr key={w.id}>
-                      <td>
-                        <strong>{w.word}</strong>
-                      </td>
-                      <td>
-                        <span style={{ textTransform: "uppercase", fontSize: "var(--font-caption)" }}>
-                          {w.lang}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
-                          {w.source}
-                        </span>
-                      </td>
-                      <td>
-                        <Chip tone={w.enabled ? "success" : "neutral"}>
-                          {w.enabled ? t("admin.chat.active") : t("admin.chat.inactive")}
-                        </Chip>
-                      </td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <Button
-                          variant="secondary"
-                          style={{ marginRight: "var(--space-2)" }}
-                          onClick={() => handleToggleWord(w.id, w.enabled)}
-                        >
-                          {w.enabled ? t("admin.chat.inactive") : t("admin.chat.active")}
-                        </Button>
-                        <Button
-                          variant="danger"
-                          onClick={() => setDeleteTargetWord(w.id)}
-                        >
-                          {t("admin.chat.delete")}
-                        </Button>
-                      </td>
+            <>
+              <div className="ls-admin-table-container">
+                <table className="ls-admin-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("admin.chat.word")}</th>
+                      <th scope="col">{t("admin.chat.lang")}</th>
+                      <th scope="col">{t("admin.chat.colSource")}</th>
+                      <th scope="col">{t("admin.chat.status")}</th>
+                      <th scope="col" style={{ textAlign: "right" }}>{t("admin.chat.colActions")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {bannedWords.map((w) => (
+                      <tr key={w.id}>
+                        <td>
+                          <strong>{w.word}</strong>
+                        </td>
+                        <td>
+                          <span style={{ textTransform: "uppercase", fontSize: "var(--font-caption)" }}>
+                            {w.lang}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                            {w.source}
+                          </span>
+                        </td>
+                        <td>
+                          <Chip tone={w.enabled ? "success" : "neutral"}>
+                            {w.enabled ? t("admin.chat.active") : t("admin.chat.inactive")}
+                          </Chip>
+                        </td>
+                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          <Button
+                            variant="secondary"
+                            style={{ marginRight: "var(--space-2)" }}
+                            onClick={() => handleToggleWord(w.id, w.enabled)}
+                          >
+                            {w.enabled ? t("admin.chat.inactive") : t("admin.chat.active")}
+                          </Button>
+                          <Button
+                            variant="danger"
+                            onClick={() => setDeleteTargetWord(w.id)}
+                          >
+                            {t("admin.chat.delete")}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards for Banned Words */}
+              <div className="ls-admin-card-list">
+                {bannedWords.map((w) => (
+                  <div key={w.id} className="ls-admin-mobile-card">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <strong>{w.word}</strong>
+                      <Chip tone={w.enabled ? "success" : "neutral"}>
+                        {w.enabled ? t("admin.chat.active") : t("admin.chat.inactive")}
+                      </Chip>
+                    </div>
+                    <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                      {t("admin.chat.lang")}: {w.lang.toUpperCase()} • {t("admin.chat.colSource")}: {w.source}
+                    </div>
+                    <div className="ls-row" style={{ gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleToggleWord(w.id, w.enabled)}
+                      >
+                        {w.enabled ? t("admin.chat.inactive") : t("admin.chat.active")}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => setDeleteTargetWord(w.id)}
+                      >
+                        {t("admin.chat.delete")}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -466,7 +587,7 @@ export function AdminChatPage() {
         closeLabel={t("action.close")}
       >
         <p style={{ margin: "var(--space-4) 0", color: "var(--text-secondary)" }}>
-          Cabut status bisu pengguna ini?
+          {t("admin.chat.confirmUnmute")}
         </p>
         <div className="ls-row" style={{ justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button variant="secondary" onClick={() => setUnmuteTargetUser(null)}>
@@ -496,11 +617,11 @@ export function AdminChatPage() {
               {t("admin.chat.lang")}
             </label>
             <SegmentedControl
-              label=""
+              label={t("admin.chat.lang")}
               options={[
-                { value: "any", label: "Semua (Any)" },
-                { value: "id", label: "Indonesia" },
-                { value: "en", label: "English" },
+                { value: "any", label: t("admin.chat.langAny") },
+                { value: "id", label: t("admin.chat.langId") },
+                { value: "en", label: t("admin.chat.langEn") },
               ]}
               value={newWordLang}
               onChange={(val) => setNewWordLang(val as "id" | "en" | "any")}
@@ -525,7 +646,7 @@ export function AdminChatPage() {
         closeLabel={t("action.close")}
       >
         <p style={{ margin: "var(--space-4) 0", color: "var(--text-secondary)" }}>
-          Hapus kata terlarang ini dari daftar?
+          {t("admin.chat.confirmDeleteWord")}
         </p>
         <div className="ls-row" style={{ justifyContent: "flex-end", gap: "var(--space-2)" }}>
           <Button variant="secondary" onClick={() => setDeleteTargetWord(null)}>

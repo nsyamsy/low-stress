@@ -133,9 +133,11 @@ export class AutopilotManager {
         )
         .limit(1);
 
-      if (this.isStopped || !player) return;
+      if (this.isStopped) return;
 
-      if (player.autopilot) {
+      // Jika pemain pada kursi ini telah dihapus (tidak ada di ludo_players) atau autopilot menyala,
+      // jalankan giliran secara otomatis lewat CPU autopilot agar permainan tidak macet.
+      if (!player || player.autopilot) {
         const timer = setTimeout(() => {
           this.timers.delete(roomId);
           void this.executeAutopilotTurn(roomId);
@@ -259,7 +261,7 @@ export class AutopilotManager {
           )
           .limit(1);
 
-        if (!player || !player.autopilot) return;
+        if (player && !player.autopilot) return;
 
         const now = new Date();
         let nextState: LudoState;

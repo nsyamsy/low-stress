@@ -1,17 +1,18 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Chip, Input, Modal, SegmentedControl } from "@low-stress/ui";
 import {
   changePasswordApi,
   deleteAccountApi,
   updateProfileApi,
   useAuth,
-  useSavePreferences,
   type ApiError,
 } from "../features/auth";
-import { changeLocale, readLocalePreference, type LocalePreference } from "../i18n";
-import { applyTheme, readThemePreference, type ThemePreference } from "../theme";
+import { usePreferences } from "../features/preferences/usePreferences";
+import type { LocalePreference } from "../i18n";
+import type { ThemePreference } from "../theme";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -38,10 +39,7 @@ export function ProfilePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, setUser, logout } = useAuth();
-  const savePreferences = useSavePreferences();
-
-  const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
-  const [locale, setLocale] = useState<LocalePreference>(readLocalePreference);
+  const { theme, locale, setTheme, setLocale } = usePreferences();
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [savingName, setSavingName] = useState(false);
@@ -60,6 +58,9 @@ export function ProfilePage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.addEventListener !== "function") {
+      return undefined;
+    }
     const onPrompt = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as InstallPromptEvent);
@@ -72,18 +73,6 @@ export function ProfilePage() {
 
   const initial = (user.displayName.trim()[0] ?? user.username[0] ?? "?").toUpperCase();
 
-  const onThemeChange = (value: ThemePreference) => {
-    setTheme(value);
-    applyTheme(value);
-    void savePreferences({ theme: value });
-  };
-
-  const onLocaleChange = (value: LocalePreference) => {
-    setLocale(value);
-    changeLocale(value);
-    void savePreferences({ locale: value });
-  };
-
   const onSaveName = async (e: FormEvent) => {
     e.preventDefault();
     const next = displayName.trim();
@@ -93,8 +82,12 @@ export function ProfilePage() {
     try {
       setUser(await updateProfileApi({ displayName: next }));
       setNameNotice({ tone: "success", text: t("profile.saved") });
-    } catch {
-      setNameNotice({ tone: "danger", text: t("profile.saveFailed") });
+    } catch (err) {
+      const code = apiCode(err);
+      setNameNotice({
+        tone: "danger",
+        text: code ? translateErrorCode(code) : t("profile.saveFailed"),
+      });
     } finally {
       setSavingName(false);
     }
@@ -119,7 +112,9 @@ export function ProfilePage() {
             ? t("profile.password.wrongCurrent")
             : code === "PASSWORD_TOO_WEAK" || code === "VALIDATION_FAILED"
               ? t("profile.password.weak")
-              : t("profile.saveFailed"),
+              : code
+                ? translateErrorCode(code)
+                : t("profile.saveFailed"),
       });
     } finally {
       setSavingPassword(false);
@@ -240,7 +235,7 @@ export function ProfilePage() {
               label={t("language.label")}
               options={LOCALE_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
               value={locale}
-              onChange={onLocaleChange}
+              onChange={setLocale}
             />
           </div>
         </div>
@@ -251,7 +246,7 @@ export function ProfilePage() {
               label={t("theme.label")}
               options={THEME_OPTIONS.map((o) => ({ value: o.value, label: t(o.key) }))}
               value={theme}
-              onChange={onThemeChange}
+              onChange={setTheme}
             />
           </div>
         </div>

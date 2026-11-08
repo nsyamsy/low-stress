@@ -34,6 +34,7 @@ export interface CrowdCharacterState {
   y: number;
   heading: number;
   ghost?: boolean;
+  visible?: boolean;
 }
 
 const loadThree = () => import("three");
@@ -41,12 +42,14 @@ type Three = Awaited<ReturnType<typeof loadThree>>;
 
 interface SpeciesBucket {
   slots: Map<string, number>;
+  freeSlots: number[];
   nextSlot: number;
   parts: Map<MochiPartName, InstancedMesh>;
 }
 
 interface AccessoryBucket {
   slots: Map<string, number>;
+  freeSlots: number[];
   nextSlot: number;
   mesh: InstancedMesh | null;
 }
@@ -54,6 +57,7 @@ interface AccessoryBucket {
 interface HumanoidBucket {
   variant: HumanoidBodyVariant;
   slots: Map<string, number>;
+  freeSlots: number[];
   nextSlot: number;
   /** Satu InstancedMesh per mesh sumber pada GLB (biasanya 2). */
   parts: InstancedMesh[];
@@ -115,6 +119,7 @@ export class MochiCrowd {
   private characters = new Map<string, CrowdCharacterState>();
   /** Posisi frame-sekarang (interpolasi/prediksi) yang menimpa state dasar. */
   private framePositions = new Map<string, { x: number; y: number; heading: number }>();
+  private visibleIds: ReadonlySet<string> | null = null;
   private disposed = false;
   private three: Three | null = null;
   private dummy: Object3D | null = null;
@@ -137,7 +142,13 @@ export class MochiCrowd {
       const THREE = await loadThree();
       this.three = THREE;
       const parts: MochiPartGeometries = await getMochiParts(species);
-      const bucket: SpeciesBucket = { slots: new Map(), nextSlot: 0, parts: new Map() };
+      const bucket: SpeciesBucket = {
+        slots: new Map(),
+        freeSlots: [],
+        nextSlot: 0,
+        parts: new Map(),
+      };
+      if (this.disposed) return bucket;
 
       for (const partName of BODY_PARTS) {
         const geom = parts[partName];
@@ -176,7 +187,7 @@ export class MochiCrowd {
       this.three = THREE;
       const geom = await buildAccessoryGeometry(accessory);
       if (!geom || this.disposed) {
-        return { slots: new Map(), nextSlot: 0, mesh: null };
+        return { slots: new Map(), freeSlots: [], nextSlot: 0, mesh: null };
       }
       const isHalo = accessory === "halo";
       const material = new THREE.MeshStandardMaterial({
@@ -191,7 +202,12 @@ export class MochiCrowd {
       mesh.frustumCulled = false;
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       this.scene.add(mesh);
-      const bucket: AccessoryBucket = { slots: new Map(), nextSlot: 0, mesh };
+      const bucket: AccessoryBucket = {
+        slots: new Map(),
+        freeSlots: [],
+        nextSlot: 0,
+        mesh,
+      };
       this.accessoryBuckets.set(accessory, bucket);
       return bucket;
     })();
@@ -217,7 +233,14 @@ export class MochiCrowd {
       const THREE = await loadThree();
       this.three = THREE;
       const { scene } = await loadVariant(variant);
-      const bucket: HumanoidBucket = { variant, slots: new Map(), nextSlot: 0, parts: [] };
+      const bucket: HumanoidBucket = {
+        variant,
+        slots: new Map(),
+        freeSlots: [],
+        nextSlot: 0,
+        parts: [],
+      };
+      if (this.disposed) return bucket;
 
       scene.updateMatrixWorld(true);
       scene.traverse((obj) => {
@@ -259,6 +282,7 @@ export class MochiCrowd {
     this.characters.set(state.id, state);
 
     const THREE = await loadThree();
+    if (this.disposed) return;
     const color = new THREE.Color();
 
     if (state.custom.type === "mochi") {
@@ -267,7 +291,9 @@ export class MochiCrowd {
 
       let slot = bucket.slots.get(state.id);
       if (slot === undefined) {
-        slot = bucket.nextSlot++;
+        slot =
+          bucket.freeSlots.pop() ??
+          (bucket.nextSlot < this.capacity ? bucket.nextSlot++ : this.capacity - 1);
         bucket.slots.set(state.id, slot);
       }
 
@@ -286,7 +312,9 @@ export class MochiCrowd {
 
       let slot = bucket.slots.get(state.id);
       if (slot === undefined) {
-        slot = bucket.nextSlot++;
+        slot =
+          bucket.freeSlots.pop() ??
+          (bucket.nextSlot < this.capacity ? bucket.nextSlot++ : this.capacity - 1);
         bucket.slots.set(state.id, slot);
       }
 
@@ -306,7 +334,9 @@ export class MochiCrowd {
       if (this.disposed || !accBucket.mesh) return;
       let accSlot = accBucket.slots.get(state.id);
       if (accSlot === undefined) {
-        accSlot = accBucket.nextSlot++;
+        accSlot =
+          accBucket.freeSlots.pop() ??
+          (accBucket.nextSlot < this.capacity ? accBucket.nextSlot++ : this.capacity - 1);
         accBucket.slots.set(state.id, accSlot);
       }
       color.setHex(
@@ -348,11 +378,24 @@ export class MochiCrowd {
     this.framePositions = positions as Map<string, { x: number; y: number; heading: number }>;
   }
 
+  setVisibleIds(visibleIds: ReadonlySet<string> | null): void {
+    this.visibleIds = visibleIds;
+  }
+
   /**
    * Dipanggil tiap frame untuk menulis ulang matriks semua instance
    * (posisi, rotasi hadap, dan sedikit goyangan idle).
+   * Ketika visibleIds diberikan dan id karakter tidak ada di dalamnya,
+   * matriks skala-nol diterapkan agar pemain di luar radius pandang tersembunyi.
    */
-  update(now = performance.now()): void {
+  update(
+    now = performance.now(),
+    framePositionsOrVisibleIds?:
+      | ReadonlyMap<string, { x: number; y: number; heading: number }>
+      | ReadonlySet<string>
+      | null,
+    maybeVisibleIds?: ReadonlySet<string> | null,
+  ): void {
     if (this.disposed || !this.three) return;
     const THREE = this.three;
     if (!this.dummy) this.dummy = new THREE.Object3D();
@@ -361,7 +404,59 @@ export class MochiCrowd {
     }
     const dummy = this.dummy;
 
+    let effectiveVisibleIds = this.visibleIds;
+    if (framePositionsOrVisibleIds instanceof Map) {
+      this.framePositions = framePositionsOrVisibleIds as Map<
+        string,
+        { x: number; y: number; heading: number }
+      >;
+      if (maybeVisibleIds !== undefined) {
+        effectiveVisibleIds = maybeVisibleIds;
+      }
+    } else if (framePositionsOrVisibleIds instanceof Set) {
+      effectiveVisibleIds = framePositionsOrVisibleIds;
+    } else if (maybeVisibleIds !== undefined) {
+      effectiveVisibleIds = maybeVisibleIds;
+    }
+
     for (const state of this.characters.values()) {
+      const isVisible =
+        state.visible !== false &&
+        (!effectiveVisibleIds || effectiveVisibleIds.has(state.id));
+
+      if (!isVisible) {
+        dummy.scale.set(0, 0, 0);
+        dummy.updateMatrix();
+        if (state.custom.type === "mochi") {
+          const bucket = this.speciesBuckets.get(state.custom.species);
+          const slot = bucket?.slots.get(state.id);
+          if (bucket && slot !== undefined) {
+            for (const mesh of bucket.parts.values()) {
+              mesh.setMatrixAt(slot, this.zeroMatrix);
+              mesh.instanceMatrix.needsUpdate = true;
+            }
+          }
+        } else {
+          const bucket = this.humanoidBuckets.get(state.custom.bodyVariant);
+          const slot = bucket?.slots.get(state.id);
+          if (bucket && slot !== undefined) {
+            for (const mesh of bucket.parts) {
+              mesh.setMatrixAt(slot, this.zeroMatrix);
+              mesh.instanceMatrix.needsUpdate = true;
+            }
+          }
+        }
+        if (state.custom.accessory) {
+          const accBucket = this.accessoryBuckets.get(state.custom.accessory);
+          const accSlot = accBucket?.slots.get(state.id);
+          if (accBucket?.mesh && accSlot !== undefined) {
+            accBucket.mesh.setMatrixAt(accSlot, this.zeroMatrix);
+            accBucket.mesh.instanceMatrix.needsUpdate = true;
+          }
+        }
+        continue;
+      }
+
       const fp = this.framePositions.get(state.id);
       const px = fp?.x ?? state.x;
       const py = fp?.y ?? state.y;
@@ -415,8 +510,9 @@ export class MochiCrowd {
 
   private release(state: CrowdCharacterState): void {
     const THREE = this.three;
-    if (!THREE) return;
-    if (!this.zeroMatrix) this.zeroMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
+    if (THREE && !this.zeroMatrix) {
+      this.zeroMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
+    }
 
     if (state.custom.type === "mochi") {
       const bucket = this.speciesBuckets.get(state.custom.species);
@@ -424,9 +520,14 @@ export class MochiCrowd {
         const slot = bucket.slots.get(state.id);
         if (slot !== undefined) {
           bucket.slots.delete(state.id);
-          for (const mesh of bucket.parts.values()) {
-            mesh.setMatrixAt(slot, this.zeroMatrix);
-            mesh.instanceMatrix.needsUpdate = true;
+          if (!bucket.freeSlots.includes(slot)) {
+            bucket.freeSlots.push(slot);
+          }
+          if (this.zeroMatrix) {
+            for (const mesh of bucket.parts.values()) {
+              mesh.setMatrixAt(slot, this.zeroMatrix);
+              mesh.instanceMatrix.needsUpdate = true;
+            }
           }
         }
       }
@@ -436,9 +537,14 @@ export class MochiCrowd {
         const slot = bucket.slots.get(state.id);
         if (slot !== undefined) {
           bucket.slots.delete(state.id);
-          for (const mesh of bucket.parts) {
-            mesh.setMatrixAt(slot, this.zeroMatrix);
-            mesh.instanceMatrix.needsUpdate = true;
+          if (!bucket.freeSlots.includes(slot)) {
+            bucket.freeSlots.push(slot);
+          }
+          if (this.zeroMatrix) {
+            for (const mesh of bucket.parts) {
+              mesh.setMatrixAt(slot, this.zeroMatrix);
+              mesh.instanceMatrix.needsUpdate = true;
+            }
           }
         }
       }
@@ -446,13 +552,17 @@ export class MochiCrowd {
 
     if (state.custom.accessory) {
       const accBucket = this.accessoryBuckets.get(state.custom.accessory);
-      if (accBucket?.mesh) {
+      if (accBucket) {
         const accSlot = accBucket.slots.get(state.id);
         if (accSlot !== undefined) {
           accBucket.slots.delete(state.id);
-          if (!this.zeroMatrix) this.zeroMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
-          accBucket.mesh.setMatrixAt(accSlot, this.zeroMatrix);
-          accBucket.mesh.instanceMatrix.needsUpdate = true;
+          if (!accBucket.freeSlots.includes(accSlot)) {
+            accBucket.freeSlots.push(accSlot);
+          }
+          if (accBucket.mesh && this.zeroMatrix) {
+            accBucket.mesh.setMatrixAt(accSlot, this.zeroMatrix);
+            accBucket.mesh.instanceMatrix.needsUpdate = true;
+          }
         }
       }
     }
@@ -460,22 +570,25 @@ export class MochiCrowd {
 
   dispose(): void {
     this.disposed = true;
+    const disposeMeshAndMaterials = (mesh: InstancedMesh) => {
+      this.scene.remove(mesh);
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const m of mats) m.dispose();
+      mesh.dispose();
+    };
     for (const bucket of this.speciesBuckets.values()) {
       for (const mesh of bucket.parts.values()) {
-        this.scene.remove(mesh);
-        mesh.dispose();
+        disposeMeshAndMaterials(mesh);
       }
     }
     for (const bucket of this.accessoryBuckets.values()) {
       if (bucket.mesh) {
-        this.scene.remove(bucket.mesh);
-        bucket.mesh.dispose();
+        disposeMeshAndMaterials(bucket.mesh);
       }
     }
     for (const bucket of this.humanoidBuckets.values()) {
       for (const mesh of bucket.parts) {
-        this.scene.remove(mesh);
-        mesh.dispose();
+        disposeMeshAndMaterials(mesh);
       }
     }
     this.speciesBuckets.clear();

@@ -6,7 +6,7 @@ import {
 import {
   type Database,
 } from "@low-stress/sdk/server";
-import { getRoomView, performAction } from "./service";
+import { getRoomView, performAction, setLudoCensor } from "./service";
 import type { LudoAction, LudoActor, RoomView } from "./types";
 import type { GameServerContext } from "@low-stress/sdk/server";
 
@@ -16,6 +16,16 @@ export function setupLudoSocket(
   options: AutopilotOptions = {},
   ctx?: GameServerContext,
 ) {
+  const censorFn =
+    (ctx as GameServerContext & { censorText?: (text: string) => string })
+      ?.censorText ??
+    (typeof ctx?.options?.censorText === "function"
+      ? (ctx.options.censorText as (text: string) => string)
+      : undefined);
+  if (censorFn) {
+    setLudoCensor(censorFn);
+  }
+
   const nsp = io.of("/ludo");
   const autopilot = new AutopilotManager(nsp, db, {
     ...options,
@@ -34,9 +44,8 @@ export function setupLudoSocket(
           socket.data.user = principal.user;
           return next();
         }
-        if (principal.kind === "admin" && principal.admin) {
-          socket.data.admin = principal.admin;
-          return next();
+        if (principal.kind === "admin") {
+          return next(new Error("FORBIDDEN"));
         }
         return next(new Error("UNAUTHENTICATED"));
       }

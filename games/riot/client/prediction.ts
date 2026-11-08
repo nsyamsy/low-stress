@@ -10,6 +10,8 @@ export interface PendingInput {
   input: PlayerInput;
   predictedX: number;
   predictedY: number;
+  speedMultiplier: number;
+  lockedRoomIds: readonly string[];
 }
 
 export class ClientPredictionManager {
@@ -18,11 +20,37 @@ export class ClientPredictionManager {
   private heading: number;
   private nextSeq = 1;
   private pendingInputs: PendingInput[] = [];
+  private speedMultiplier: number;
+  private lockedRoomIds: readonly string[] = [];
+  private initialized: boolean;
 
-  constructor(initialX = 0, initialY = 0) {
+  constructor(initialX = 0, initialY = 0, speedMultiplier = 1.0, initialized = true) {
     this.currentX = initialX;
     this.currentY = initialY;
     this.heading = 0;
+    this.speedMultiplier = speedMultiplier;
+    this.initialized = initialized;
+  }
+
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  setPosition(x: number, y: number, heading = this.heading): void {
+    this.currentX = x;
+    this.currentY = y;
+    this.heading = heading;
+    this.initialized = true;
+  }
+
+  setSpeedMultiplier(multiplier: number): void {
+    if (Number.isFinite(multiplier) && multiplier > 0) {
+      this.speedMultiplier = multiplier;
+    }
+  }
+
+  setLockedRooms(roomIds: readonly string[]): void {
+    this.lockedRoomIds = roomIds;
   }
 
   getPosition(): { x: number; y: number; heading: number } {
@@ -45,7 +73,8 @@ export class ClientPredictionManager {
     if (magnitude > 0.001) {
       const dirX = dx / magnitude;
       const dirY = dy / magnitude;
-      const speed = Math.min(magnitude * MAX_PLAYER_SPEED, MAX_PLAYER_SPEED);
+      const maxSpeed = MAX_PLAYER_SPEED * this.speedMultiplier;
+      const speed = Math.min(magnitude * maxSpeed, maxSpeed);
       const disp = speed * dt;
 
       const desiredX = this.currentX + dirX * disp;
@@ -55,6 +84,8 @@ export class ClientPredictionManager {
         { x: this.currentX, y: this.currentY },
         { x: desiredX, y: desiredY },
         PLAYER_RADIUS,
+        undefined,
+        this.lockedRoomIds,
       );
 
       this.currentX = resolved.x;
@@ -66,6 +97,8 @@ export class ClientPredictionManager {
       input,
       predictedX: this.currentX,
       predictedY: this.currentY,
+      speedMultiplier: this.speedMultiplier,
+      lockedRoomIds: this.lockedRoomIds,
     });
 
     return input;
@@ -75,6 +108,7 @@ export class ClientPredictionManager {
    * Reconciles authoritative server state, discarding acked inputs and replaying pending inputs.
    */
   reconcile(serverSnapshot: CompactPlayerSnapshot): void {
+    this.initialized = true;
     // Drop all acknowledged inputs
     this.pendingInputs = this.pendingInputs.filter(
       (item) => item.input.seq > serverSnapshot.lastSeq,
@@ -92,7 +126,9 @@ export class ClientPredictionManager {
       if (magnitude > 0.001) {
         const dirX = input.dx / magnitude;
         const dirY = input.dy / magnitude;
-        const speed = Math.min(magnitude * MAX_PLAYER_SPEED, MAX_PLAYER_SPEED);
+        const maxSpeed =
+          MAX_PLAYER_SPEED * (pending.speedMultiplier ?? this.speedMultiplier);
+        const speed = Math.min(magnitude * maxSpeed, maxSpeed);
         const disp = speed * input.dt;
 
         const desiredX = reconX + dirX * disp;
@@ -102,6 +138,8 @@ export class ClientPredictionManager {
           { x: reconX, y: reconY },
           { x: desiredX, y: desiredY },
           PLAYER_RADIUS,
+          undefined,
+          pending.lockedRoomIds ?? this.lockedRoomIds,
         );
 
         reconX = resolved.x;

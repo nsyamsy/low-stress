@@ -1,36 +1,29 @@
+import { eq } from "drizzle-orm";
 import type { Server, Socket } from "socket.io";
 import type { Database } from "@low-stress/db";
-import {
-  ADMIN_COOKIE_NAME,
-  getSessionUser,
-  SESSION_COOKIE_NAME,
-} from "../auth/session";
+import { users } from "@low-stress/db";
+import { resolvePrincipal } from "../auth/principal";
 import {
   getUserMute,
   isChatEnabled,
   saveChatMessage,
 } from "./service";
 
-function parseCookies(cookieHeader?: string): Record<string, string> {
-  const list: Record<string, string> = {};
-  if (!cookieHeader) return list;
-
-  cookieHeader.split(";").forEach((cookie) => {
-    const parts = cookie.split("=");
-    const key = parts.shift()?.trim();
-    if (key) {
-      list[key] = decodeURIComponent(parts.join("=").trim());
-    }
-  });
-
-  return list;
-}
+const MESSAGE_COOLDOWN_MS = 2000;
 
 export function setupPublicChatSocket(io: Server, db: Database) {
   const nsp = io.of("/public-chat");
 
   // Track user cooldown for rate limit (1 message / 2 seconds)
   const lastMessageTimes = new Map<string, number>();
+
+  function pruneLastMessageTimes(nowMs: number) {
+    for (const [uid, ts] of lastMessageTimes) {
+      if (nowMs - ts > MESSAGE_COOLDOWN_MS * 10) {
+        lastMessageTimes.delete(uid);
+      }
+    }
+  }
 
   function broadcastPresence() {
     const uniqueUsers = new Set(
@@ -44,25 +37,17 @@ export function setupPublicChatSocket(io: Server, db: Database) {
   // Middleware autentikasi soket: Hanya pemain aktif, admin & pending ditolak
   nsp.use(async (socket: Socket, next) => {
     try {
-      const cookies = parseCookies(socket.handshake.headers.cookie);
-      const sessionToken = cookies[SESSION_COOKIE_NAME];
-      const adminToken = cookies[ADMIN_COOKIE_NAME];
+      const principal = await resolvePrincipal(
+        db,
+        socket.handshake.headers.cookie,
+      );
 
-      // Jika ada admin token dan tidak ada session token pemain, admin ditolak
-      if (adminToken && !sessionToken) {
+      if (principal.kind !== "user" || principal.user.status !== "active") {
         return next(new Error("FORBIDDEN"));
       }
 
-      if (!sessionToken) {
-        return next(new Error("FORBIDDEN"));
-      }
-
-      const sessionResult = await getSessionUser(db, sessionToken);
-      if (!sessionResult || sessionResult.user.status !== "active") {
-        return next(new Error("FORBIDDEN"));
-      }
-
-      socket.data.user = sessionResult.user;
+      socket.data.user = principal.user;
+      socket.data.sessionId = principal.sessionId;
       return next();
     } catch {
       return next(new Error("FORBIDDEN"));
@@ -104,6 +89,25 @@ export function setupPublicChatSocket(io: Server, db: Database) {
             return;
           }
 
+          // 1b. Pastikan pemain masih berstatus active di database (belum di-suspend/ban saat terhubung)
+          const [freshUser] = await db
+            .select({ status: users.status })
+            .from(users)
+            .where(eq(users.id, user.id))
+            .limit(1);
+
+          if (!freshUser || freshUser.status !== "active") {
+            const errorCode =
+              freshUser?.status === "banned"
+                ? "ACCOUNT_BANNED"
+                : freshUser?.status === "suspended"
+                  ? "ACCOUNT_SUSPENDED"
+                  : "FORBIDDEN";
+            ack?.({ ok: false, code: errorCode });
+            socket.disconnect(true);
+            return;
+          }
+
           // 2. Cek apakah chat publik aktif
           const currentEnabled = await isChatEnabled(db);
           if (!currentEnabled) {
@@ -124,8 +128,9 @@ export function setupPublicChatSocket(io: Server, db: Database) {
 
           // 4. Rate limit: 1 pesan / 2 detik per pemain
           const now = Date.now();
+          pruneLastMessageTimes(now);
           const lastTime = lastMessageTimes.get(user.id) ?? 0;
-          if (now - lastTime < 2000) {
+          if (now - lastTime < MESSAGE_COOLDOWN_MS) {
             ack?.({ ok: false, code: "RATE_LIMITED" });
             return;
           }

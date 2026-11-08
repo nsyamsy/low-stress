@@ -1,4 +1,4 @@
-import { computeExpirationCutoff } from "@low-stress/sdk";
+import { censorProfanity, computeExpirationCutoff } from "@low-stress/sdk";
 import {
   type HologramMarker,
   canReportHologram,
@@ -111,6 +111,50 @@ export interface RiotRoom {
 
 export class RiotGameService {
   private rooms = new Map<string, RiotRoom>();
+  private censorFn: (text: string) => string = censorProfanity;
+
+  constructor(options?: { censorText?: (text: string) => string }) {
+    if (options?.censorText) {
+      this.censorFn = options.censorText;
+    }
+  }
+
+  setCensorFn(fn: (text: string) => string): void {
+    this.censorFn = fn;
+  }
+
+  private resolveRoom(roomId: string): RiotRoom | undefined {
+    const exact = this.rooms.get(roomId);
+    if (exact) return exact;
+    const trimmed = roomId.trim();
+    const byTrimmed = this.rooms.get(trimmed);
+    if (byTrimmed) return byTrimmed;
+    if (trimmed.length >= 6) {
+      const code = trimmed.slice(-6).toUpperCase();
+      for (const room of this.rooms.values()) {
+        if (room.id.slice(-6).toUpperCase() === code) {
+          return room;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  private transferHostIfNeeded(room: RiotRoom, departingId: string): boolean {
+    if (room.hostId !== departingId) return false;
+    const nextConnected = Array.from(room.players.values()).find(
+      (p) => p.id !== departingId && p.connected && !p.isAbandoned,
+    );
+    const nextAny = Array.from(room.players.values()).find(
+      (p) => p.id !== departingId,
+    );
+    const nextHost = nextConnected ?? nextAny;
+    if (nextHost) {
+      room.hostId = nextHost.id;
+      return true;
+    }
+    return false;
+  }
 
   createRoom(
     hostId: string,
@@ -119,9 +163,11 @@ export class RiotGameService {
     options: Partial<RiotHostOptions> = {},
     character?: RiotCharacterCustomization,
   ): RiotRoom {
-    const sim = new AuthoritativeSimulation();
-    const players = new Map<string, RiotPlayer>();
     const sanitizedOptions = sanitizeHostOptions(options);
+    const sim = new AuthoritativeSimulation({
+      speedMultiplier: sanitizedOptions.playerSpeed,
+    });
+    const players = new Map<string, RiotPlayer>();
 
     const hostPlayer: RiotPlayer = {
       id: hostId,
@@ -188,6 +234,7 @@ export class RiotGameService {
     if (room.phase !== "lobby") return { success: false, reason: "CANNOT_CHANGE_OPTIONS_IN_GAME" };
 
     room.options = sanitizeHostOptions({ ...room.options, ...options });
+    room.simulation.setSpeedMultiplier(room.options.playerSpeed);
     room.updatedAt = Date.now();
     return { success: true };
   }
@@ -217,7 +264,7 @@ export class RiotGameService {
     playerName: string,
     character?: RiotCharacterCustomization,
   ): { success: boolean; room?: RiotRoom; reason?: string } {
-    const room = this.rooms.get(roomId);
+    const room = this.resolveRoom(roomId);
     if (!room) {
       return { success: false, reason: "ROOM_NOT_FOUND" };
     }
@@ -273,9 +320,16 @@ export class RiotGameService {
     room.simulation.removePlayer(playerId);
     room.updatedAt = Date.now();
 
-    if (room.players.size === 0 || room.hostId === playerId) {
+    if (room.players.size === 0) {
       this.rooms.delete(roomId);
       return { success: true, roomClosed: true };
+    }
+
+    if (room.hostId === playerId) {
+      if (!this.transferHostIfNeeded(room, playerId)) {
+        this.rooms.delete(roomId);
+        return { success: true, roomClosed: true };
+      }
     }
 
     return { success: true, roomClosed: false };
@@ -305,7 +359,9 @@ export class RiotGameService {
     }
 
     room.phase = "lobby";
-    room.simulation = new AuthoritativeSimulation();
+    room.simulation = new AuthoritativeSimulation({
+      speedMultiplier: room.options.playerSpeed,
+    });
     for (const id of room.players.keys()) room.simulation.addPlayer(id);
     room.hologramMarkers = [];
     room.tasksTotal = 0;
@@ -367,6 +423,8 @@ export class RiotGameService {
       }
     }
 
+    room.simulation.setSpeedMultiplier(room.options.playerSpeed);
+    room.simulation.setActiveSabotage(null);
     room.phase = "playing";
     room.roundStartedAt = Date.now();
     room.tasksTotal = totalCrewTasks;
@@ -392,7 +450,10 @@ export class RiotGameService {
     if (!room || room.phase !== "playing") return { accepted: false };
     const player = room.players.get(playerId);
     if (!player || !player.connected || player.isAbandoned) return { accepted: false };
-    return room.simulation.processInput(playerId, input, serverTime);
+    return room.simulation.processInput(playerId, input, serverTime, {
+      speedMultiplier: room.options.playerSpeed,
+      activeSabotage: room.activeSabotage,
+    });
   }
 
   completeTask(roomId: string, playerId: string, proof: TaskCompletionProof): {
@@ -530,6 +591,7 @@ export class RiotGameService {
     // Clear non-critical sabotage during meeting
     if (room.activeSabotage && room.activeSabotage.kind !== "critical_alarm") {
       room.activeSabotage = null;
+      room.simulation.setActiveSabotage(null);
     }
 
     for (const player of room.players.values()) {
@@ -541,7 +603,13 @@ export class RiotGameService {
 
   // --- RT-30: Rapat Chat & Voting ---
 
-  sendChatMessage(roomId: string, senderId: string, text: string, serverTime = Date.now()): {
+  sendChatMessage(
+    roomId: string,
+    senderId: string,
+    text: string,
+    serverTime = Date.now(),
+    censorFn?: (text: string) => string,
+  ): {
     success: boolean;
     reason?: string;
     message?: MeetingChatMessage;
@@ -563,6 +631,7 @@ export class RiotGameService {
       text,
       sender.lastChatSentAt,
       serverTime,
+      censorFn ?? this.censorFn,
     );
 
     if (!res.valid || !res.message) {
@@ -578,6 +647,16 @@ export class RiotGameService {
       message: res.message,
       audience: sender.status === "ghost" ? "ghosts_only" : "all",
     };
+  }
+
+  sendMeetingChat(
+    roomId: string,
+    senderId: string,
+    text: string,
+    serverTime = Date.now(),
+    censorFn?: (text: string) => string,
+  ) {
+    return this.sendChatMessage(roomId, senderId, text, serverTime, censorFn);
   }
 
   advanceMeetingToVoting(roomId: string): { success: boolean; reason?: string } {
@@ -723,6 +802,7 @@ export class RiotGameService {
     };
 
     room.activeSabotage = sabotage;
+    room.simulation.setActiveSabotage(sabotage);
     room.lastSabotageAt = serverTime;
     room.updatedAt = serverTime;
 
@@ -749,6 +829,7 @@ export class RiotGameService {
 
     if (sabotage.kind === "blackout") {
       sabotage.resolved = true;
+      room.simulation.setActiveSabotage(sabotage);
       room.updatedAt = serverTime;
       return { success: true, resolved: true };
     }
@@ -758,6 +839,7 @@ export class RiotGameService {
       // Both cooling and power stations must be activated
       if (sabotage.activatedSwitches.size >= 2) {
         sabotage.resolved = true;
+        room.simulation.setActiveSabotage(sabotage);
         room.updatedAt = serverTime;
         return { success: true, resolved: true };
       }
@@ -780,6 +862,10 @@ export class RiotGameService {
     player.disconnectedAt = serverTime;
     room.updatedAt = serverTime;
 
+    if (room.phase === "finished") {
+      this.transferHostIfNeeded(room, playerId);
+    }
+
     // If currently voting, check if all remaining connected players have voted
     if (room.phase === "voting") {
       const activeVoters = Array.from(room.players.values()).filter(
@@ -792,7 +878,7 @@ export class RiotGameService {
   }
 
   reconnectPlayer(roomId: string, playerId: string): { success: boolean; view?: RiotClientRoomView | null } {
-    const room = this.rooms.get(roomId);
+    const room = this.resolveRoom(roomId);
     if (!room) return { success: false };
 
     const player = room.players.get(playerId);
@@ -803,7 +889,7 @@ export class RiotGameService {
     player.isAbandoned = false;
     room.updatedAt = Date.now();
 
-    const view = this.getClientRoomView(roomId, playerId);
+    const view = this.getClientRoomView(room.id, playerId);
     return { success: true, view };
   }
 
@@ -821,12 +907,81 @@ export class RiotGameService {
     room.votes.delete(targetId);
 
     // Re-evaluate win condition if in game
-    if (room.phase === "playing" || room.phase === "voting") {
+    if (room.phase === "playing" || room.phase === "voting" || room.phase === "meeting") {
       this.checkAndApplyWinCondition(room);
     }
 
     room.updatedAt = Date.now();
     return { success: true };
+  }
+
+  adminResetRoom(roomId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    for (const player of room.players.values()) {
+      player.role = "crew";
+      player.status = "alive";
+      player.tasksCompleted = 0;
+      player.completedTasks = [];
+      player.correctVotes = 0;
+      player.assignedTasks = [];
+      player.votedFor = null;
+      player.isAbandoned = false;
+      player.emergencyMeetingsRemaining = room.options.emergencyMeetingsPerPlayer;
+      player.lastActionAt = 0;
+    }
+
+    room.phase = "lobby";
+    room.simulation = new AuthoritativeSimulation({
+      speedMultiplier: room.options.playerSpeed,
+    });
+    for (const id of room.players.keys()) room.simulation.addPlayer(id);
+    room.hologramMarkers = [];
+    room.tasksTotal = 0;
+    room.tasksCompleted = 0;
+    room.activeSabotage = null;
+    room.lastSabotageAt = 0;
+    room.chatMessages = [];
+    room.meetingReason = null;
+    room.phaseStartedAt = Date.now();
+    room.votes.clear();
+    room.votingResult = null;
+    room.winner = null;
+    room.winReason = null;
+    room.scores = null;
+    room.updatedAt = Date.now();
+    room.roundStartedAt = 0;
+    return true;
+  }
+
+  adminKickPlayer(roomId: string, userId: string): { removed: boolean; roomClosed: boolean } {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.players.has(userId)) {
+      return { removed: false, roomClosed: false };
+    }
+
+    room.players.delete(userId);
+    room.simulation.removePlayer(userId);
+    room.votes.delete(userId);
+
+    if (room.players.size === 0) {
+      this.rooms.delete(roomId);
+      return { removed: true, roomClosed: true };
+    }
+
+    this.transferHostIfNeeded(room, userId);
+
+    if (room.phase === "playing" || room.phase === "voting" || room.phase === "meeting") {
+      this.checkAndApplyWinCondition(room);
+    }
+
+    room.updatedAt = Date.now();
+    return { removed: true, roomClosed: false };
+  }
+
+  adminDeleteRoom(roomId: string): boolean {
+    return this.rooms.delete(roomId);
   }
 
   /**
@@ -864,6 +1019,7 @@ export class RiotGameService {
       serverTime - room.activeSabotage.startedAt >= room.activeSabotage.durationMs
     ) {
       room.activeSabotage.resolved = true;
+      room.simulation.setActiveSabotage(room.activeSabotage);
       room.updatedAt = serverTime;
     }
 
@@ -886,20 +1042,23 @@ export class RiotGameService {
     }
 
     // 5. Handle abandoned players (disconnected > 60s)
+    let winResult: WinConditionResult | null | undefined;
     for (const player of room.players.values()) {
       if (!player.connected && !player.isAbandoned && player.disconnectedAt) {
         if (serverTime - player.disconnectedAt >= DISCONNECT_GRACE_PERIOD_MS) {
           player.isAbandoned = true;
-          if (room.phase === "playing" || room.phase === "voting") {
+          this.transferHostIfNeeded(room, player.id);
+          if (room.phase === "playing" || room.phase === "voting" || room.phase === "meeting") {
             // Count abandoned player as eliminated so alive count doesn't stall game
             player.status = "ghost";
-            this.checkAndApplyWinCondition(room);
+            const win = this.checkAndApplyWinCondition(room);
+            if (win) winResult = win;
           }
         }
       }
     }
 
-    return {};
+    return winResult ? { winResult } : {};
   }
 
   private checkAndApplyWinCondition(room: RiotRoom): WinConditionResult | null {

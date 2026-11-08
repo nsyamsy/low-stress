@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Chip, Modal, SegmentedControl } from "@low-stress/ui";
 import {
   deleteAdminRunApi,
@@ -7,16 +8,43 @@ import {
   resetAdminLeaderboardApi,
   type AdminGameRunItem,
 } from "../../features/admin/api";
+import { fetchAdminGamesApi } from "../../features/games/api";
+import type { AdminGameItem } from "../../features/games/types";
+import { registeredGames } from "../../games/registry";
+import type { ApiError } from "../../lib/apiFetch";
 
-const GAME_OPTIONS = [
-  { value: "flappy-bird", label: "Flappy Bird" },
-  { value: "memory-match", label: "Memory Match" },
-  { value: "ludo", label: "Ludo" },
-];
+function getErrorText(err: unknown, fallback: string): string {
+  const apiError = (err as { apiError?: ApiError })?.apiError;
+  if (apiError?.code) {
+    return translateErrorCode(apiError.code, apiError.params);
+  }
+  return fallback;
+}
 
 export function AdminLeaderboardPage() {
   const { t, i18n } = useTranslation();
-  const [selectedGame, setSelectedGame] = useState("flappy-bird");
+  const currentLang = i18n.language.startsWith("en") ? "en" : "id";
+
+  const [adminGames, setAdminGames] = useState<AdminGameItem[]>([]);
+  const gameOptions = useMemo(() => {
+    if (adminGames.length > 0) {
+      return adminGames.map((g) => ({
+        value: g.id,
+        label:
+          g.manifest?.title[currentLang] ??
+          g.manifest?.title.id ??
+          g.id,
+      }));
+    }
+    return registeredGames.map((g) => ({
+      value: g.id,
+      label: g.title[currentLang] ?? g.title.id ?? g.id,
+    }));
+  }, [adminGames, currentLang]);
+
+  const [selectedGame, setSelectedGame] = useState(
+    () => registeredGames[0]?.id ?? "flappy-bird",
+  );
   const [filterFlaggedOnly, setFilterFlaggedOnly] = useState(false);
   const [runs, setRuns] = useState<AdminGameRunItem[]>([]);
   const [page, setPage] = useState(1);
@@ -27,6 +55,25 @@ export function AdminLeaderboardPage() {
   // Modal State
   const [deleteRunId, setDeleteRunId] = useState<string | null>(null);
   const [resetPeriod, setResetPeriod] = useState<"week" | "month" | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchAdminGamesApi()
+      .then((res) => {
+        if (!mounted) return;
+        setAdminGames(res.items);
+        if (
+          res.items.length > 0 &&
+          !res.items.some((g) => g.id === selectedGame)
+        ) {
+          setSelectedGame(res.items[0]!.id);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [selectedGame]);
 
   const loadRuns = async () => {
     setLoading(true);
@@ -41,7 +88,7 @@ export function AdminLeaderboardPage() {
       setRuns(res.items);
       setTotalPages(Math.max(1, Math.ceil(res.total / res.pageSize)));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal memuat catatan run");
+      setError(getErrorText(err, t("state.error")));
     } finally {
       setLoading(false);
     }
@@ -59,11 +106,12 @@ export function AdminLeaderboardPage() {
         if (mounted) {
           setRuns(res.items);
           setTotalPages(Math.max(1, Math.ceil(res.total / res.pageSize)));
+          setError(null);
         }
       })
       .catch((err: unknown) => {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Gagal memuat catatan run");
+          setError(getErrorText(err, t("state.error")));
         }
       })
       .finally(() => {
@@ -73,7 +121,7 @@ export function AdminLeaderboardPage() {
     return () => {
       mounted = false;
     };
-  }, [selectedGame, filterFlaggedOnly, page]);
+  }, [selectedGame, filterFlaggedOnly, page, t]);
 
   const handleDeleteRun = async () => {
     if (!deleteRunId) return;
@@ -82,7 +130,7 @@ export function AdminLeaderboardPage() {
       setDeleteRunId(null);
       await loadRuns();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus run");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
@@ -93,16 +141,19 @@ export function AdminLeaderboardPage() {
       setResetPeriod(null);
       await loadRuns();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal mereset leaderboard");
+      setError(getErrorText(err, t("state.error")));
     }
   };
 
-  const formatDate = (isoString: string) => {
+  const formatDate = (isoString?: string) => {
+    if (!isoString) return "—";
     try {
+      const date = new Date(isoString);
+      if (Number.isNaN(date.getTime())) return isoString;
       return new Intl.DateTimeFormat(i18n.language === "id" ? "id-ID" : "en-US", {
         dateStyle: "medium",
         timeStyle: "short",
-      }).format(new Date(isoString));
+      }).format(date);
     } catch {
       return isoString;
     }
@@ -115,6 +166,14 @@ export function AdminLeaderboardPage() {
     const remSec = sec % 60;
     return `${min}m ${remSec}s`;
   };
+
+  const resolvePlayerName = (r: AdminGameRunItem) =>
+    r.displayName ?? r.user?.displayName ?? r.username ?? r.user?.username ?? "—";
+
+  const resolvePlayerUsername = (r: AdminGameRunItem) =>
+    r.username ?? r.user?.username ?? null;
+
+  const resolvePlayedAt = (r: AdminGameRunItem) => r.playedAt ?? r.createdAt;
 
   return (
     <div className="ls-admin-page">
@@ -140,8 +199,8 @@ export function AdminLeaderboardPage() {
         }}
       >
         <SegmentedControl
-          label=""
-          options={GAME_OPTIONS}
+          label={t("admin.leaderboard.selectGame")}
+          options={gameOptions}
           value={selectedGame}
           onChange={(val) => {
             setSelectedGame(val);
@@ -186,52 +245,97 @@ export function AdminLeaderboardPage() {
               {t("admin.leaderboard.emptyRuns")}
             </p>
           ) : (
-            <div className="ls-admin-table-container">
-              <table className="ls-admin-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("admin.leaderboard.colTime")}</th>
-                    <th scope="col">{t("admin.leaderboard.colPlayer")}</th>
-                    <th scope="col">{t("admin.leaderboard.colScore")}</th>
-                    <th scope="col">{t("admin.leaderboard.colDuration")}</th>
-                    <th scope="col">{t("admin.leaderboard.colFlagged")}</th>
-                    <th scope="col" style={{ textAlign: "right" }}>{t("admin.leaderboard.colActions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ whiteSpace: "nowrap", fontSize: "var(--font-caption)" }}>
-                        {formatDate(r.playedAt)}
-                      </td>
-                      <td>
-                        <strong>{r.displayName}</strong>
-                        <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
-                          @{r.username}
+            <>
+              <div className="ls-admin-table-container">
+                <table className="ls-admin-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("admin.leaderboard.colTime")}</th>
+                      <th scope="col">{t("admin.leaderboard.colPlayer")}</th>
+                      <th scope="col">{t("admin.leaderboard.colScore")}</th>
+                      <th scope="col">{t("admin.leaderboard.colDuration")}</th>
+                      <th scope="col">{t("admin.leaderboard.colFlagged")}</th>
+                      <th scope="col" style={{ textAlign: "right" }}>{t("admin.leaderboard.colActions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {runs.map((r) => {
+                      const uname = resolvePlayerUsername(r);
+                      return (
+                        <tr key={r.id}>
+                          <td style={{ whiteSpace: "nowrap", fontSize: "var(--font-caption)" }}>
+                            {formatDate(resolvePlayedAt(r))}
+                          </td>
+                          <td>
+                            <strong>{resolvePlayerName(r)}</strong>
+                            {uname && (
+                              <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                                @{uname}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <strong style={{ fontSize: "var(--font-body)" }}>{r.score.toLocaleString()}</strong>
+                          </td>
+                          <td>{formatDuration(r.durationMs)}</td>
+                          <td>
+                            <Chip tone={r.flagged ? "danger" : "success"}>
+                              {r.flagged ? t("admin.leaderboard.flagged") : t("admin.leaderboard.normal")}
+                            </Chip>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <Button
+                              variant="danger"
+                              onClick={() => setDeleteRunId(r.id)}
+                            >
+                              {t("admin.leaderboard.deleteRun")}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="ls-admin-card-list">
+                {runs.map((r) => {
+                  const uname = resolvePlayerUsername(r);
+                  return (
+                    <div key={r.id} className="ls-admin-mobile-card">
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <strong>{resolvePlayerName(r)}</strong>
+                          {uname && (
+                            <span style={{ marginLeft: "var(--space-1)", fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
+                              (@{uname})
+                            </span>
+                          )}
                         </div>
-                      </td>
-                      <td>
-                        <strong style={{ fontSize: "var(--font-body)" }}>{r.score.toLocaleString()}</strong>
-                      </td>
-                      <td>{formatDuration(r.durationMs)}</td>
-                      <td>
                         <Chip tone={r.flagged ? "danger" : "success"}>
                           {r.flagged ? t("admin.leaderboard.flagged") : t("admin.leaderboard.normal")}
                         </Chip>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
+                      </div>
+                      <div style={{ fontSize: "var(--font-small)", color: "var(--text-secondary)" }}>
+                        {t("admin.leaderboard.colScore")}: <strong>{r.score.toLocaleString()}</strong> • {formatDuration(r.durationMs)}
+                      </div>
+                      <div style={{ fontSize: "var(--font-caption)", color: "var(--text-muted)" }}>
+                        {formatDate(resolvePlayedAt(r))}
+                      </div>
+                      <div style={{ marginTop: "var(--space-2)" }}>
                         <Button
                           variant="danger"
                           onClick={() => setDeleteRunId(r.id)}
                         >
                           {t("admin.leaderboard.deleteRun")}
                         </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
 
           {totalPages > 1 && (

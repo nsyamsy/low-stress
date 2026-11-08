@@ -6,12 +6,65 @@ import {
   MIN_PLAYERS_TO_START,
   type RiotHostOptions,
 } from "../shared/lobby";
-import type { RiotCharacterCustomization } from "../shared/character";
-import { CHARACTER_ACCESSORIES } from "../shared/character";
+import {
+  CHARACTER_ACCESSORIES,
+  HUMANOID_PALETTES,
+  mochiAccentColor,
+  mochiBodyColor,
+  sanitizeCharacterCustomization,
+  type RiotCharacterCustomization,
+} from "../shared/character";
 import type { RiotClientRoomView } from "../shared/protocol";
-import { AvatarPreview } from "./AvatarPreview";
 import { CharacterPicker, type TranslateFn } from "./CharacterPicker";
 import { emitAck } from "./net";
+
+function hexColor(num: number): string {
+  return `#${(num & 0xffffff).toString(16).padStart(6, "0")}`;
+}
+
+function AvatarBadge({ raw, size = 36 }: { raw: unknown; size?: number }) {
+  const custom = sanitizeCharacterCustomization(raw);
+  const primary =
+    custom.type === "mochi"
+      ? hexColor(mochiBodyColor(custom))
+      : hexColor(HUMANOID_PALETTES[custom.paletteIndex % HUMANOID_PALETTES.length] ?? 0xffffff);
+  const accent =
+    custom.type === "mochi"
+      ? hexColor(mochiAccentColor(custom))
+      : hexColor(0x38bdf8);
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 36 36"
+      role="img"
+      aria-hidden="true"
+      className="shrink-0 rounded-full border border-border"
+    >
+      <circle cx="18" cy="18" r="17" fill={accent} fillOpacity="0.22" />
+      {custom.type === "mochi" ? (
+        <>
+          <circle cx="12" cy="10" r="3.5" fill={accent} />
+          <circle cx="24" cy="10" r="3.5" fill={accent} />
+          <circle cx="18" cy="20" r="10" fill={primary} stroke={accent} strokeWidth="2" />
+          <circle cx="14.5" cy="18.5" r="1.5" fill="currentColor" />
+          <circle cx="21.5" cy="18.5" r="1.5" fill="currentColor" />
+        </>
+      ) : (
+        <>
+          <circle cx="18" cy="13" r="5.5" fill={primary} stroke={accent} strokeWidth="1.5" />
+          <path
+            d="M9 30c0-5 4-8 9-8s9 3 9 8"
+            fill={primary}
+            stroke={accent}
+            strokeWidth="1.5"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
 
 interface LobbyProps {
   socket: Socket | null;
@@ -171,7 +224,7 @@ export function Lobby({
               return (
                 <li key={p.id} className="ls-row items-center gap-2">
                   {p.character ? (
-                    <AvatarPreview custom={p.character as RiotCharacterCustomization} size={40} />
+                    <AvatarBadge raw={p.character} size={36} />
                   ) : null}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">

@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { Server as SocketIOServer } from "socket.io";
 import { z } from "zod";
 import type { Database } from "@low-stress/sdk/server";
 import { AppError } from "./errors";
@@ -7,6 +8,7 @@ import {
   deleteRoom,
   getRoomView,
   listRooms,
+  respondToInvite,
   searchInvitableUsers,
 } from "./service";
 import type { LudoActor } from "./types";
@@ -15,6 +17,10 @@ const createRoomSchema = z.object({
   name: z.string().trim().min(1).max(60),
   maxPlayers: z.number().int().min(2).max(12).optional(),
   play: z.boolean().optional(),
+});
+
+const respondRoomSchema = z.object({
+  accept: z.boolean(),
 });
 
 function getActor(request: FastifyRequest): LudoActor {
@@ -34,7 +40,7 @@ function getActor(request: FastifyRequest): LudoActor {
 
 export function registerLudoRoutes(
   app: FastifyInstance,
-  options: { db: Database },
+  options: { db: Database; io?: SocketIOServer },
 ) {
   const { db } = options;
 
@@ -58,6 +64,43 @@ export function registerLudoRoutes(
     );
     return reply.status(201).send({ id });
   });
+
+  // POST /api/games/ludo/rooms/:id/respond
+  app.post(
+    "/api/games/ludo/rooms/:id/respond",
+    async (request: FastifyRequest<{ Params: { id: string } }>) => {
+      const actor = getActor(request);
+      const roomId = request.params.id;
+      const body = respondRoomSchema.parse(request.body ?? {});
+      const accept = Boolean(body.accept);
+      const result = await respondToInvite(db, roomId, actor, accept);
+
+      const io =
+        options.io ??
+        (app as FastifyInstance & { io?: SocketIOServer }).io;
+      if (accept && io && typeof io.of === "function") {
+        const nsp = io.of("/ludo");
+        const socketsInRoom = await nsp.in(`ludo:${roomId}`).fetchSockets();
+        for (const s of socketsInRoom) {
+          const socketUser = s.data.user;
+          if (!socketUser) continue;
+          const targetActor: LudoActor = {
+            userId: socketUser.id,
+            username: socketUser.username,
+            displayName: socketUser.displayName,
+          };
+          try {
+            const personalView = await getRoomView(db, roomId, targetActor);
+            s.emit("room:state", personalView);
+          } catch {
+            // Abaikan jika bukan anggota lagi
+          }
+        }
+      }
+
+      return result.view;
+    },
+  );
 
   // GET /api/games/ludo/rooms/:id
   app.get(

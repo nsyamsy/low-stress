@@ -116,5 +116,22 @@
     "pass": "{{name}} tidak bisa melangkah",
     "skip": "Giliran {{name}} dilewati",
     "doubles3": "Tiga dadu kembar! Giliran {{name}} hangus"
-  }
+  },
+  "status": {
+    "lobby": "Lobi",
+    "playing": "Berlangsung",
+    "finished": "Selesai"
+  },
+  "roomSettings": "Pengaturan Ruangan",
+  "pawnCountOption": "{{count}} pion",
+  "searchUsersPh": "Cari nama atau username...",
+  "errorLoadRooms": "Gagal memuat ruangan",
+  "errorRespond": "Gagal merespons undangan",
+  "errorCreateRoom": "Gagal membuat ruangan",
+  "errorJoinRoom": "Gagal bergabung ke ruangan",
+  "muteSound": "Bisukan suara",
+  "unmuteSound": "Bunyikan suara",
+  "close": "Tutup",
+  "boardAriaLabel": "Ludo board",
+  "pawnAriaLabel": "Pion {{index}}"
 }

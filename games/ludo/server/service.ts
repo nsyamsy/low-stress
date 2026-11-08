@@ -6,6 +6,7 @@ import {
   ludoRooms,
   ludoPlayers,
   ludoMessages,
+  bannedWords,
   settings,
   eq,
   and,
@@ -14,7 +15,30 @@ import {
   inArray,
 } from "@low-stress/sdk/server";
 import { censorProfanity } from "@low-stress/sdk";
-const censorServerText = (t: string) => censorProfanity(t);
+
+let customCensorText: ((text: string) => string) | undefined;
+let extraBannedWords: string[] = [];
+
+export function setLudoCensor(fn?: (text: string) => string): void {
+  customCensorText = fn;
+}
+
+export const setCensorText = setLudoCensor;
+
+async function syncBannedWords(db: Database): Promise<void> {
+  if (customCensorText) return;
+  try {
+    const rows = await db.select({ word: bannedWords.word }).from(bannedWords);
+    extraBannedWords = rows.map((r) => r.word);
+  } catch {
+    // Abaikan bila tabel belum siap pada unit test mock
+  }
+}
+
+const censorServerText = (t: string) =>
+  customCensorText
+    ? customCensorText(t)
+    : censorProfanity(t, { extraWords: extraBannedWords });
 import { AppError } from "./errors";
 import {
   autoMove,
@@ -68,6 +92,7 @@ export async function listRooms(
   db: Database,
   actor: LudoActor,
 ): Promise<RoomSummary[]> {
+  await syncBannedWords(db);
   const isPrivileged = !!actor.isAdmin;
 
   const rows = await db
@@ -165,6 +190,7 @@ export async function searchInvitableUsers(
   q: string,
   excludeUserIds: string[] = [],
 ): Promise<{ id: string; username: string; displayName: string }[]> {
+  await syncBannedWords(db);
   const query = q.trim();
   const baseQuery = db
     .select({
@@ -302,6 +328,7 @@ export async function buildView(
   room: RoomQueryResult,
   actor: LudoActor,
 ): Promise<RoomView> {
+  await syncBannedWords(db);
   const players = await loadPlayers(db, room.id);
   const mine = players.find((p) => p.userId === actor.userId);
   const isHost = room.hostId === actor.userId;
@@ -444,6 +471,7 @@ export async function performAction(
   actor: LudoActor,
   action: LudoAction,
 ): Promise<ActionResult> {
+  await syncBannedWords(db);
   return db.transaction(async (tx) => {
     const room = await loadRoom(tx, roomId, true);
     const isHost = room.hostId === actor.userId;
@@ -882,5 +910,21 @@ export async function performAction(
     const view = await buildView(tx, updatedRoom, actor);
 
     return { view, event, chatMessage };
+  });
+}
+
+export async function respondToInvite(
+  db: Database,
+  roomId: string,
+  actorOrUserId: LudoActor | string,
+  accept: boolean,
+): Promise<ActionResult> {
+  const actor: LudoActor =
+    typeof actorOrUserId === "string"
+      ? { userId: actorOrUserId, username: "", displayName: "" }
+      : actorOrUserId;
+  return performAction(db, roomId, actor, {
+    action: "respond",
+    accept: Boolean(accept),
   });
 }

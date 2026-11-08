@@ -6,6 +6,7 @@ import {
   auditLog,
   bannedWords,
   chatMessages,
+  chatMutes,
   gameRuns,
   gameScores,
   ludoMessages,
@@ -18,6 +19,7 @@ import {
   settings,
   users,
 } from "@low-stress/db";
+import { censorServerText } from "../chat/profanity-service";
 import { AppError } from "../errors";
 import type { Env } from "../env";
 import { smtpConfigured } from "../env";
@@ -33,7 +35,7 @@ import {
   deleteAllUserSessions,
   deleteSession,
 } from "../auth/session";
-import type { LoadedGame } from "../registry/games";
+import { resolveGameServerModule, type LoadedGame } from "../registry/games";
 import { getLeaderboardBounds, recomputeGameScore } from "../games/scores";
 import type { AdminRunsQueryInput } from "./validation";
 
@@ -411,7 +413,8 @@ export async function deleteUserByAdmin(
     await tx.delete(gameScores).where(eq(gameScores.userId, userId));
     await tx.delete(gameRuns).where(eq(gameRuns.userId, userId));
 
-    // 2. Putuskan relasi chat publik
+    // 2. Hapus chat_mutes dan putuskan relasi chat publik
+    await tx.delete(chatMutes).where(eq(chatMutes.userId, userId));
     await tx
       .update(chatMessages)
       .set({ userId: null })
@@ -426,15 +429,14 @@ export async function deleteUserByAdmin(
 
     // 4. Hook onUserDeleted
     for (const loaded of games) {
-      if (loaded.manifest.server) {
-        try {
-          const serverMod = await loaded.manifest.server();
-          if (serverMod.onUserDeleted) {
-            await serverMod.onUserDeleted({ userId, db: tx });
-          }
-        } catch {
-          // Abaikan kegagalan hook game agar proses hapus akun tidak terhenti
+      try {
+        const serverMod =
+          loaded.serverModule ?? (await resolveGameServerModule(loaded));
+        if (serverMod?.onUserDeleted) {
+          await serverMod.onUserDeleted({ userId, db: tx, logger: console });
         }
+      } catch {
+        // Abaikan kegagalan hook game agar proses hapus akun tidak terhenti
       }
     }
 
@@ -657,8 +659,13 @@ export async function getAdminDashboard(db: Database): Promise<{
   }>;
 }> {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const wibNowMs = now.getTime() + WIB_OFFSET_MS;
+  const startOfToday = new Date(
+    Math.floor(wibNowMs / DAY_MS) * DAY_MS - WIB_OFFSET_MS,
+  );
+  const sevenDaysAgo = new Date(now.getTime() - 7 * DAY_MS);
 
   // 1. Pemain aktif hari ini (lastLoginAt >= startOfToday)
   const activeResult = await db
@@ -753,6 +760,10 @@ export async function listGameRuns(
     durationMs: number;
     flagged: boolean;
     createdAt: string;
+    playedAt: string;
+    userId: string;
+    username: string;
+    displayName: string;
     user: {
       id: string;
       username: string;
@@ -803,19 +814,27 @@ export async function listGameRuns(
     .offset(offset);
 
   return {
-    items: rows.map((r) => ({
-      id: r.id,
-      gameId: r.gameId,
-      score: r.score,
-      durationMs: r.durationMs,
-      flagged: r.flagged,
-      createdAt: r.createdAt.toISOString(),
-      user: {
-        id: r.userId,
+    items: rows.map((r) => {
+      const isoCreatedAt = r.createdAt.toISOString();
+      const censoredDisplayName = censorServerText(r.displayName);
+      return {
+        id: r.id,
+        gameId: r.gameId,
+        score: r.score,
+        durationMs: r.durationMs,
+        flagged: r.flagged,
+        createdAt: isoCreatedAt,
+        playedAt: isoCreatedAt,
+        userId: r.userId,
         username: r.username,
-        displayName: r.displayName,
-      },
-    })),
+        displayName: censoredDisplayName,
+        user: {
+          id: r.userId,
+          username: r.username,
+          displayName: censoredDisplayName,
+        },
+      };
+    }),
     page: query.page,
     pageSize: query.pageSize,
     total,
@@ -830,6 +849,7 @@ export async function deleteGameRun(
   db: Database,
   adminId: string,
   runId: string,
+  games: readonly LoadedGame[] = [],
 ): Promise<void> {
   const [run] = await db
     .select()
@@ -844,7 +864,10 @@ export async function deleteGameRun(
   await db.delete(gameRuns).where(eq(gameRuns.id, runId));
 
   // Hitung ulang game_scores pemain
-  await recomputeGameScore(db, run.userId, run.gameId);
+  const direction =
+    games.find((g) => g.manifest.id === run.gameId)?.manifest.scoring?.direction ??
+    "higher";
+  await recomputeGameScore(db, run.userId, run.gameId, direction);
 
   await recordAuditLog(db, {
     adminId,
@@ -870,6 +893,7 @@ export async function resetLeaderboard(
   adminId: string,
   gameId: string,
   period: "week" | "month",
+  games: readonly LoadedGame[] = [],
 ): Promise<{ deletedCount: number }> {
   const bounds = await getLeaderboardBounds(db, period);
   const start = new Date(bounds.periodStart);
@@ -900,9 +924,12 @@ export async function resetLeaderboard(
         ),
       );
 
+    const direction =
+      games.find((g) => g.manifest.id === gameId)?.manifest.scoring?.direction ??
+      "higher";
     const affectedUserIds = [...new Set(runsToDelete.map((r) => r.userId))];
     for (const uid of affectedUserIds) {
-      await recomputeGameScore(db, uid, gameId);
+      await recomputeGameScore(db, uid, gameId, direction);
     }
   }
 
@@ -1284,7 +1311,12 @@ export async function getAdminRiotRoomDetail(db: Database, roomId: string) {
 /**
  * Moderasi Riot (RT-51): Reset room ke lobby.
  */
-export async function adminResetRiotRoom(db: Database, adminId: string, roomId: string) {
+export async function adminResetRiotRoom(
+  db: Database,
+  adminId: string,
+  roomId: string,
+  games: readonly LoadedGame[] = [],
+) {
   const [room] = await db
     .select({ id: riotRooms.id, name: riotRooms.name })
     .from(riotRooms)
@@ -1303,6 +1335,17 @@ export async function adminResetRiotRoom(db: Database, adminId: string, roomId: 
       lastActivityAt: sql`CURRENT_TIMESTAMP`,
     })
     .where(eq(riotRooms.id, roomId));
+
+  const riotGame = games.find((g) => g.manifest.id === "riot");
+  if (riotGame) {
+    try {
+      const serverMod =
+        riotGame.serverModule ?? (await resolveGameServerModule(riotGame));
+      await serverMod?.adminResetRoom?.(roomId);
+    } catch {
+      // Abaikan kegagalan sinkronisasi memori
+    }
+  }
 
   await recordAuditLog(db, {
     adminId,
@@ -1323,6 +1366,7 @@ export async function adminKickRiotPlayer(
   adminId: string,
   roomId: string,
   userId: string,
+  games: readonly LoadedGame[] = [],
 ) {
   const [player] = await db
     .select({ roomId: riotRoomPlayers.roomId })
@@ -1356,6 +1400,17 @@ export async function adminKickRiotPlayer(
     })
     .where(eq(riotRooms.id, roomId));
 
+  const riotGame = games.find((g) => g.manifest.id === "riot");
+  if (riotGame) {
+    try {
+      const serverMod =
+        riotGame.serverModule ?? (await resolveGameServerModule(riotGame));
+      await serverMod?.adminKickPlayer?.(roomId, userId);
+    } catch {
+      // Abaikan kegagalan sinkronisasi memori
+    }
+  }
+
   await recordAuditLog(db, {
     adminId,
     action: "riot_kick_player",
@@ -1370,7 +1425,12 @@ export async function adminKickRiotPlayer(
 /**
  * Moderasi Riot (RT-51): Hapus room (pemain & match ikut terhapus via cascade).
  */
-export async function adminDeleteRiotRoom(db: Database, adminId: string, roomId: string) {
+export async function adminDeleteRiotRoom(
+  db: Database,
+  adminId: string,
+  roomId: string,
+  games: readonly LoadedGame[] = [],
+) {
   const [room] = await db
     .select({ id: riotRooms.id, name: riotRooms.name })
     .from(riotRooms)
@@ -1382,6 +1442,17 @@ export async function adminDeleteRiotRoom(db: Database, adminId: string, roomId:
   }
 
   await db.delete(riotRooms).where(eq(riotRooms.id, roomId));
+
+  const riotGame = games.find((g) => g.manifest.id === "riot");
+  if (riotGame) {
+    try {
+      const serverMod =
+        riotGame.serverModule ?? (await resolveGameServerModule(riotGame));
+      await serverMod?.adminDeleteRoom?.(roomId);
+    } catch {
+      // Abaikan kegagalan sinkronisasi memori
+    }
+  }
 
   await recordAuditLog(db, {
     adminId,

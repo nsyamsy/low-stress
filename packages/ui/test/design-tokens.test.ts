@@ -81,4 +81,28 @@ describe("token desain", () => {
     const value = /--tap-min:\s*(\d+)px/.exec(css)?.[1];
     expect(Number(value)).toBeGreaterThanOrEqual(44);
   });
+
+  it("tidak merujuk variabel CSS yang belum didefinisikan di :root", () => {
+    const defined = new Set(declarationNames(blockAfter('data-theme="light"')));
+    const used = Array.from(css.matchAll(/var\((--[a-z0-9-]+)\)/g)).map(
+      (m) => m[1]!,
+    );
+    const undefinedVars = Array.from(new Set(used)).filter(
+      (v) => !defined.has(v),
+    );
+    expect(undefinedVars).toEqual([]);
+  });
+
+  it("membatasi tinggi kanvas Flappy Bird di mobile agar pas tanpa scroll (T-18)", () => {
+    const flappyCanvasBlock = blockAfter(".ls-flappy-canvas");
+    expect(flappyCanvasBlock).toContain("max-height: calc(100dvh - 210px)");
+    expect(flappyCanvasBlock).toContain("width: auto");
+    expect(flappyCanvasBlock).toContain("margin: 0 auto");
+  });
+
+  it("memakai kontras WCAG AA pada .ls-admin-badge (T-11)", () => {
+    const badgeBlock = blockAfter(".ls-admin-badge {");
+    expect(badgeBlock).toContain("var(--accent-subtle)");
+    expect(badgeBlock).toContain("var(--accent-text)");
+  });
 });

@@ -149,7 +149,7 @@ export function AdminApprovalsPage() {
             <table className="ls-admin-table">
               <thead>
                 <tr>
-                  <th scope="col" style={{ width: 40 }}>
+                  <th scope="col" style={{ width: "var(--space-8)" }}>
                     <input
                       type="checkbox"
                       checked={selectedIds.length === users.length && users.length > 0}
@@ -172,7 +172,7 @@ export function AdminApprovalsPage() {
                         type="checkbox"
                         checked={selectedIds.includes(u.id)}
                         onChange={() => toggleSelect(u.id)}
-                        aria-label={`Pilih ${u.username}`}
+                        aria-label={`${t("admin.users.colUsername")}: ${u.username}`}
                       />
                     </td>
                     <td style={{ fontWeight: "var(--weight-medium)" }}>@{u.username}</td>

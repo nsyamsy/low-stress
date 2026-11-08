@@ -1,42 +1,24 @@
+import {
+  apiFetch,
+  clearCsrfToken,
+  fetchCsrfToken,
+  getCsrfToken,
+  parseResponse,
+  type ApiError,
+} from "../../lib/apiFetch";
 import type { Me, PublicConfig } from "./types";
 
-let cachedCsrfToken: string | null = null;
-
-export async function fetchCsrfToken(): Promise<string> {
-  const res = await fetch("/api/csrf");
-  if (!res.ok) throw new Error("Gagal mengambil token CSRF.");
-  const data = (await res.json()) as { token: string };
-  cachedCsrfToken = data.token;
-  return data.token;
-}
-
-/**
- * Cookie `ls_csrf` dibagi oleh semua tab. Token yang disimpan di memori bisa
- * basi bila tab lain mengambil token baru, jadi nilai cookie saat ini
- * didahulukan; permintaan ke server hanya bila cookie belum ada.
- */
-function readCsrfCookie(): string | null {
-  if (typeof document === "undefined") return null;
-  const entry = document.cookie.split("; ").find((c) => c.startsWith("ls_csrf="));
-  if (!entry) return null;
-  const value = decodeURIComponent(entry.slice("ls_csrf=".length));
-  return value || null;
-}
-
-export async function getCsrfToken(): Promise<string> {
-  const fromCookie = readCsrfCookie();
-  if (fromCookie) {
-    cachedCsrfToken = fromCookie;
-    return fromCookie;
-  }
-  if (cachedCsrfToken) return cachedCsrfToken;
-  return fetchCsrfToken();
-}
+export {
+  apiFetch,
+  clearCsrfToken,
+  fetchCsrfToken,
+  getCsrfToken,
+  parseResponse,
+  type ApiError,
+};
 
 export async function fetchPublicConfig(): Promise<PublicConfig> {
-  const res = await fetch("/api/public-config");
-  if (!res.ok) throw new Error("Gagal mengambil konfigurasi publik.");
-  return res.json() as Promise<PublicConfig>;
+  return apiFetch<PublicConfig>("/api/public-config");
 }
 
 export interface CaptchaChallengeResponse {
@@ -47,9 +29,7 @@ export interface CaptchaChallengeResponse {
 }
 
 export async function fetchCaptchaChallenge(): Promise<CaptchaChallengeResponse> {
-  const res = await fetch("/api/auth/captcha-challenge");
-  if (!res.ok) throw new Error("Gagal mengambil tantangan CAPTCHA.");
-  return res.json() as Promise<CaptchaChallengeResponse>;
+  return apiFetch<CaptchaChallengeResponse>("/api/auth/captcha-challenge");
 }
 
 async function sha256Hex(message: string): Promise<string> {
@@ -76,35 +56,6 @@ export async function solveCaptcha(
   }
 }
 
-export interface ApiError {
-  code: string;
-  params?: Record<string, unknown>;
-}
-
-async function parseResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let error: ApiError = { code: "INTERNAL" };
-    try {
-      const body = (await res.json()) as { error?: ApiError };
-      if (body.error) {
-        error = body.error;
-      }
-    } catch {
-      // bukan JSON
-    }
-    const err = new Error(error.code);
-    (err as Error & { apiError: ApiError; status: number }).apiError = error;
-    (err as Error & { apiError: ApiError; status: number }).status = res.status;
-    throw err;
-  }
-
-  if (res.status === 204) {
-    return undefined as unknown as T;
-  }
-
-  return res.json() as Promise<T>;
-}
-
 export async function registerApi(payload: {
   username: string;
   displayName: string;
@@ -112,48 +63,30 @@ export async function registerApi(payload: {
   password: string;
   captcha?: { challenge: string; nonce: string; signature?: string };
 }): Promise<{ status: "pending" | "active" }> {
-  const csrf = await getCsrfToken();
-  const res = await fetch("/api/auth/register", {
+  return apiFetch<{ status: "pending" | "active" }>("/api/auth/register", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-csrf-token": csrf,
-    },
     body: JSON.stringify(payload),
   });
-  return parseResponse<{ status: "pending" | "active" }>(res);
 }
 
 export async function loginApi(payload: {
   username: string;
   password: string;
 }): Promise<{ user: Me }> {
-  const csrf = await getCsrfToken();
-  const res = await fetch("/api/auth/login", {
+  return apiFetch<{ user: Me }>("/api/auth/login", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-csrf-token": csrf,
-    },
     body: JSON.stringify(payload),
   });
-  return parseResponse<{ user: Me }>(res);
 }
 
 export async function logoutApi(): Promise<void> {
-  const csrf = await getCsrfToken();
-  const res = await fetch("/api/auth/logout", {
+  return apiFetch<void>("/api/auth/logout", {
     method: "POST",
-    headers: {
-      "x-csrf-token": csrf,
-    },
   });
-  return parseResponse<void>(res);
 }
 
 export async function getMeApi(): Promise<Me> {
-  const res = await fetch("/api/me");
-  return parseResponse<Me>(res);
+  return apiFetch<Me>("/api/me");
 }
 
 export async function updateProfileApi(payload: {
@@ -162,45 +95,27 @@ export async function updateProfileApi(payload: {
   theme?: "system" | "light" | "dark";
   email?: string;
 }): Promise<Me> {
-  const csrf = await getCsrfToken();
-  const res = await fetch("/api/me", {
+  return apiFetch<Me>("/api/me", {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-csrf-token": csrf,
-    },
     body: JSON.stringify(payload),
   });
-  return parseResponse<Me>(res);
 }
 
 export async function changePasswordApi(payload: {
   currentPassword: string;
   newPassword: string;
 }): Promise<void> {
-  const csrf = await getCsrfToken();
-  const res = await fetch("/api/me/password", {
+  return apiFetch<void>("/api/me/password", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-csrf-token": csrf,
-    },
     body: JSON.stringify(payload),
   });
-  return parseResponse<void>(res);
 }
 
 export async function deleteAccountApi(payload: {
   password: string;
 }): Promise<void> {
-  const csrf = await getCsrfToken();
-  const res = await fetch("/api/me", {
+  return apiFetch<void>("/api/me", {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "x-csrf-token": csrf,
-    },
     body: JSON.stringify(payload),
   });
-  return parseResponse<void>(res);
 }

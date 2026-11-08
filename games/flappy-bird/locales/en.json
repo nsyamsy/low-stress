@@ -24,5 +24,11 @@
   "rules": "Each passed pipe awards 1 point. Don't hit pipes or the ground.",
   "medals": "Earn bronze (10+), silver (20+), or gold (30+) medals.",
   "bestNote": "Only runs scoring 1 or more are submitted to the leaderboard.",
+  "leaderboard": "Leaderboard",
+  "periodWeek": "This week",
+  "periodMonth": "This month",
+  "periodAll": "All time",
+  "loading": "Loading…",
+  "empty": "No scores yet",
   "leaderboardNote": "Your best score is automatically saved to the weekly, monthly, and all-time leaderboards."
 }

@@ -1,10 +1,51 @@
 # Low Stress — Tugas Debug dan Refactor
 
-Versi: 0.1 · Tanggal: 2026-11-05 · Untuk dieksekusi agent lain
+Versi: 0.2 · Tanggal: 2026-11-08 · Untuk dieksekusi agent lain
 
-Dokumen ini adalah antrean kerja **perbaikan dan perapian** setelah Fase 1–9 selesai. Setiap butir berisi bukti (hasil pemeriksaan nyata pada 2026-11-05, dengan berkas dan baris bila ada), tindakan, dan kriteria selesai. Baca dulu [Agents.md](../Agents.md), [Architecture.md](Architecture.md), dan [API_Spec.md](API_Spec.md).
+Dokumen ini adalah antrean kerja **perbaikan dan perapian** setelah Fase 1–9 dan Riot Fase 0–5 selesai. Setiap butir berisi bukti, tindakan, dan kriteria selesai. Baca dulu [Agents.md](../Agents.md), [Architecture.md](Architecture.md), dan [API_Spec.md](API_Spec.md).
 
 Butir bertanda **Perlu keputusan** tidak boleh dikerjakan sebelum pemilik proyek memutuskan.
+
+---
+
+## 0A. Panduan Serah-Terima (Handoff 2026-11-08) — MULAI DARI SINI
+
+Sebagian besar perbaikan kritis (Gelombang 1 s.d. 5) **sudah diimplementasikan dan lolos `pnpm lint`, `pnpm typecheck`, `pnpm i18n:check`, `pnpm check:migrations`, `pnpm check:assets`, serta seluruh unit test non-DB**:
+
+### Yang SUDAH Selesai pada 2026-11-08:
+1. **Keamanan, Auth, Principal, Lockout & Job Server:**
+   - **CAPTCHA PoW & CSRF:** `registerBodySchema` kini memvalidasi `signature`, `verifyCaptchaSolution` menolak `difficulty < 1` atau tanpa HMAC `signature` valid (`timingSafeEqual`) serta mencegah replay; `createCsrfMiddleware` memeriksa fallback `Referer`, hostname `localhost`/`127.0.0.1` presisi, dan `timingSafeEqual`.
+   - **R-02 (`resolvePrincipal`):** Diekstrak ke `apps/server/src/auth/principal.ts` dan dipakai seragam di `auth/middleware.ts`, `games/routes.ts`, `chat/socket.ts`, dan `app.ts`.
+   - **D-03 (Jendela Lockout 10 Menit):** Kolom `last_failed_at` ditambahkan ke `login_attempts` (`packages/db/migrations/0002_login_attempts_last_failed.sql`) dan diterapkan di `apps/server/src/auth/lockout.ts`.
+   - **D-08 & R-03 (Modul Job Terpusat):** `apps/server/src/jobs/index.ts` (`createJobRunner`) menjadwalkan `purge-chat`, `purge-sessions` (`purgeExpiredSessions`), `purge-login-attempts` (`purgeStaleLoginAttempts`), serta semua `LoadedGame.jobs` dari modul server game.
+   - **Hook `onUserDeleted` & Sensor Kata Kasar DB:** `deleteAccount` dan `deleteUserByAdmin` kini memanggil `serverModule.onUserDeleted`; `censorServerText` (dengan `banned_words` DB) diteruskan lewat `GameServerContext.censorText` ke Ludo dan Riot.
+   - **Tes Server Baru (`D-02a..d`, `D-03`, `D-08`, `R-02`, `R-03`):** Sudah ditambahkan di `apps/server/test/auth.test.ts` dan `apps/server/test/games-gate.test.ts`.
+2. **Perbaikan Kritis Game (Memory Match, Flappy Bird, Ludo, Riot):**
+   - **Memory Match:** Fix bug combo pasangan ke-8 (`nextCombos`), pembersihan `flipTimeoutRef` saat restart/unmount, ukuran tombol 44×44px, ganti emoji trofi ke SVG, simpan `bestScore` di `localStorage`, lokalisasi penuh, dan ganti class Material-3 mati dengan token `@low-stress/ui`.
+   - **Flappy Bird:** Pembatas tinggi kanvas mobile (`max-height: calc(100dvh - 210px)`) agar pas di `360×640` tanpa scroll, lokalisasi `"Leaderboard"`, dan token `@low-stress/ui`.
+   - **Ludo:** Endpoint `POST /api/games/ludo/rooms/:id/respond` + perbaikan terima/tolak undangan di `Lobby.tsx` dan `Room.tsx`, penghapusan `chatOpen` dari dependency `useEffect` socket (agar buka/tutup chat tidak memutus koneksi), suara menang hanya sekali (`prevWinnerRef`), ticker event `pass`/`doubles3`, penolakan koneksi admin di `/ludo`, dan pengalihan ke CPU autopilot bila akun pemain dihapus.
+   - **Riot:** Penegakan `ctx.checkGameGate("riot")` di socket `/riot`, sinkronisasi moderasi admin Riot (`reset`/`kick`/`delete`) dengan `globalService` in-memory, penghapusan baris `riot_room_players` yatim, penyembunyian pemain di luar radius pandang (tidak lagi menumpuk di `(0, 0)`), visual 3D hologram & fog blackout, penggantian 33 `WebGLRenderer` di daftar lobi dengan `<AvatarBadge>` 2D SVG, daur ulang `freeSlots` & disposal geometri/material Three.js, sinkronisasi `role` saat reconnect, dukungan kode pendek 6 karakter saat join, sabotase pintu (`isRoomDoorLocked`), multiplier `playerSpeed`, dan persistensi profil `/api/games/riot/profile`.
+3. **Perbaikan Klien Web, Token CSS, i18n & Halaman Admin:**
+   - **R-01 (`apiFetch`):** Klien HTTP tunggal di `apps/web/src/lib/apiFetch.ts` (header CSRF otomatis, retry sekali saat `CSRF_INVALID`), dipakai di seluruh `features/*/api.ts` dan `GamePage.tsx`.
+   - **R-05 & Token CSS (`packages/ui/src/styles.css` & `tailwind.css`):** Semua referensi variabel CSS yang tidak terdefinisi di `styles.css` sudah diperbaiki; `@theme` ditambahkan di `tailwind.css`.
+   - **D-04, D-05, D-07 (`HomePage.tsx` & `LeaderboardPage.tsx`):** `formatNextOpenWib` memakai zona waktu `Asia/Jakarta` (WIB); error state dengan tombol "Coba lagi" diterapkan; paksaan `"memory-match"` dihapus dari `LeaderboardPage.tsx`.
+   - **D-06 & R-09 (`packages/i18n` & komponen web):** 41 kode error server ditambahkan ke `errors.*` (`id.json` & `en.json`) dengan helper `translateErrorCode`; teks hardcoded di halaman admin & game dipindahkan ke i18n.
+   - **R-07 (`usePreferences`):** Hook terpusat di `apps/web/src/features/preferences/usePreferences.ts` menyinkronkan tema dan bahasa tanpa memanggil API pemain dari panel admin.
+   - **D-09, R-10 & Halaman Admin Baru:** Kontrak `AdminLeaderboardPage` (`playedAt`/`createdAt`) diperbaiki, kartu mobile `.ls-admin-card-list` ditambahkan di `AdminLeaderboardPage` & `AdminChatPage`, kartu ganda di `AdminGamesPage` diperbaiki, editor jadwal ditambahkan di `AdminSettingsPage` & `AdminGamesPage`, halaman baru `AdminLudoPage` (`/admin/ludo`) dan `AdminRiotPage` (`/admin/riot`) dibuat, halaman 404 dibuat, dan `/showcase` dibatasi ke `import.meta.env.DEV`.
+   - **D-12 & D-13:** `.gitattributes` dibuat dan status `AGENTS.md` diperbarui.
+
+### Urutan Langkah untuk Agent Berikutnya (Mulai dari Sini):
+1. **Langkah 1 — Tulis Tes Regresi Web (`D-02e..i`, `D-04`, `D-05`, `D-07`):**
+   - Implementasi fiturnya di `apps/web/src/` sudah selesai, namun berkas tes unit di `apps/web/test/` untuk kasus `D-02e` (`AdminLoginPage` `AUTH_LOCKED`), `D-02f` (`getCsrfToken` cookie priority), `D-02g` (`applyUserPreferences`), `D-02h` (`ProfilePage`), `D-02i` (`getGameThumbnail`), `D-04` (`formatNextOpenWib` lintas TZ), serta `D-05`/`D-07` (`HomePage`/`LeaderboardPage` error & empty state) belum ditambahkan. Tambahkan tes tersebut di `apps/web/test/` dan jalankan `pnpm --filter @low-stress/web test`.
+2. **Langkah 2 — Jalankan Migrasi & Tes Server terhadap Database Uji (`low_stress_test`):**
+   - Pastikan PostgreSQL uji berjalan (`pnpm test:db:up`), lalu jalankan `pnpm test` dari root untuk memverifikasi migrasi `0002_login_attempts_last_failed.sql` dan tes regresi baru di `apps/server/test/auth.test.ts` serta `games-gate.test.ts`.
+3. **Langkah 3 — Selesaikan Sisa Refactor & QA:**
+   - **D-06 (Pemeriksa otomatis teks literal JSX):** Tambahkan aturan ESLint atau skrip di `tools/` untuk mendeteksi teks literal di JSX.
+   - **D-11 (Service Worker update & banner offline):** Tambahkan penanganan `onNeedRefresh` / banner offline di `apps/web`.
+   - **R-06 (Pecah berkas besar):** Pecah `apps/server/src/admin/service.ts`, `games/riot/server/service.ts`, `games/ludo/client/Room.tsx`, dan `games/ludo/server/service.ts` menjadi sub-modul terfokus.
+   - **R-08 (Satu sumber tipe API server–web):** Satukan skema Zod DTO di paket bersama.
+   - **D-15 (Playwright E2E) & D-09/D-10 (QA visual browser nyata):** Pasang Playwright (`pnpm test:e2e`) dan verifikasi tampilan di viewport 360px/768px/1280px mode terang & gelap.
+   - **D-13 (sisa), D-14, R-11:** Tambah skrip `pnpm db:seed:dev` (atau hapus rujukannya di `ROADMAP.md`), tambah secret scan di `.github/workflows/ci.yml`, dan arsipkan `reference/performance_dash-games/` setelah pemilik menyetujui.
 
 ---
 

@@ -99,4 +99,32 @@ describe("RT-32: Network Resilience and Reconnection", () => {
     expect(room.players.has("p4")).toBe(false);
     expect(room.simulation.getPlayer("p4")).toBeUndefined();
   });
+
+  it("supports joining by 6-character short code, meeting abandon win check, and host transfer", () => {
+    const service = new RiotGameService();
+    const room = service.createRoom("p1", "Host", "riot_123456_ab99xz", { infiltratorCount: 1 });
+    const shortCode = room.id.slice(-6).toUpperCase();
+
+    expect(service.joinRoom(shortCode, "p2", "Player 2").success).toBe(true);
+    expect(service.joinRoom(shortCode.toLowerCase(), "p3", "Player 3").success).toBe(true);
+    expect(service.joinRoom(room.id, "p4", "Player 4").success).toBe(true);
+
+    service.startGame(room.id, "p1");
+    // Make p1 (host) the sole infiltrator
+    for (const [id, p] of room.players) {
+      p.role = id === "p1" ? "infiltrator" : "crew";
+    }
+
+    service.callEmergencyMeeting(room.id, "p2");
+    expect(room.phase).toBe("meeting");
+
+    const t0 = 200000;
+    service.handleDisconnect(room.id, "p1", t0);
+    const tickRes = service.processServerTick(room.id, t0 + DISCONNECT_GRACE_PERIOD_MS + 100);
+
+    // Host abandoned during meeting -> host transferred to next connected player & crew wins!
+    expect(room.hostId).not.toBe("p1");
+    expect(tickRes.winResult?.winner).toBe("crew");
+    expect(room.phase).toBe("finished");
+  });
 });

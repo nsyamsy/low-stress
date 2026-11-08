@@ -1,4 +1,5 @@
-import { getSpawnPoint, resolveMovement } from "./collision";
+import { getSpawnPoint, MAP_DATA, resolveMovement } from "./collision";
+import { type ActiveSabotage, isRoomDoorLocked } from "./sabotage";
 import {
   MAX_ALLOWED_SPEED,
   MAX_PLAYER_SPEED,
@@ -13,6 +14,13 @@ export interface SimulationConfig {
   playerRadius?: number;
   maxSpeed?: number;
   maxAllowedSpeed?: number;
+  speedMultiplier?: number;
+}
+
+export interface ProcessInputOptions {
+  speedMultiplier?: number;
+  activeSabotage?: ActiveSabotage | null;
+  lockedRoomIds?: readonly string[];
 }
 
 export class AuthoritativeSimulation {
@@ -21,11 +29,28 @@ export class AuthoritativeSimulation {
   private readonly playerRadius: number;
   private readonly maxSpeed: number;
   private readonly maxAllowedSpeed: number;
+  private speedMultiplier: number;
+  private activeSabotage: ActiveSabotage | null = null;
 
   constructor(config: SimulationConfig = {}) {
     this.playerRadius = config.playerRadius ?? PLAYER_RADIUS;
     this.maxSpeed = config.maxSpeed ?? MAX_PLAYER_SPEED;
     this.maxAllowedSpeed = config.maxAllowedSpeed ?? MAX_ALLOWED_SPEED;
+    this.speedMultiplier = config.speedMultiplier ?? 1.0;
+  }
+
+  setSpeedMultiplier(multiplier: number): void {
+    if (Number.isFinite(multiplier) && multiplier > 0) {
+      this.speedMultiplier = multiplier;
+    }
+  }
+
+  getSpeedMultiplier(): number {
+    return this.speedMultiplier;
+  }
+
+  setActiveSabotage(sabotage: ActiveSabotage | null): void {
+    this.activeSabotage = sabotage;
   }
 
   addPlayer(id: string, initialPos?: { x: number; y: number }): PlayerMovementState {
@@ -64,6 +89,7 @@ export class AuthoritativeSimulation {
     playerId: string,
     input: PlayerInput,
     serverTime = Date.now(),
+    options?: ProcessInputOptions,
   ): { accepted: boolean; state?: PlayerMovementState; reason?: string } {
     const player = this.players.get(playerId);
     if (!player) {
@@ -86,12 +112,16 @@ export class AuthoritativeSimulation {
       return { accepted: false, state: player, reason: "INPUT_MAGNITUDE_EXCEEDED" };
     }
 
+    const mult = options?.speedMultiplier ?? this.speedMultiplier;
+    const effectiveMaxSpeed = this.maxSpeed * mult;
+    const effectiveMaxAllowedSpeed = this.maxAllowedSpeed * Math.max(1, mult);
+
     // Calculate requested displacement
-    const targetSpeed = Math.min(inputMagnitude * this.maxSpeed, this.maxSpeed);
+    const targetSpeed = Math.min(inputMagnitude * effectiveMaxSpeed, effectiveMaxSpeed);
     const displacement = targetSpeed * input.dt;
     const requestedSpeed = displacement / input.dt;
 
-    if (requestedSpeed > this.maxAllowedSpeed) {
+    if (requestedSpeed > effectiveMaxAllowedSpeed) {
       return { accepted: false, state: player, reason: "SPEED_LIMIT_EXCEEDED" };
     }
 
@@ -106,11 +136,32 @@ export class AuthoritativeSimulation {
     const desiredX = player.x + dirX * displacement;
     const desiredY = player.y + dirY * displacement;
 
-    // Authoritative collision resolution against 2D map walls with sliding
+    let lockedRooms: readonly string[] | undefined = options?.lockedRoomIds;
+    if (!lockedRooms) {
+      const sab =
+        options?.activeSabotage !== undefined
+          ? options.activeSabotage
+          : this.activeSabotage;
+      if (sab && sab.kind === "doors" && !sab.resolved && sab.targetRoom) {
+        const locked: string[] = [];
+        for (const r of MAP_DATA.rooms) {
+          if (isRoomDoorLocked(sab, r.id, serverTime)) {
+            locked.push(r.id);
+          }
+        }
+        if (locked.length > 0) {
+          lockedRooms = locked;
+        }
+      }
+    }
+
+    // Authoritative collision resolution against 2D map walls and locked doorways with sliding
     const resolved = resolveMovement(
       { x: player.x, y: player.y },
       { x: desiredX, y: desiredY },
       this.playerRadius,
+      MAP_DATA.walls,
+      lockedRooms,
     );
 
     // Compute actual velocity

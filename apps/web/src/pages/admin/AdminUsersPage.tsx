@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { translateErrorCode } from "@low-stress/i18n";
 import { Button, Chip, Input, Modal } from "@low-stress/ui";
 import {
   deleteAdminUserApi,
@@ -7,11 +8,13 @@ import {
   updateAdminUserStatusApi,
   type AdminUserItem,
 } from "../../features/admin";
+import type { ApiError } from "../../lib/apiFetch";
 
 export function AdminUsersPage() {
   const { t } = useTranslation();
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -30,17 +33,26 @@ export function AdminUsersPage() {
     copied: boolean;
   }>({ open: false, password: "", copied: false });
 
+  const getErrorText = (err: unknown): string => {
+    const apiError = (err as { apiError?: ApiError })?.apiError;
+    if (apiError?.code) {
+      return translateErrorCode(apiError.code, apiError.params);
+    }
+    return t("state.error");
+  };
+
   const loadUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await getAdminUsersApi({
         status: statusFilter || undefined,
         q: searchQuery || undefined,
         pageSize: 50,
       });
       setUsers(res.items);
-    } catch {
-      // Abaikan
+    } catch (err: unknown) {
+      setError(getErrorText(err));
     } finally {
       setLoading(false);
     }
@@ -54,9 +66,21 @@ export function AdminUsersPage() {
       pageSize: 50,
     })
       .then((res) => {
-        if (mounted) setUsers(res.items);
+        if (mounted) {
+          setUsers(res.items);
+          setError(null);
+        }
       })
-      .catch(() => undefined)
+      .catch((err: unknown) => {
+        if (mounted) {
+          const typed = err as { apiError?: { code?: string; params?: Record<string, unknown> } };
+          setError(
+            typed?.apiError?.code
+              ? translateErrorCode(typed.apiError.code, typed.apiError.params)
+              : t("state.error"),
+          );
+        }
+      })
       .finally(() => {
         if (mounted) setLoading(false);
       });
@@ -64,45 +88,56 @@ export function AdminUsersPage() {
     return () => {
       mounted = false;
     };
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, t]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadUsers();
+    void loadUsers();
   };
 
   const handleAction = async (
     userId: string,
     action: "approve" | "reject" | "suspend" | "ban" | "activate" | "reset-password",
   ) => {
-    if (action === "reset-password") {
-      const res = await updateAdminUserStatusApi(userId, "reset-password");
-      if (res.temporaryPassword) {
-        setTempPasswordModal({
-          open: true,
-          password: res.temporaryPassword,
-          copied: false,
-        });
+    setError(null);
+    try {
+      if (action === "reset-password") {
+        const res = await updateAdminUserStatusApi(userId, "reset-password");
+        if (res.temporaryPassword) {
+          setTempPasswordModal({
+            open: true,
+            password: res.temporaryPassword,
+            copied: false,
+          });
+        }
+        return;
       }
-      return;
-    }
 
-    await updateAdminUserStatusApi(userId, action);
-    await loadUsers();
+      await updateAdminUserStatusApi(userId, action);
+      await loadUsers();
+    } catch (err: unknown) {
+      setError(getErrorText(err));
+    }
   };
 
   const handleConfirmAction = async () => {
-    if (confirmModal.type === "delete") {
-      await deleteAdminUserApi(confirmModal.userId);
-    } else if (confirmModal.type === "ban") {
-      await updateAdminUserStatusApi(confirmModal.userId, "ban");
+    setError(null);
+    try {
+      if (confirmModal.type === "delete") {
+        await deleteAdminUserApi(confirmModal.userId);
+      } else if (confirmModal.type === "ban") {
+        await updateAdminUserStatusApi(confirmModal.userId, "ban");
+      }
+      setConfirmModal({ open: false, type: "delete", userId: "", username: "" });
+      await loadUsers();
+    } catch (err: unknown) {
+      setError(getErrorText(err));
+      setConfirmModal((prev) => ({ ...prev, open: false }));
     }
-    setConfirmModal({ open: false, type: "delete", userId: "", username: "" });
-    await loadUsers();
   };
 
   const copyTempPassword = () => {
-    navigator.clipboard.writeText(tempPasswordModal.password);
+    void navigator.clipboard.writeText(tempPasswordModal.password);
     setTempPasswordModal((prev) => ({ ...prev, copied: true }));
   };
 
@@ -129,7 +164,7 @@ export function AdminUsersPage() {
 
       {/* Filter and Search Bar */}
       <div className="ls-admin-card" style={{ padding: "var(--space-4)" }}>
-        <form onSubmit={handleSearchSubmit} className="ls-row" style={{ gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
+        <form onSubmit={handleSearchSubmit} className="ls-row" style={{ gap: "var(--space-2)", marginBottom: "var(--space-4)", alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
             <Input
               label={t("admin.users.searchPlaceholder")}
@@ -137,8 +172,8 @@ export function AdminUsersPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button type="submit" variant="secondary" style={{ marginTop: 22 }}>
-            Cari
+          <Button type="submit" variant="secondary">
+            {t("action.search")}
           </Button>
         </form>
 
@@ -163,6 +198,22 @@ export function AdminUsersPage() {
           ))}
         </div>
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            background: "var(--danger-bg)",
+            color: "var(--danger-text)",
+            padding: "var(--space-3)",
+            borderRadius: "var(--radius-control)",
+            fontSize: "var(--font-small)",
+            marginBottom: "var(--space-4)",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <p className="ls-text-secondary">{t("state.loading")}</p>
@@ -195,7 +246,7 @@ export function AdminUsersPage() {
                     <td>{u.displayName}</td>
                     <td style={{ color: "var(--text-secondary)" }}>{u.email}</td>
                     <td>
-                      <Chip tone={statusTone(u.status)}>{u.status}</Chip>
+                      <Chip tone={statusTone(u.status)}>{t(`admin.users.${u.status}`)}</Chip>
                     </td>
                     <td style={{ color: "var(--text-muted)", fontSize: "var(--font-caption)" }}>
                       {new Date(u.createdAt).toLocaleDateString()}
@@ -275,7 +326,7 @@ export function AdminUsersPage() {
               <div key={u.id} className="ls-admin-mobile-card">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={{ fontWeight: "var(--weight-medium)" }}>@{u.username}</span>
-                  <Chip tone={statusTone(u.status)}>{u.status}</Chip>
+                  <Chip tone={statusTone(u.status)}>{t(`admin.users.${u.status}`)}</Chip>
                 </div>
 
                 <div style={{ fontSize: "var(--font-small)", color: "var(--text-secondary)" }}>
@@ -363,7 +414,7 @@ export function AdminUsersPage() {
             {t("action.cancel")}
           </Button>
           <Button variant="danger" onClick={handleConfirmAction}>
-            {confirmModal.type === "delete" ? t("action.close") : t("admin.users.ban")}
+            {confirmModal.type === "delete" ? t("admin.users.delete") : t("admin.users.ban")}
           </Button>
         </div>
       </Modal>

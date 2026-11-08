@@ -37,10 +37,10 @@ export function AdminAuditPage() {
       <div className="ls-admin-card" style={{ padding: "var(--space-4)" }}>
         <div className="ls-admin-filter-control">
           <Input
-            label="Filter Aksi"
+            label={t("admin.audit.colAction")}
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            placeholder="mis. user.approve, settings.update"
+            placeholder={t("admin.audit.filterAction")}
           />
         </div>
       </div>
@@ -102,11 +102,11 @@ export function AdminAuditPage() {
                   </span>
                 </div>
                 <div style={{ fontSize: "var(--font-small)", fontWeight: "var(--weight-medium)" }}>
-                  Admin: @{log.adminUsername ?? "system"}
+                  {t("admin.audit.colAdmin")}: @{log.adminUsername ?? "system"}
                 </div>
                 {log.targetType && (
                   <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)" }}>
-                    Target: {log.targetType} ({log.targetId})
+                    {t("admin.audit.colTarget")}: {log.targetType} ({log.targetId})
                   </div>
                 )}
                 {Boolean(log.detail) && (

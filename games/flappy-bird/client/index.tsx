@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Feather, Trophy } from "lucide-react";
 import type { GameProps } from "@low-stress/sdk";
-import { useTranslation } from "react-i18next";
 import { FlappyBird, type RunResult } from "./FlappyBird";
 import { useFlappyTranslation } from "./i18n";
 
@@ -26,7 +25,7 @@ export function MiniLeaderboard({
   gameId,
   refreshKey = 0,
 }: MiniLeaderboardProps) {
-  const { t } = useTranslation();
+  const { t } = useFlappyTranslation();
   const [period, setPeriod] = useState<"all" | "week" | "month">("all");
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,13 +49,15 @@ export function MiniLeaderboard({
   }, [gameId, period, refreshKey]);
 
   return (
-    <div className="flex flex-col rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-4 shadow-xs">
+    <div className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-xs">
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="h-4 w-4 text-amber-500" />
-        <h2 className="text-sm font-bold text-on-surface">Leaderboard</h2>
+        <h2 className="text-sm font-bold text-[var(--text-primary)]">
+          {t("leaderboard")}
+        </h2>
       </div>
 
-      <div className="flex items-center gap-1 p-1 bg-surface-container-high rounded-lg mb-3 text-xs">
+      <div className="flex items-center gap-1 p-1 bg-[var(--bg-inset)] rounded-lg mb-3 text-xs">
         {(["all", "week", "month"] as const).map((p) => (
           <button
             key={p}
@@ -67,26 +68,26 @@ export function MiniLeaderboard({
             }}
             className={`flex-1 py-1 px-1.5 rounded-md font-bold text-center transition-colors cursor-pointer text-xs ${
               period === p
-                ? "bg-surface-container-lowest text-primary shadow-xs"
-                : "text-on-surface-variant hover:text-on-surface"
+                ? "bg-[var(--bg-surface)] text-[var(--primary)] shadow-xs"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             }`}
           >
             {p === "week"
-              ? t("leaderboard.periodWeek") || "Minggu ini"
+              ? t("periodWeek")
               : p === "month"
-                ? t("leaderboard.periodMonth") || "Bulan ini"
-                : t("leaderboard.periodAll") || "Sepanjang waktu"}
+                ? t("periodMonth")
+                : t("periodAll")}
           </button>
         ))}
       </div>
 
       {loading && !data ? (
-        <div className="py-6 text-center text-xs text-on-surface-variant">
-          {t("state.loading") || "Memuat…"}
+        <div className="py-6 text-center text-xs text-[var(--text-secondary)]">
+          {t("loading")}
         </div>
       ) : data?.entries?.length === 0 ? (
-        <div className="py-8 text-center text-xs text-on-surface-variant/60">
-          {t("leaderboard.empty") || "Belum ada skor"}
+        <div className="py-8 text-center text-xs text-[var(--text-secondary)]">
+          {t("empty")}
         </div>
       ) : (
         <ul className="flex flex-col gap-1.5">
@@ -95,17 +96,17 @@ export function MiniLeaderboard({
               key={e.userId}
               className={`flex items-center justify-between text-xs px-2 py-1.5 rounded-md ${
                 e.isMe
-                  ? "bg-primary/10 font-bold"
-                  : "hover:bg-surface-container-high/40"
+                  ? "bg-[var(--primary-subtle)] font-bold"
+                  : "hover:bg-[var(--bg-inset)]"
               }`}
             >
               <div className="flex items-center gap-2 truncate">
-                <span className="w-5 text-center font-bold text-on-surface-variant">
+                <span className="w-5 text-center font-bold text-[var(--text-secondary)]">
                   {e.rank}
                 </span>
-                <span className="truncate text-on-surface">{e.name}</span>
+                <span className="truncate text-[var(--text-primary)]">{e.name}</span>
               </div>
-              <span className="font-extrabold tabular-nums text-on-surface ml-2">
+              <span className="font-extrabold tabular-nums text-[var(--text-primary)] ml-2">
                 {e.score}
               </span>
             </li>
@@ -155,37 +156,37 @@ export default function FlappyBirdGame(props: GameProps) {
         </div>
 
         {/* Right: Rules & Info (Porting_Guide §2) */}
-        <aside className="order-3 rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-5 shadow-xs md:col-span-2 lg:col-span-1">
+        <aside className="order-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-xs md:col-span-2 lg:col-span-1">
           <div className="mb-3 flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary-subtle)] text-[var(--primary)]">
               <Feather className="h-5 w-5" />
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold text-on-surface">
+                <h1 className="text-base font-extrabold text-[var(--text-primary)]">
                   {t("title")}
                 </h1>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                <span className="rounded-full bg-[var(--primary-subtle)] px-2 py-0.5 text-xs font-bold text-[var(--primary)]">
                   {t("badge")}
                 </span>
               </div>
-              <p className="text-xs text-on-surface-variant">{t("subtitle")}</p>
+              <p className="text-xs text-[var(--text-secondary)]">{t("subtitle")}</p>
             </div>
           </div>
 
-          <h2 className="mb-1.5 mt-4 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+          <h2 className="mb-1.5 mt-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
             {t("howTo")}
           </h2>
-          <ul className="list-disc space-y-2 pl-4 text-xs text-on-surface leading-relaxed">
+          <ul className="list-disc space-y-2 pl-4 text-xs text-[var(--text-primary)] leading-relaxed">
             <li>{t("controls")}</li>
             <li>{t("rules")}</li>
             <li>{t("medals")}</li>
           </ul>
 
-          <div className="mt-5 rounded-lg bg-surface-container-high/60 p-3 border border-outline-variant/15 text-xs text-on-surface-variant">
-            <div className="flex items-center gap-1.5 font-bold text-on-surface mb-1">
+          <div className="mt-5 rounded-lg bg-[var(--bg-inset)] p-3 border border-[var(--border)] text-xs text-[var(--text-secondary)]">
+            <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)] mb-1">
               <Trophy className="h-3.5 w-3.5 text-amber-500" />
-              <span>Leaderboard</span>
+              <span>{t("leaderboard")}</span>
             </div>
             {t("bestNote")}
           </div>

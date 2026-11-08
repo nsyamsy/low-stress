@@ -7,8 +7,27 @@ import { readEnv } from "../src/env";
 import {
   CSRF_COOKIE_NAME,
   SESSION_COOKIE_NAME,
+  generateToken,
+  hashToken,
+  purgeExpiredSessions,
 } from "../src/auth/session";
-import { solveCaptchaChallenge } from "../src/auth/captcha";
+import {
+  generateCaptchaChallenge,
+  solveCaptchaChallenge,
+  verifyCaptchaSolution,
+} from "../src/auth/captcha";
+import {
+  LOCKOUT_DURATION_MS,
+  STALE_ATTEMPT_TTL_MS,
+  WINDOW_MS,
+  checkLockout,
+  clearLockout,
+  makeLockoutKey,
+  purgeStaleLoginAttempts,
+  recordFailedAttempt,
+} from "../src/auth/lockout";
+import { createJobRunner } from "../src/jobs";
+import { createHmac } from "node:crypto";
 
 if (typeof process.loadEnvFile === "function") {
   try {
@@ -910,6 +929,426 @@ describe("Auth and Profile API (Phase 2)", () => {
       } finally {
         await db.delete(settings).where(eq(settings.key, "captcha_enabled"));
       }
+    });
+
+    it("T-01: menolak challenge palsu (difficulty: 0 atau signature hilang/tidak valid) dan menolak replay solusi yang sama", () => {
+      const secret = env.SESSION_SECRET;
+
+      // 1. Challenge dengan difficulty: 0 (meskipun ditandatangani dengan HMAC valid) harus ditolak
+      const expiresAt = Date.now() + 60_000;
+      const forgedZeroDiffChallenge = `deadbeefdeadbeefdeadbeefdeadbeef:${expiresAt}:0`;
+      const forgedZeroDiffSig = createHmac("sha256", secret)
+        .update(forgedZeroDiffChallenge)
+        .digest("hex");
+      expect(
+        verifyCaptchaSolution(
+          {
+            challenge: forgedZeroDiffChallenge,
+            nonce: "0",
+            signature: forgedZeroDiffSig,
+          },
+          secret,
+        ),
+      ).toBe(false);
+
+      // 2. Challenge valid tetapi signature kosong atau tidak valid harus ditolak
+      const validChallenge = generateCaptchaChallenge(secret, 2);
+      const validNonce = solveCaptchaChallenge(
+        validChallenge.challenge,
+        validChallenge.difficulty,
+      );
+
+      expect(
+        verifyCaptchaSolution(
+          {
+            challenge: validChallenge.challenge,
+            nonce: validNonce,
+            signature: undefined,
+          },
+          secret,
+        ),
+      ).toBe(false);
+
+      expect(
+        verifyCaptchaSolution(
+          {
+            challenge: validChallenge.challenge,
+            nonce: validNonce,
+            signature: "0".repeat(64),
+          },
+          secret,
+        ),
+      ).toBe(false);
+
+      // 3. Verifikasi pertama dengan solusi sah berhasil (true), replay kedua ditolak (false)
+      expect(
+        verifyCaptchaSolution(
+          {
+            challenge: validChallenge.challenge,
+            nonce: validNonce,
+            signature: validChallenge.signature,
+          },
+          secret,
+        ),
+      ).toBe(true);
+
+      expect(
+        verifyCaptchaSolution(
+          {
+            challenge: validChallenge.challenge,
+            nonce: validNonce,
+            signature: validChallenge.signature,
+          },
+          secret,
+        ),
+      ).toBe(false);
+    });
+  });
+
+  // --- D-02a & D-02b: /api/csrf Reuse Lintas Tab ---
+  describe("D-02a & D-02b: /api/csrf reuse across tabs", () => {
+    it("mengembalikan token yang sama saat dipanggil ulang dengan cookie ls_csrf valid dan mengganti cookie rusak", async () => {
+      const res1 = await app.inject({ method: "GET", url: "/api/csrf" });
+      expect(res1.statusCode).toBe(200);
+      const token1 = (res1.json() as { token: string }).token;
+      const cookie1 = res1.cookies.find((c) => c.name === CSRF_COOKIE_NAME);
+      expect(cookie1?.value).toBe(token1);
+
+      // Panggilan kedua dengan cookie ls_csrf dari panggilan pertama
+      const res2 = await app.inject({
+        method: "GET",
+        url: "/api/csrf",
+        headers: { cookie: `${CSRF_COOKIE_NAME}=${cookie1!.value}` },
+      });
+      expect(res2.statusCode).toBe(200);
+      const token2 = (res2.json() as { token: string }).token;
+      expect(token2).toBe(token1);
+
+      // Panggilan dengan cookie rusak/malformed harus membuat token baru yang sah
+      const resMalformed = await app.inject({
+        method: "GET",
+        url: "/api/csrf",
+        headers: { cookie: `${CSRF_COOKIE_NAME}=malformed!short` },
+      });
+      expect(resMalformed.statusCode).toBe(200);
+      const tokenReplacement = (resMalformed.json() as { token: string }).token;
+      expect(tokenReplacement).not.toBe("malformed!short");
+      expect(tokenReplacement).toMatch(/^[A-Za-z0-9_-]{32,64}$/);
+    });
+
+    it("login dari tab A tetap sah setelah tab B memanggil GET /api/csrf dengan cookie yang sama", async () => {
+      // Tab A mengambil CSRF token
+      const tabACsrf = await getCsrfTokenAndCookie();
+
+      const username = helperUsername("csrf_tab");
+      const email = helperEmail("csrf_tab");
+      createdUsernames.push(username);
+      createdEmails.push(email);
+
+      await app.inject({
+        method: "POST",
+        url: "/api/auth/register",
+        headers: {
+          "x-csrf-token": tabACsrf.token,
+          cookie: tabACsrf.cookie,
+          origin: env.APP_ORIGIN,
+        },
+        payload: {
+          username,
+          displayName: "Multi Tab User",
+          email,
+          password: "password123!",
+        },
+      });
+
+      // Tab B memuat ulang halaman dan memanggil GET /api/csrf membawa cookie yang dibagi bersama
+      const tabBRes = await app.inject({
+        method: "GET",
+        url: "/api/csrf",
+        headers: { cookie: tabACsrf.cookie },
+      });
+      expect(tabBRes.statusCode).toBe(200);
+      const tabBToken = (tabBRes.json() as { token: string }).token;
+      expect(tabBToken).toBe(tabACsrf.token);
+      const tabBCookieVal =
+        tabBRes.cookies.find((c) => c.name === CSRF_COOKIE_NAME)?.value ??
+        tabBToken;
+
+      // Tab A melakukan login menggunakan token dari Tab A dan cookie bersama terbaru
+      const loginRes = await app.inject({
+        method: "POST",
+        url: "/api/auth/login",
+        headers: {
+          "x-csrf-token": tabACsrf.token,
+          cookie: `${CSRF_COOKIE_NAME}=${tabBCookieVal}`,
+          origin: env.APP_ORIGIN,
+        },
+        payload: {
+          username,
+          password: "password123!",
+        },
+      });
+      expect(loginRes.statusCode).toBe(200);
+    });
+  });
+
+  // --- D-02c & D-03: Reset Lockout & Jendela Kegagalan 10 Menit ---
+  describe("D-02c & D-03: Lockout reset after expiry & 10-minute failure window", () => {
+    it("D-02c: setelah masa kunci berakhir, 1 kegagalan login tidak langsung mengunci ulang akun", async () => {
+      const key = makeLockoutKey(helperUsername("exp_lck"), "127.0.0.1");
+      const t0 = new Date("2026-01-01T00:00:00.000Z");
+
+      try {
+        // 5 kali gagal pada t0 -> akun terkunci selama 15 menit
+        for (let i = 0; i < 5; i += 1) {
+          await recordFailedAttempt(db, key, new Date(t0.getTime() + i * 1000));
+        }
+
+        await expect(
+          checkLockout(db, key, new Date(t0.getTime() + 10_000)),
+        ).rejects.toMatchObject({
+          code: "AUTH_LOCKED",
+          statusCode: 429,
+        });
+
+        // Setelah 16 menit (> LOCKOUT_DURATION_MS), kunci sudah kedaluwarsa
+        const afterExpiry = new Date(
+          t0.getTime() + LOCKOUT_DURATION_MS + 60_000,
+        );
+        await expect(
+          checkLockout(db, key, afterExpiry),
+        ).resolves.toBeUndefined();
+
+        // 1 percobaan gagal baru setelah kedaluwarsa mereset penghitung ke 1 (tidak langsung mengunci)
+        await recordFailedAttempt(db, key, afterExpiry);
+        await expect(
+          checkLockout(db, key, afterExpiry),
+        ).resolves.toBeUndefined();
+
+        const [row] = await db
+          .select()
+          .from(loginAttempts)
+          .where(eq(loginAttempts.key, key));
+        expect(row?.count).toBe(1);
+        expect(row?.lockedUntil).toBeNull();
+      } finally {
+        await clearLockout(db, key);
+      }
+    });
+
+    it("D-03: 4 gagal lalu jeda 11 menit + 1 gagal tidak mengunci; 5 gagal dalam 10 menit mengunci selama 15 menit", async () => {
+      const key = makeLockoutKey(helperUsername("win_lck"), "127.0.0.1");
+      const t0 = new Date("2026-01-01T00:00:00.000Z");
+
+      try {
+        // 4 kali gagal dalam 1 menit pertama
+        for (let i = 0; i < 4; i += 1) {
+          await recordFailedAttempt(
+            db,
+            key,
+            new Date(t0.getTime() + i * 10_000),
+          );
+        }
+
+        const lastFailT = t0.getTime() + 3 * 10_000;
+        // Tunggu 11 menit sejak kegagalan terakhir (> WINDOW_MS 10 menit)
+        const after11Min = new Date(lastFailT + WINDOW_MS + 60_000);
+
+        // 1 kali gagal setelah 11 menit -> mereset penghitung kembali ke 1, TIDAK mengunci
+        await recordFailedAttempt(db, key, after11Min);
+        await expect(
+          checkLockout(db, key, after11Min),
+        ).resolves.toBeUndefined();
+
+        const [rowAfterReset] = await db
+          .select()
+          .from(loginAttempts)
+          .where(eq(loginAttempts.key, key));
+        expect(rowAfterReset?.count).toBe(1);
+        expect(rowAfterReset?.lockedUntil).toBeNull();
+
+        // 4 kali gagal lagi dalam jendela 10 menit yang sama (total 5 gagal beruntun dalam 10 menit)
+        let fifthAttemptTime = after11Min;
+        for (let i = 1; i <= 4; i += 1) {
+          fifthAttemptTime = new Date(after11Min.getTime() + i * 30_000);
+          await recordFailedAttempt(db, key, fifthAttemptTime);
+        }
+
+        // Sekarang terkunci selama 15 menit sejak kegagalan ke-5
+        const [lockedRow] = await db
+          .select()
+          .from(loginAttempts)
+          .where(eq(loginAttempts.key, key));
+        expect(lockedRow?.count).toBe(5);
+        expect(lockedRow?.lockedUntil?.getTime()).toBe(
+          fifthAttemptTime.getTime() + LOCKOUT_DURATION_MS,
+        );
+
+        await expect(
+          checkLockout(db, key, new Date(fifthAttemptTime.getTime() + 1000)),
+        ).rejects.toMatchObject({
+          code: "AUTH_LOCKED",
+          statusCode: 429,
+        });
+      } finally {
+        await clearLockout(db, key);
+      }
+    });
+  });
+
+  // --- D-08 & R-03: Pembersihan Sesi, Login Attempts, dan Job Runner ---
+  describe("D-08 & R-03: purgeExpiredSessions, purgeStaleLoginAttempts, createJobRunner", () => {
+    it("purgeExpiredSessions menghapus sesi kedaluwarsa dan mempertahankan sesi aktif", async () => {
+      const { token, cookie } = await getCsrfTokenAndCookie();
+      const username = helperUsername("purge_s");
+      createdUsernames.push(username);
+
+      await app.inject({
+        method: "POST",
+        url: "/api/auth/register",
+        headers: { "x-csrf-token": token, cookie, origin: env.APP_ORIGIN },
+        payload: {
+          username,
+          displayName: "Purge Session User",
+          email: helperEmail("purge_s"),
+          password: "password123!",
+        },
+      });
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
+      expect(user).toBeDefined();
+
+      const now = new Date();
+      const expiredSessionId = hashToken(generateToken());
+      const activeSessionId = hashToken(generateToken());
+
+      await db.insert(sessions).values([
+        {
+          id: expiredSessionId,
+          subjectType: "user",
+          subjectId: user!.id,
+          expiresAt: new Date(now.getTime() - 60_000),
+        },
+        {
+          id: activeSessionId,
+          subjectType: "user",
+          subjectId: user!.id,
+          expiresAt: new Date(now.getTime() + 3600_000),
+        },
+      ]);
+
+      const purgedCount = await purgeExpiredSessions(db, now);
+      expect(purgedCount).toBeGreaterThanOrEqual(1);
+
+      const remaining = await db
+        .select()
+        .from(sessions)
+        .where(inArray(sessions.id, [expiredSessionId, activeSessionId]));
+
+      expect(remaining.map((s) => s.id)).toEqual([activeSessionId]);
+    });
+
+    it("purgeStaleLoginAttempts menghapus percobaan usang/kedaluwarsa dan mempertahankan kunci aktif", async () => {
+      const now = new Date();
+      const expiredLockKey = `${TEST_PREFIX}purge_explock:127.0.0.1`;
+      const staleAttemptKey = `${TEST_PREFIX}purge_stale:127.0.0.1`;
+      const activeLockKey = `${TEST_PREFIX}purge_actlock:127.0.0.1`;
+      const recentAttemptKey = `${TEST_PREFIX}purge_recent:127.0.0.1`;
+
+      await db.insert(loginAttempts).values([
+        {
+          key: expiredLockKey,
+          count: 5,
+          lockedUntil: new Date(now.getTime() - 60_000),
+          lastFailedAt: new Date(now.getTime() - 120_000),
+        },
+        {
+          key: staleAttemptKey,
+          count: 2,
+          lockedUntil: null,
+          lastFailedAt: new Date(now.getTime() - STALE_ATTEMPT_TTL_MS - 60_000),
+        },
+        {
+          key: activeLockKey,
+          count: 5,
+          lockedUntil: new Date(now.getTime() + 600_000),
+          lastFailedAt: now,
+        },
+        {
+          key: recentAttemptKey,
+          count: 2,
+          lockedUntil: null,
+          lastFailedAt: new Date(now.getTime() - 60_000),
+        },
+      ]);
+
+      const deletedCount = await purgeStaleLoginAttempts(db, now);
+      expect(deletedCount).toBeGreaterThanOrEqual(2);
+
+      const remaining = await db
+        .select()
+        .from(loginAttempts)
+        .where(
+          inArray(loginAttempts.key, [
+            expiredLockKey,
+            staleAttemptKey,
+            activeLockKey,
+            recentAttemptKey,
+          ]),
+        );
+
+      const remainingKeys = remaining.map((r) => r.key).sort();
+      expect(remainingKeys).toEqual([activeLockKey, recentAttemptKey].sort());
+    });
+
+    it("createJobRunner mendaftarkan job inti, mengeksekusi runJob(name), dan menghentikan job dengan bersih", async () => {
+      const runner = createJobRunner({ db, autoStart: false });
+      expect(runner.listJobs()).toEqual(
+        expect.arrayContaining([
+          "purge-chat",
+          "purge-sessions",
+          "purge-login-attempts",
+        ]),
+      );
+
+      let customRunCount = 0;
+      let customStopped = false;
+
+      runner.register({
+        name: "custom-test-job",
+        intervalMs: 60_000,
+        run: () => {
+          customRunCount += 1;
+          return customRunCount;
+        },
+        stop: () => {
+          customStopped = true;
+        },
+      });
+
+      expect(runner.listJobs()).toContain("custom-test-job");
+
+      const result = await runner.runJob("custom-test-job");
+      expect(result).toBe(1);
+      expect(customRunCount).toBe(1);
+
+      // Menjalankan job inti via runJob
+      await expect(runner.runJob("purge-sessions")).resolves.toEqual(
+        expect.any(Number),
+      );
+      await expect(runner.runJob("purge-login-attempts")).resolves.toEqual(
+        expect.any(Number),
+      );
+
+      // Job yang tidak terdaftar harus melempar error
+      await expect(runner.runJob("non-existent-job")).rejects.toThrow();
+
+      runner.startAll();
+      runner.stopAll();
+      expect(customStopped).toBe(true);
     });
   });
 });
