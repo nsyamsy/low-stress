@@ -55,11 +55,19 @@ import {
   getTaskById,
   validateTaskCompletion,
 } from "../shared/tasks";
+import {
+  type RiotClientRoomView,
+  type RiotPublicPlayerView,
+} from "../shared/protocol";
 import { type PlayerInput } from "../shared/types";
+import type { RiotCharacterCustomization } from "../shared/character";
+
+export type { RiotClientRoomView, RiotPublicPlayerView } from "../shared/protocol";
 
 export interface RiotPlayer {
   id: string;
   displayName: string;
+  character?: RiotCharacterCustomization;
   role: PlayerRole;
   status: PlayerStatus;
   connected: boolean;
@@ -68,44 +76,11 @@ export interface RiotPlayer {
   tasksCompleted: number;
   correctVotes: number;
   assignedTasks: string[];
+  completedTasks: string[];
   emergencyMeetingsRemaining: number;
   lastChatSentAt: number;
   votedFor: string | "skip" | null;
   isAbandoned: boolean;
-}
-
-export interface RiotPublicPlayerView {
-  id: string;
-  displayName: string;
-  status: PlayerStatus;
-  connected: boolean;
-  hasVoted: boolean;
-  // Note: role is omitted in public view while game is ongoing!
-}
-
-export interface RiotClientRoomView {
-  roomId: string;
-  phase: GamePhase;
-  hostId: string;
-  options: RiotHostOptions;
-  myRole: PlayerRole;
-  myStatus: PlayerStatus;
-  players: RiotPublicPlayerView[];
-  hologramMarkers: HologramMarker[];
-  tasksTotal: number;
-  tasksCompleted: number;
-  activeSabotage: {
-    kind: SabotageKind;
-    targetRoom?: string;
-    startedAt: number;
-    durationMs: number;
-  } | null;
-  chatMessages: MeetingChatMessage[];
-  meetingReason: MeetingTrigger | null;
-  votingResult: VotingResolutionResult | null;
-  winner?: WinWinner | null;
-  winReason?: WinReason | null;
-  scores?: Record<string, PlayerScoreBreakdown>;
 }
 
 export interface RiotRoom {
@@ -130,6 +105,8 @@ export interface RiotRoom {
   scores: Map<string, PlayerScoreBreakdown> | null;
   createdAt: number;
   updatedAt: number;
+  /** Waktu mulai ronde berjalan (ms epoch); 0 bila belum dimulai. Dipakai RT-50 untuk durasi run leaderboard. */
+  roundStartedAt: number;
 }
 
 export class RiotGameService {
@@ -140,6 +117,7 @@ export class RiotGameService {
     hostName: string,
     roomId = `riot_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     options: Partial<RiotHostOptions> = {},
+    character?: RiotCharacterCustomization,
   ): RiotRoom {
     const sim = new AuthoritativeSimulation();
     const players = new Map<string, RiotPlayer>();
@@ -148,6 +126,7 @@ export class RiotGameService {
     const hostPlayer: RiotPlayer = {
       id: hostId,
       displayName: hostName,
+      character,
       role: "crew",
       status: "alive",
       connected: true,
@@ -156,6 +135,7 @@ export class RiotGameService {
       tasksCompleted: 0,
       correctVotes: 0,
       assignedTasks: [],
+      completedTasks: [],
       emergencyMeetingsRemaining: sanitizedOptions.emergencyMeetingsPerPlayer,
       lastChatSentAt: 0,
       votedFor: null,
@@ -186,6 +166,7 @@ export class RiotGameService {
       scores: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      roundStartedAt: 0,
     };
 
     this.rooms.set(roomId, room);
@@ -211,7 +192,31 @@ export class RiotGameService {
     return { success: true };
   }
 
-  joinRoom(roomId: string, playerId: string, playerName: string): { success: boolean; room?: RiotRoom; reason?: string } {
+  /**
+   * Memperbarui kustomisasi karakter pemain (RT-42). Hanya boleh saat fase
+   * lobby; kustomisasi dibekukan saat permainan dimulai.
+   */
+  updateCharacter(
+    roomId: string,
+    playerId: string,
+    character: RiotCharacterCustomization,
+  ): { success: boolean; reason?: string } {
+    const room = this.rooms.get(roomId);
+    if (!room) return { success: false, reason: "ROOM_NOT_FOUND" };
+    if (room.phase !== "lobby") return { success: false, reason: "CANNOT_CHANGE_CHARACTER_IN_GAME" };
+    const player = room.players.get(playerId);
+    if (!player) return { success: false, reason: "PLAYER_NOT_FOUND" };
+    player.character = character;
+    room.updatedAt = Date.now();
+    return { success: true };
+  }
+
+  joinRoom(
+    roomId: string,
+    playerId: string,
+    playerName: string,
+    character?: RiotCharacterCustomization,
+  ): { success: boolean; room?: RiotRoom; reason?: string } {
     const room = this.rooms.get(roomId);
     if (!room) {
       return { success: false, reason: "ROOM_NOT_FOUND" };
@@ -230,12 +235,14 @@ export class RiotGameService {
       const existing = room.players.get(playerId)!;
       existing.connected = true;
       existing.disconnectedAt = null;
+      if (character) existing.character = character;
       return { success: true, room };
     }
 
     const newPlayer: RiotPlayer = {
       id: playerId,
       displayName: playerName,
+      character,
       role: "crew",
       status: "alive",
       connected: true,
@@ -244,6 +251,7 @@ export class RiotGameService {
       tasksCompleted: 0,
       correctVotes: 0,
       assignedTasks: [],
+      completedTasks: [],
       emergencyMeetingsRemaining: room.options.emergencyMeetingsPerPlayer,
       lastChatSentAt: 0,
       votedFor: null,
@@ -273,6 +281,50 @@ export class RiotGameService {
     return { success: true, roomClosed: false };
   }
 
+  /**
+   * Kembali ke fase lobby setelah ronde selesai (rematch, RT-42).
+   * Hanya host; pemain & room dipertahankan, status permainan direset.
+   */
+  returnToLobby(roomId: string, callerId: string): { success: boolean; reason?: string } {
+    const room = this.rooms.get(roomId);
+    if (!room) return { success: false, reason: "ROOM_NOT_FOUND" };
+    if (room.hostId !== callerId) return { success: false, reason: "NOT_ROOM_HOST" };
+    if (room.phase !== "finished") return { success: false, reason: "NOT_FINISHED" };
+
+    for (const player of room.players.values()) {
+      player.role = "crew";
+      player.status = "alive";
+      player.tasksCompleted = 0;
+      player.completedTasks = [];
+      player.correctVotes = 0;
+      player.assignedTasks = [];
+      player.votedFor = null;
+      player.isAbandoned = false;
+      player.emergencyMeetingsRemaining = room.options.emergencyMeetingsPerPlayer;
+      player.lastActionAt = 0;
+    }
+
+    room.phase = "lobby";
+    room.simulation = new AuthoritativeSimulation();
+    for (const id of room.players.keys()) room.simulation.addPlayer(id);
+    room.hologramMarkers = [];
+    room.tasksTotal = 0;
+    room.tasksCompleted = 0;
+    room.activeSabotage = null;
+    room.lastSabotageAt = 0;
+    room.chatMessages = [];
+    room.meetingReason = null;
+    room.phaseStartedAt = Date.now();
+    room.votes.clear();
+    room.votingResult = null;
+    room.winner = null;
+    room.winReason = null;
+    room.scores = null;
+    room.updatedAt = Date.now();
+    room.roundStartedAt = 0;
+    return { success: true };
+  }
+
   startGame(roomId: string, callerId: string): {
     success: boolean;
     reason?: string;
@@ -287,9 +339,9 @@ export class RiotGameService {
     const playerIds = Array.from(room.players.keys());
     const assignedRoles = assignRoles(playerIds, room.options.infiltratorCount);
 
-    // Assign tasks: Each crew member gets tasks based on options.tasksPerPlayer
+    // Assign tasks: each crew member draws a shuffled subset of the
+    // station task pool so players do not all share the same three tasks.
     const allTaskIds = STATION_TASKS.map((t) => t.id);
-    const tasksToAssign = allTaskIds.slice(0, room.options.tasksPerPlayer);
     let totalCrewTasks = 0;
 
     for (const [id, player] of room.players.entries()) {
@@ -300,20 +352,23 @@ export class RiotGameService {
       player.disconnectedAt = null;
       player.lastActionAt = Date.now();
       player.tasksCompleted = 0;
+      player.completedTasks = [];
       player.correctVotes = 0;
       player.votedFor = null;
       player.isAbandoned = false;
       player.emergencyMeetingsRemaining = room.options.emergencyMeetingsPerPlayer;
 
       if (role === "crew") {
-        player.assignedTasks = [...tasksToAssign];
-        totalCrewTasks += tasksToAssign.length;
+        const shuffled = [...allTaskIds].sort(() => Math.random() - 0.5);
+        player.assignedTasks = shuffled.slice(0, room.options.tasksPerPlayer);
+        totalCrewTasks += player.assignedTasks.length;
       } else {
         player.assignedTasks = [];
       }
     }
 
     room.phase = "playing";
+    room.roundStartedAt = Date.now();
     room.tasksTotal = totalCrewTasks;
     room.tasksCompleted = 0;
     room.hologramMarkers = [];
@@ -356,6 +411,12 @@ export class RiotGameService {
 
     const task = getTaskById(proof.taskId);
     if (!task) return { success: false, reason: "INVALID_TASK_ID" };
+    if (!player.assignedTasks.includes(proof.taskId)) {
+      return { success: false, reason: "TASK_NOT_ASSIGNED" };
+    }
+    if (player.completedTasks.includes(proof.taskId)) {
+      return { success: false, reason: "TASK_ALREADY_DONE" };
+    }
 
     const simPlayer = room.simulation.getPlayer(playerId);
     if (!simPlayer) return { success: false, reason: "SIM_PLAYER_NOT_FOUND" };
@@ -366,6 +427,7 @@ export class RiotGameService {
     }
 
     player.tasksCompleted++;
+    player.completedTasks.push(proof.taskId);
     room.tasksCompleted++;
     room.updatedAt = Date.now();
 
@@ -884,6 +946,7 @@ export class RiotGameService {
       status: p.status,
       connected: p.connected,
       hasVoted: p.votedFor !== null,
+      character: p.character,
     }));
 
     const scoresObj: Record<string, PlayerScoreBreakdown> = {};
@@ -898,6 +961,7 @@ export class RiotGameService {
 
     return {
       roomId: room.id,
+      viewerId,
       phase: room.phase,
       hostId: room.hostId,
       options: room.options,
@@ -907,6 +971,8 @@ export class RiotGameService {
       hologramMarkers: room.hologramMarkers,
       tasksTotal: room.tasksTotal,
       tasksCompleted: room.tasksCompleted,
+      myTasks: [...viewer.assignedTasks],
+      myCompletedTasks: [...viewer.completedTasks],
       activeSabotage:
         room.activeSabotage && !room.activeSabotage.resolved
           ? {
@@ -921,6 +987,9 @@ export class RiotGameService {
       votingResult: room.phase === "voting" || room.phase === "finished" ? room.votingResult : null,
       winner: room.winner,
       winReason: room.winReason,
+      ejectedRole: room.votingResult?.ejectedId
+        ? (room.players.get(room.votingResult.ejectedId)?.role ?? null)
+        : null,
       scores: room.phase === "finished" ? scoresObj : undefined,
     };
   }

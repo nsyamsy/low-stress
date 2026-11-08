@@ -1,6 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { getRoomAtPosition, getSpawnPoint, MAP_DATA, resolveMovement } from "../shared/collision";
+import {
+  CHARACTER_ACCESSORIES,
+  MOCHI_ACCENT_COLORS,
+  MOCHI_BODY_COLORS,
+  MOCHI_SPECIES,
+  type MochiCustomization,
+} from "../shared/character";
+import { MochiCrowd, type CrowdCharacterState } from "../client/characters/crowd";
 import { VirtualJoystick } from "../client/VirtualJoystick";
 import idMessages from "../locales/id.json";
 import enMessages from "../locales/en.json";
@@ -184,23 +192,11 @@ export function SpikeApp() {
       scene.add(padMesh);
     });
 
-    // 4. InstancedMesh Characters (20 or 32 instances)
-    const charGeom = new THREE.SphereGeometry(0.8, 16, 16);
-    const charMat = new THREE.MeshStandardMaterial({
-      roughness: 0.3,
-      metalness: 0.2,
-    });
-    const instancedMesh = new THREE.InstancedMesh(charGeom, charMat, characterCount);
-    instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    // 4. Karakter Mochi prosedural (RT-40) via InstancedMesh per bagian
+    const crowd = new MochiCrowd(scene, 40);
+    const crowdStates: CrowdCharacterState[] = [];
 
-    // Initial transforms and colors for all characters
-    const dummy = new THREE.Object3D();
     const characterData: Array<{ x: number; y: number; baseAngle: number; speed: number }> = [];
-
-    const instancePalette = [
-      0x38bdf8, 0xf43f5e, 0x22c55e, 0xeab308, 0xa855f7, 0xec4899,
-      0x06b6d4, 0xf97316, 0x14b8a6, 0x8b5cf6, 0x64748b, 0xd946ef,
-    ];
 
     for (let i = 0; i < characterCount; i++) {
       const spawn = getSpawnPoint(i);
@@ -214,17 +210,26 @@ export function SpikeApp() {
         speed: 1.5 + (i % 3) * 0.5,
       });
 
-      dummy.position.set(startX, 0.8, -startY);
-      dummy.updateMatrix();
-      instancedMesh.setMatrixAt(i, dummy.matrix);
-
-      // Local player is bright cyan (0), others have varied mochi palette
-      const colorHex = i === 0 ? 0x38bdf8 : instancePalette[i % instancePalette.length]!;
-      instancedMesh.setColorAt(i, new THREE.Color(colorHex));
+      const species = MOCHI_SPECIES[i % MOCHI_SPECIES.length]!;
+      const custom: MochiCustomization = {
+        type: "mochi",
+        species,
+        bodyColorIndex: i % MOCHI_BODY_COLORS.length,
+        accentColorIndex: i % MOCHI_ACCENT_COLORS.length,
+        accessory:
+          i % 3 === 0 ? null : CHARACTER_ACCESSORIES[(i * 2) % CHARACTER_ACCESSORIES.length]!,
+      };
+      const state: CrowdCharacterState = {
+        id: `c${i}`,
+        custom,
+        x: startX,
+        y: startY,
+        heading: 0,
+        ghost: false,
+      };
+      crowdStates.push(state);
+      void crowd.upsert(state);
     }
-    instancedMesh.instanceColor!.needsUpdate = true;
-    instancedMesh.instanceMatrix.needsUpdate = true;
-    scene.add(instancedMesh);
 
     // FPS and Telemetry measurement trackers
     const frameTimes: number[] = [];
@@ -286,23 +291,20 @@ export function SpikeApp() {
       const r = getRoomAtPosition(playerPosRef.current.x, playerPosRef.current.y);
       if (r) setCurrentRoom(r.id);
 
-      // 2. Update Instance 0 (Player) in InstancedMesh
-      dummy.position.set(playerPosRef.current.x, 0.8 + Math.sin(now * 0.008) * 0.06, -playerPosRef.current.y);
-      dummy.updateMatrix();
-      instancedMesh.setMatrixAt(0, dummy.matrix);
-
-      // 3. Update Other Instances (Mochi Characters wandering slightly)
+      // Sinkronkan posisi semua karakter ke state crowd (RT-40 InstancedMesh)
+      const pState = crowdStates[0];
+      if (pState) {
+        pState.x = playerPosRef.current.x;
+        pState.y = playerPosRef.current.y;
+      }
       for (let i = 1; i < characterCount; i++) {
         const cd = characterData[i]!;
-        const bob = Math.sin(now * 0.005 + i) * 0.08;
-        const wanderX = cd.x + Math.sin(now * 0.001 * cd.speed + cd.baseAngle) * 0.6;
-        const wanderZ = -(cd.y + Math.cos(now * 0.001 * cd.speed + cd.baseAngle) * 0.6);
-
-        dummy.position.set(wanderX, 0.8 + bob, wanderZ);
-        dummy.updateMatrix();
-        instancedMesh.setMatrixAt(i, dummy.matrix);
+        const st = crowdStates[i];
+        if (!st) continue;
+        st.x = cd.x + Math.sin(now * 0.001 * cd.speed + cd.baseAngle) * 0.6;
+        st.y = cd.y + Math.cos(now * 0.001 * cd.speed + cd.baseAngle) * 0.6;
       }
-      instancedMesh.instanceMatrix.needsUpdate = true;
+      crowd.update(now);
 
       // 4. Smooth Camera Tracking
       const camTargetX = playerPosRef.current.x;
@@ -319,6 +321,7 @@ export function SpikeApp() {
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", onWindowResize);
+      crowd.dispose();
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);

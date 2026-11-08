@@ -11,6 +11,9 @@ import {
   ludoMessages,
   ludoPlayers,
   ludoRooms,
+  riotMatches,
+  riotRoomPlayers,
+  riotRooms,
   sessions,
   settings,
   users,
@@ -1163,6 +1166,227 @@ export async function adminDeleteLudoRoom(
     adminId,
     action: "ludo_delete_room",
     targetType: "ludo_room",
+    targetId: roomId,
+    detail: { roomName: room.name },
+  });
+
+  return { ok: true };
+}
+
+/**
+ * Moderasi Riot (RT-51): Daftar semua room.
+ * Chat rapat bersifat ephemeral (memori server, tidak dipersist), jadi
+ * riwayat yang dapat dilihat admin adalah room, pemain, dan hasil match.
+ */
+export async function listAdminRiotRooms(db: Database, status?: string) {
+  const conditions = [];
+  if (status) {
+    conditions.push(eq(riotRooms.status, status));
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const rows = await db
+    .select({
+      id: riotRooms.id,
+      name: riotRooms.name,
+      status: riotRooms.status,
+      hostId: riotRooms.hostId,
+      hostName: users.displayName,
+      options: riotRooms.options,
+      lastActivityAt: riotRooms.lastActivityAt,
+      createdAt: riotRooms.createdAt,
+      playersCount: sql<number>`(
+        SELECT COUNT(*)::int FROM riot_room_players rp
+         WHERE rp.room_id = ${riotRooms.id}
+      )`,
+    })
+    .from(riotRooms)
+    .innerJoin(users, eq(users.id, riotRooms.hostId))
+    .where(whereClause)
+    .orderBy(desc(riotRooms.lastActivityAt));
+
+  return {
+    items: rows.map((r) => ({
+      ...r,
+      lastActivityAt: r.lastActivityAt.toISOString(),
+      createdAt: r.createdAt.toISOString(),
+    })),
+  };
+}
+
+/**
+ * Moderasi Riot (RT-51): Rincian room lengkap (pemain + riwayat match).
+ */
+export async function getAdminRiotRoomDetail(db: Database, roomId: string) {
+  const [room] = await db
+    .select({
+      id: riotRooms.id,
+      name: riotRooms.name,
+      status: riotRooms.status,
+      hostId: riotRooms.hostId,
+      hostName: users.displayName,
+      options: riotRooms.options,
+      lastActivityAt: riotRooms.lastActivityAt,
+      createdAt: riotRooms.createdAt,
+    })
+    .from(riotRooms)
+    .innerJoin(users, eq(users.id, riotRooms.hostId))
+    .where(eq(riotRooms.id, roomId))
+    .limit(1);
+
+  if (!room) {
+    throw new AppError("NOT_FOUND", 404, { roomId });
+  }
+
+  const players = await db
+    .select({
+      userId: riotRoomPlayers.userId,
+      username: users.username,
+      displayName: users.displayName,
+      status: riotRoomPlayers.status,
+      character: riotRoomPlayers.character,
+      joinedAt: riotRoomPlayers.joinedAt,
+    })
+    .from(riotRoomPlayers)
+    .innerJoin(users, eq(users.id, riotRoomPlayers.userId))
+    .where(eq(riotRoomPlayers.roomId, roomId));
+
+  const matches = await db
+    .select({
+      id: riotMatches.id,
+      winner: riotMatches.winner,
+      startedAt: riotMatches.startedAt,
+      endedAt: riotMatches.endedAt,
+      players: riotMatches.players,
+    })
+    .from(riotMatches)
+    .where(eq(riotMatches.roomId, roomId))
+    .orderBy(desc(riotMatches.endedAt));
+
+  return {
+    room: {
+      ...room,
+      lastActivityAt: room.lastActivityAt.toISOString(),
+      createdAt: room.createdAt.toISOString(),
+    },
+    players: players.map((p) => ({
+      ...p,
+      joinedAt: p.joinedAt?.toISOString() ?? null,
+    })),
+    matches: matches.map((m) => ({
+      ...m,
+      startedAt: m.startedAt?.toISOString() ?? null,
+      endedAt: m.endedAt?.toISOString() ?? null,
+    })),
+  };
+}
+
+/**
+ * Moderasi Riot (RT-51): Reset room ke lobby.
+ */
+export async function adminResetRiotRoom(db: Database, adminId: string, roomId: string) {
+  const [room] = await db
+    .select({ id: riotRooms.id, name: riotRooms.name })
+    .from(riotRooms)
+    .where(eq(riotRooms.id, roomId))
+    .limit(1);
+
+  if (!room) {
+    throw new AppError("NOT_FOUND", 404, { roomId });
+  }
+
+  await db
+    .update(riotRooms)
+    .set({
+      status: "lobby",
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+      lastActivityAt: sql`CURRENT_TIMESTAMP`,
+    })
+    .where(eq(riotRooms.id, roomId));
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "riot_reset_room",
+    targetType: "riot_room",
+    targetId: roomId,
+    detail: { roomName: room.name },
+  });
+
+  return { ok: true };
+}
+
+/**
+ * Moderasi Riot (RT-51): Keluarkan pemain dari room.
+ */
+export async function adminKickRiotPlayer(
+  db: Database,
+  adminId: string,
+  roomId: string,
+  userId: string,
+) {
+  const [player] = await db
+    .select({ roomId: riotRoomPlayers.roomId })
+    .from(riotRoomPlayers)
+    .where(
+      and(
+        eq(riotRoomPlayers.roomId, roomId),
+        eq(riotRoomPlayers.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  if (!player) {
+    throw new AppError("NOT_FOUND", 404, { roomId, userId });
+  }
+
+  await db
+    .delete(riotRoomPlayers)
+    .where(
+      and(
+        eq(riotRoomPlayers.roomId, roomId),
+        eq(riotRoomPlayers.userId, userId),
+      ),
+    );
+
+  await db
+    .update(riotRooms)
+    .set({
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+      lastActivityAt: sql`CURRENT_TIMESTAMP`,
+    })
+    .where(eq(riotRooms.id, roomId));
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "riot_kick_player",
+    targetType: "riot_room",
+    targetId: roomId,
+    detail: { kickedUserId: userId },
+  });
+
+  return { ok: true };
+}
+
+/**
+ * Moderasi Riot (RT-51): Hapus room (pemain & match ikut terhapus via cascade).
+ */
+export async function adminDeleteRiotRoom(db: Database, adminId: string, roomId: string) {
+  const [room] = await db
+    .select({ id: riotRooms.id, name: riotRooms.name })
+    .from(riotRooms)
+    .where(eq(riotRooms.id, roomId))
+    .limit(1);
+
+  if (!room) {
+    throw new AppError("NOT_FOUND", 404, { roomId });
+  }
+
+  await db.delete(riotRooms).where(eq(riotRooms.id, roomId));
+
+  await recordAuditLog(db, {
+    adminId,
+    action: "riot_delete_room",
+    targetType: "riot_room",
     targetId: roomId,
     detail: { roomName: room.name },
   });

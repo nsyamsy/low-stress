@@ -1,5 +1,14 @@
 import type { Server as SocketIOServer, Socket } from "socket.io";
-import { RiotGameService } from "./service";
+import {
+  type Database,
+  riotMatches,
+  riotRoomPlayers,
+  riotRooms,
+  type GameServerContext,
+} from "@low-stress/sdk/server";
+import { RiotGameService, type RiotRoom } from "./service";
+import { buildLeaderboardScoreEntries, matchRecordKey } from "./leaderboard";
+import { sanitizeCharacterCustomization } from "../shared/character";
 import { SERVER_TICK_MS } from "../shared/types";
 import type { RiotHostOptions } from "../shared/lobby";
 import type { SabotageKind } from "../shared/sabotage";
@@ -9,20 +18,156 @@ export interface SetupRiotSocketResult {
   stopTickLoop: () => void;
 }
 
-export function setupRiotSocket(io: SocketIOServer, service = new RiotGameService()): SetupRiotSocketResult {
+interface RiotSocketUser {
+  id: string;
+  username: string;
+  displayName: string;
+  status: string;
+}
+
+export function setupRiotSocket(
+  io: SocketIOServer,
+  service = new RiotGameService(),
+  ctx?: GameServerContext,
+): SetupRiotSocketResult {
   const riotNamespace = io.of("/riot");
+  const db = ctx?.db as Database | undefined;
+
+  // --- Persistensi opsional (RT-41): room & match ke tabel riot_* ---
+  // Throttle per room agar broadcast view tidak membanjiri DB.
+  const lastPersistAt = new Map<string, number>();
+  const recordedMatches = new Set<string>();
+
+  const persistRoom = (room: RiotRoom): void => {
+    if (!db) return;
+    const now = Date.now();
+    if (now - (lastPersistAt.get(room.id) ?? 0) < 5000) return;
+    lastPersistAt.set(room.id, now);
+    void (async () => {
+      try {
+        await db
+          .insert(riotRooms)
+          .values({
+            id: room.id,
+            name: `Room ${room.id.slice(-6).toUpperCase()}`,
+            hostId: room.hostId,
+            status: room.phase,
+            options: room.options as unknown as Record<string, unknown>,
+            lastActivityAt: new Date(room.updatedAt),
+            updatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: riotRooms.id,
+            set: {
+              status: room.phase,
+              options: room.options as unknown as Record<string, unknown>,
+              lastActivityAt: new Date(room.updatedAt),
+              updatedAt: new Date(),
+            },
+          });
+        for (const p of room.players.values()) {
+          await db
+            .insert(riotRoomPlayers)
+            .values({
+              roomId: room.id,
+              userId: p.id,
+              status: p.status,
+              character: (p.character ?? null) as Record<string, unknown> | null,
+            })
+            .onConflictDoUpdate({
+              target: [riotRoomPlayers.roomId, riotRoomPlayers.userId],
+              set: {
+                status: p.status,
+                character: (p.character ?? null) as Record<string, unknown> | null,
+              },
+            });
+        }
+      } catch {
+        // Persistensi tidak boleh menjatuhkan gameplay; dicatat untuk diagnosa.
+      }
+    })();
+  };
+
+  const recordMatch = (room: RiotRoom): void => {
+    const key = matchRecordKey(room);
+    if (recordedMatches.has(key)) return;
+    recordedMatches.add(key);
+    // RT-50: catat poin ronde ke leaderboard generik lewat ctx.recordScore.
+    // Skor SELALU dihitung server dari room.scores; klien tidak dapat mengirim skor.
+    void (async () => {
+      if (ctx?.recordScore) {
+        for (const entry of buildLeaderboardScoreEntries(room)) {
+          try {
+            await ctx.recordScore(entry);
+          } catch {
+            // Kegagalan pencatatan skor tidak boleh menjatuhkan gameplay.
+          }
+        }
+      }
+    })();
+    if (!db) return;
+    void (async () => {
+      try {
+        await db.insert(riotMatches).values({
+          id: `match_${room.id}_${Date.now()}`,
+          roomId: room.id,
+          winner: room.winner,
+          endedAt: new Date(),
+          players: Array.from(room.players.values()).map((p) => ({
+            id: p.id,
+            role: p.role,
+            status: p.status,
+            tasksCompleted: p.tasksCompleted,
+            correctVotes: p.correctVotes,
+          })) as unknown as Record<string, unknown>,
+        });
+      } catch {
+        /* sama: jangan jatuhkan gameplay */
+      }
+    })();
+  };
+
+  // Middleware autentikasi: identitas pemain SELALU dari sesi cookie yang
+  // diverifikasi server (resolvePrincipal), tidak pernah dari auth klien.
+  riotNamespace.use(async (socket: Socket, next: (err?: Error) => void) => {
+    try {
+      if (ctx?.resolvePrincipal) {
+        const principal = await ctx.resolvePrincipal(socket.handshake.headers.cookie);
+        if (principal.kind === "user" && principal.user) {
+          socket.data.user = principal.user satisfies RiotSocketUser;
+          return next();
+        }
+        return next(new Error("UNAUTHENTICATED"));
+      }
+      return next(new Error("UNAUTHENTICATED"));
+    } catch {
+      return next(new Error("INTERNAL_ERROR"));
+    }
+  });
 
   // Track socket to player & room mapping
   const socketPlayerMap = new Map<string, { playerId: string; roomId: string }>();
 
   riotNamespace.on("connection", (socket: Socket) => {
-    // Authenticate player from cookie session or handshake auth
-    const authData = (socket.handshake.auth as { userId?: string; displayName?: string }) || {};
-    const userId = authData.userId || socket.id;
-    const displayName = authData.displayName || `Player_${userId.slice(0, 4)}`;
+    // Identitas sudah diverifikasi middleware; admin ditolak.
+    const user = socket.data.user as RiotSocketUser | undefined;
+    if (!user) {
+      socket.disconnect(true);
+      return;
+    }
+    const userId = user.id;
+    const displayName = user.displayName || user.username;
 
-    socket.on("room:create", (data?: { options?: Partial<RiotHostOptions> }, callback?: (res: unknown) => void) => {
-      const room = service.createRoom(userId, displayName, undefined, data?.options);
+    socket.on(
+      "room:create",
+      (data?: { options?: Partial<RiotHostOptions>; character?: unknown }, callback?: (res: unknown) => void) => {
+        const room = service.createRoom(
+          userId,
+          displayName,
+          undefined,
+          data?.options,
+          sanitizeCharacterCustomization(data?.character),
+        );
       socket.join(room.id);
       socketPlayerMap.set(socket.id, { playerId: userId, roomId: room.id });
 
@@ -42,8 +187,15 @@ export function setupRiotSocket(io: SocketIOServer, service = new RiotGameServic
       }
     });
 
-    socket.on("room:join", (data: { roomId: string }, callback?: (res: unknown) => void) => {
-      const res = service.joinRoom(data.roomId, userId, displayName);
+    socket.on(
+      "room:join",
+      (data: { roomId: string; character?: unknown }, callback?: (res: unknown) => void) => {
+        const res = service.joinRoom(
+          data.roomId,
+          userId,
+          displayName,
+          sanitizeCharacterCustomization(data.character),
+        );
       if (!res.success || !res.room) {
         if (callback) callback({ success: false, reason: res.reason });
         return;
@@ -58,6 +210,23 @@ export function setupRiotSocket(io: SocketIOServer, service = new RiotGameServic
       // Notify all players in room with their personalized safe views
       broadcastRoomViews(riotNamespace, res.room.id, service);
     });
+
+    socket.on(
+      "character:update",
+      (data: { character?: unknown }, callback?: (res: unknown) => void) => {
+        const mapping = socketPlayerMap.get(socket.id);
+        if (!mapping) return;
+        const res = service.updateCharacter(
+          mapping.roomId,
+          mapping.playerId,
+          sanitizeCharacterCustomization(data?.character),
+        );
+        if (callback) callback(res);
+        if (res.success) {
+          broadcastRoomViews(riotNamespace, mapping.roomId, service);
+        }
+      },
+    );
 
     socket.on("game:start", (_data: unknown, callback?: (res: unknown) => void) => {
       const mapping = socketPlayerMap.get(socket.id);
@@ -287,6 +456,32 @@ export function setupRiotSocket(io: SocketIOServer, service = new RiotGameServic
       }
     });
 
+    socket.on("room:rematch", (_data: unknown, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (!mapping) return;
+
+      const res = service.returnToLobby(mapping.roomId, mapping.playerId);
+      if (callback) callback(res);
+      if (res.success) {
+        broadcastRoomViews(riotNamespace, mapping.roomId, service);
+      }
+    });
+
+    socket.on("room:leave", (_data: unknown, callback?: (res: unknown) => void) => {
+      const mapping = socketPlayerMap.get(socket.id);
+      if (mapping) {
+        socketPlayerMap.delete(socket.id);
+        const room = service.getRoom(mapping.roomId);
+        if (room && room.phase === "lobby") {
+          service.leaveRoom(mapping.roomId, mapping.playerId);
+        } else if (room) {
+          service.handleDisconnect(mapping.roomId, mapping.playerId);
+        }
+        socket.leave(mapping.roomId);
+      }
+      if (callback) callback({ success: true });
+    });
+
     socket.on("disconnect", () => {
       const mapping = socketPlayerMap.get(socket.id);
       if (mapping) {
@@ -306,8 +501,11 @@ export function setupRiotSocket(io: SocketIOServer, service = new RiotGameServic
   const tickInterval = setInterval(() => {
     const now = Date.now();
     for (const room of service.getAllRooms()) {
-      if (room.phase === "finished") continue;
-
+      persistRoom(room); // throttled 5 dtk per room; menjaga riot_rooms sinkron
+      if (room.phase === "finished") {
+        recordMatch(room);
+        continue;
+      }
       // Handle server tick timers: sabotage expiration, discussion/voting timer, disconnect timeout
       const tickRes = service.processServerTick(room.id, now);
       if (tickRes.phaseAdvanced) {
@@ -355,7 +553,7 @@ function broadcastRoomViews(namespace: unknown, roomId: string, service: RiotGam
 
   const ns = namespace as { sockets: Map<string, Socket> };
   for (const socket of ns.sockets.values()) {
-    const pId = (socket.handshake.auth as { userId?: string })?.userId || socket.id;
+    const pId = (socket.data.user as { id?: string } | undefined)?.id || socket.id;
     if (room.players.has(pId)) {
       const view = service.getClientRoomView(roomId, pId);
       if (view) {

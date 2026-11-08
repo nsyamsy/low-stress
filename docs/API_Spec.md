@@ -141,6 +141,8 @@ Respons `200`: `{ best, bestPlay, plays, isNewBest }`.
 
 Kode: `SCORE_INVALID` (400), `SCORE_RATE_LIMITED` (429).
 
+Game `multiplayer` (Riot, Ludo) bersifat server-otoritatif: rute ini ditolak dengan `SCORE_SERVER_AUTHORITATIVE` (403). Skor game tersebut hanya dicatat server dari hasil ronde (Riot: R8 lewat `ctx.recordScore`; klien tidak pernah mengirim skor).
+
 Run Flappy Bird dengan `score < 1` dijawab `200` dengan `isNewBest:false` dan **tidak disimpan**.
 
 ### GET `/api/games/:id/leaderboard?period=all|week|month`
@@ -243,7 +245,55 @@ Aturan: hanya server yang melempar dadu; klien yang menerima `version` lebih lam
 
 ---
 
-## 9. Admin (`/api/admin`, cookie `ls_admin`)
+## 9. Riot ("Uproar on the Silent Station")
+
+Judul publik: "Uproar on the Silent Station" / "Gaduh di Stasiun Hening". Slug teknis, namespace, rute, dan tabel tetap `riot`. Status awal `inactive`.
+
+### REST
+
+| Metode | Rute | Keterangan |
+|---|---|---|
+| GET | `/api/games/riot/profile` | Profil kustomisasi karakter tersimpan (`riot_profiles`) |
+| PUT | `/api/games/riot/profile` | Simpan kustomisasi (divalidasi Zod + sanitasi server) |
+| GET | `/api/games/riot/leaderboard?period=` | Papan dari skor ronde yang dicatat server (RT-50) |
+
+Skor ronde dicatat server saat fase `finished` lewat `ctx.recordScore` (menang +10, +1/tugas, +2 tebak penyusup benar). `POST /api/games/riot/scores` ditolak `SCORE_SERVER_AUTHORITATIVE` (403).
+
+### Soket: namespace `/riot`
+
+Handshake memakai cookie sesi pemain (`resolvePrincipal`); admin dan anon ditolak. Identitas pemain selalu dari sesi, tidak pernah dari `handshake.auth`. Tick server 15 Hz, input klien 20 Hz.
+
+| Arah | Event | Payload |
+|---|---|---|
+| klien → server | `room:create` | `{ options?, character? }` → ack `{ success, room: RiotClientRoomView }` |
+| klien → server | `room:join` | `{ roomId, character? }` → ack `{ success, room }` / `{ success:false, reason }` |
+| klien → server | `room:options` | `{ options }` (host, fase lobby) |
+| klien → server | `room:leave`, `room:kick`, `room:rematch` | `{ targetId? }` (kick host; rematch host saat `finished`) |
+| klien → server | `character:update` | `{ character }` (fase lobby) |
+| klien → server | `game:start` | `{}` (host, min. 4 pemain) |
+| klien → server | `input` | `{ seq, dx, dy, dt }` (20 Hz) |
+| klien → server | `task:complete` | `{ taskId, startedAt, completedAt, durationMs }` (server memvalidasi posisi & durasi) |
+| klien → server | `action:eliminate` | `{ targetId }` (penyusup, jangkauan ≤ 2,2 m, cooldown) |
+| klien → server | `report` | `{ markerId }` (penanda hologram ≤ 2,5 m) |
+| klien → server | `meeting:call` | `{}` (tombol darurat, kuota terbatas) |
+| klien → server | `chat:send` | `{ text }` (≤ 300, disensor server, rate limit; hantu hanya ke hantu) |
+| klien → server | `meeting:advance` | `{}` (host: rapat → voting) |
+| klien → server | `vote:cast` | `{ targetId \| "skip" }` |
+| klien → server | `sabotage:trigger` | `{ kind, targetRoom? }` (penyusup) |
+| klien → server | `sabotage:repair` | `{ stationId }` |
+| klien → server | `player:reconnect` | `{ roomId }` |
+| server → klien | `room:view` | `RiotClientRoomView` (per pemain; peran & tugas hanya milik sendiri) |
+| server → klien | `role` | `{ role }` (hanya ke pemilik socket) |
+| server → klien | `snapshot` | snapshot interest-managed (hanya pemain dalam radius pandang) |
+| server → klien | `hologram:spawned`, `meeting:started`, `meeting:voting_started`, `voting:result`, `game:finished`, `sabotage:active`, `sabotage:resolved`, `chat:message`, `room:kicked` | Pemberitahuan fase/kejadian |
+
+Kode alasan (ack): `ROOM_NOT_FOUND`, `MIN_PLAYERS_NOT_MET`, `ROOM_CAPACITY_REACHED`, `TASK_OUT_OF_RANGE`, `TASK_COMPLETED_TOO_FAST`, `TASK_NOT_ASSIGNED`, `TASK_ALREADY_DONE`, `INFILTRATOR_CANNOT_DO_CREW_TASK`, `ACTION_ON_COOLDOWN`, `MESSAGE_TOO_LONG`, `RATE_LIMITED`, `GHOST_CANNOT_VOTE`, `NOT_ROOM_HOST`.
+
+Persistensi: `riot_rooms`, `riot_room_players`, `riot_matches` (throttle 5 dtk/room); ronde berjalan bersifat ephemeral, hanya room `lobby` yang direhidrasi saat restart.
+
+---
+
+## 10. Admin (`/api/admin`, cookie `ls_admin`)
 
 Semua rute mengubah data → tulis `audit_log` `{ adminId, action, targetType, targetId, detail }`. Semua `403 FORBIDDEN` bila cookie pemain.
 
@@ -327,12 +377,24 @@ Transisi sah: `pending → active|rejected`; `active ↔ suspended`; `active|sus
 | POST | `/ludo/rooms/:id/kick` | `{ userId }` |
 | DELETE | `/ludo/rooms/:id` | Hapus room |
 
+### Riot (moderasi, RT-51)
+
+| Metode | Rute | Keterangan |
+|---|---|---|
+| GET | `/riot/rooms?status=` | Semua room (`lobby`\|`playing`\|`meeting`\|`voting`\|`finished`) |
+| GET | `/riot/rooms/:id` | Rincian: room, pemain, riwayat match (chat rapat ephemeral, tidak dipersist) |
+| POST | `/riot/rooms/:id/reset` | Kembali ke lobi |
+| POST | `/riot/rooms/:id/kick` | `{ userId }` |
+| DELETE | `/riot/rooms/:id` | Hapus room (pemain & match ikut terhapus) |
+
+Semua aksi menulis `audit_log` (`riot_reset_room`, `riot_kick_player`, `riot_delete_room`).
+
 ### Audit
 
 `GET /audit?page=&action=&adminId=` → `{ items: { id, adminId, adminUsername, action, targetType, targetId, detail, createdAt }[] }`.
 
 ---
 
-## 10. Versi
+## 11. Versi
 
 Awalan versi tidak dipakai (satu klien resmi). Perubahan yang memecah kompatibilitas dicatat di bagian ini dan di `docs/changelog.md`.

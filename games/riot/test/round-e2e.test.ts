@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RiotGameService } from "../server/service";
 import { POINTS_PER_TASK, POINTS_WIN } from "../shared/scoring";
-import { STATION_TASKS } from "../shared/tasks";
+import { getTaskById } from "../shared/tasks";
 
 describe("Riot Win/Loss Flow, Scoring & Bot Simulation (RT-24)", () => {
   it("simulates a full complete round where bots complete all crew tasks to victory", () => {
@@ -32,7 +32,8 @@ describe("Riot Win/Loss Flow, Scoring & Bot Simulation (RT-24)", () => {
     for (const crew of crewMembers) {
       const simPlayer = room.simulation.getPlayer(crew.id)!;
 
-      for (const task of STATION_TASKS) {
+      for (const taskId of crew.assignedTasks) {
+        const task = getTaskById(taskId)!;
         // 1. Move bot to task location
         simPlayer.x = task.location.x;
         simPlayer.y = task.location.y;

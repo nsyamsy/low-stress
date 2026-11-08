@@ -1,174 +1,151 @@
 import { useEffect, useRef, useState } from "react";
 import { translate } from "@low-stress/i18n";
 import type { GameProps } from "@low-stress/sdk";
-import { Button, Chip } from "@low-stress/ui";
+import type { Socket } from "socket.io-client";
 
 import en from "../locales/en.json";
 import id from "../locales/id.json";
-import { getRoomAtPosition } from "../shared/collision";
-import { ClientPredictionManager } from "./prediction";
-import { VirtualJoystick } from "./VirtualJoystick";
+import {
+  DEFAULT_MOCHI_CUSTOMIZATION,
+  type RiotCharacterCustomization,
+} from "../shared/character";
+import type { RiotClientRoomView } from "../shared/protocol";
+import type { PlayerRole } from "../shared/rules";
+import { GameScene } from "./GameScene";
+import { Lobby } from "./Lobby";
+import { connectRiot, emitAck } from "./net";
+import { sfx } from "./audio";
 
 const MESSAGES = { id, en };
+type Locale = keyof typeof MESSAGES;
 
-export default function Game({ locale, onScore, onExit }: GameProps) {
-  const t = (key: string) => translate(locale, key, {}, MESSAGES[locale]);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [startedAt] = useState(() => Date.now());
-  const [score, setScore] = useState(0);
-  const [finished, setFinished] = useState(false);
-  const [currentRoom, setCurrentRoom] = useState<string | null>("command");
+export default function Game({ locale, onExit }: GameProps) {
+  const t = (key: string, params?: Record<string, string | number>) =>
+    translate(locale, key, params ?? {}, MESSAGES[locale]);
 
-  const inputRef = useRef({ dx: 0, dy: 0 });
-  const predictionRef = useRef<ClientPredictionManager>(new ClientPredictionManager(0, 30));
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [view, setView] = useState<RiotClientRoomView | null>(null);
+  const [role, setRole] = useState<PlayerRole | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [character, setCharacter] = useState<RiotCharacterCustomization>({
+    ...DEFAULT_MOCHI_CUSTOMIZATION,
+  });
+  const [showCredits, setShowCredits] = useState(false);
+  const viewRef = useRef<RiotClientRoomView | null>(null);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const s = connectRiot();
 
-    let animId: number;
-    let renderer: {
-      dispose: () => void;
-      domElement: HTMLCanvasElement;
-    } | null = null;
-    let cancelled = false;
-
-    void (async () => {
-      // Three.js dimuat secara lazy agar tidak membebani shell aplikasi utama
-      const THREE = await import("three");
-      if (cancelled) return;
-
-      const width = container.clientWidth || 360;
-      const height = Math.min(width, 360);
-
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-      camera.position.set(0, 15, 20);
-      camera.lookAt(0, 0, 0);
-
-      const threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      threeRenderer.setSize(width, height);
-      container.appendChild(threeRenderer.domElement);
-      renderer = threeRenderer;
-
-      // Floor grid indicator
-      const gridHelper = new THREE.GridHelper(60, 30, 0x38bdf8, 0x1e293b);
-      scene.add(gridHelper);
-
-      // Player mesh (Mochi sphere with visor-less friendly dome)
-      const playerGroup = new THREE.Group();
-      const bodyGeom = new THREE.SphereGeometry(0.8, 16, 16);
-      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3 });
-      const bodyMesh = new THREE.Mesh(bodyGeom, bodyMat);
-      bodyMesh.position.y = 0.8;
-      playerGroup.add(bodyMesh);
-
-      // Nose / direction indicator
-      const noseGeom = new THREE.ConeGeometry(0.2, 0.5, 8);
-      const noseMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e });
-      const noseMesh = new THREE.Mesh(noseGeom, noseMat);
-      noseMesh.rotation.x = Math.PI / 2;
-      noseMesh.position.set(0, 0.8, 0.8);
-      playerGroup.add(noseMesh);
-
-      scene.add(playerGroup);
-
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
-      dirLight.position.set(5, 15, 10);
-      scene.add(dirLight);
-      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
-      let lastTime = performance.now();
-
-      const animate = () => {
-        if (cancelled) return;
-        animId = requestAnimationFrame(animate);
-
-        const now = performance.now();
-        const dt = Math.min((now - lastTime) / 1000, 0.1);
-        lastTime = now;
-
-        const { dx, dy } = inputRef.current;
-        if (dx !== 0 || dy !== 0) {
-          predictionRef.current.applyInput(dx, dy, dt);
-        }
-
-        const pos = predictionRef.current.getPosition();
-        // In 3D: X is x, Z is -y (standard top-down mapping)
-        playerGroup.position.set(pos.x, 0, -pos.y);
-        playerGroup.rotation.y = -pos.heading + Math.PI / 2;
-
-        // Camera smoothly follows player
-        camera.position.x = pos.x;
-        camera.position.z = -pos.y + 15;
-        camera.lookAt(pos.x, 0, -pos.y);
-
-        // Update current room detection
-        const room = getRoomAtPosition(pos.x, pos.y);
-        setCurrentRoom(room ? room.id : null);
-
-        threeRenderer.render(scene, camera);
-      };
-      animate();
-    })();
+    s.on("connect", () => {
+      setSocket(s);
+      setConnected(true);
+      // Sambil menyambung kembali setelah putus/hidrasi server: kembalikan
+      // ke room yang sama bila klien masih memegang view-nya.
+      const v = viewRef.current;
+      if (v?.roomId) {
+        void emitAck<{ success?: boolean; room?: RiotClientRoomView }>(
+          s,
+          "player:reconnect",
+          { roomId: v.roomId },
+        )
+          .then((res) => {
+            if (res?.success && res.room) setView(res.room);
+          })
+          .catch(() => undefined);
+      }
+    });
+    s.on("disconnect", () => setConnected(false));
+    s.on("connect_error", () => setError("lobbyExtra.errorGeneric"));
+    s.on("room:view", (v: RiotClientRoomView) => {
+      setView(v);
+      setError(null);
+    });
+    s.on("role", (d: { role: PlayerRole }) => setRole(d.role));
+    s.on("room:kicked", () => {
+      setView(null);
+      setError("lobbyExtra.errorGeneric");
+    });
+    s.on("meeting:started", () => sfx.meetingStart());
+    s.on("voting:result", (res: { ejectedId: string | null }) => {
+      if (res.ejectedId) sfx.ejected();
+    });
+    s.on("game:finished", (res: { winner?: string }) => {
+      if (res.winner === "crew") sfx.win();
+      else sfx.lose();
+    });
 
     return () => {
-      cancelled = true;
-      if (animId) cancelAnimationFrame(animId);
-      if (renderer?.domElement.parentNode) {
-        renderer.domElement.parentNode.removeChild(renderer.domElement);
-        renderer.dispose();
-      }
+      s.disconnect();
     };
   }, []);
 
-  const finish = () => {
-    if (finished) return;
-    setFinished(true);
-    void onScore({ score, durationMs: Date.now() - startedAt });
-  };
+  // Role hanya relevan selama pertandingan; di lobi selalu null.
+  const effectiveRole = view !== null && view.phase !== "lobby" ? role : null;
+
+  const inGame = view !== null && view.phase !== "lobby";
 
   return (
-    <div className="ls-card ls-stack">
-      <div className="ls-row">
-        <h1 className="ls-heading-2">{t("title")}</h1>
-        <Chip tone="neutral">
-          {translate(locale, "score", { score }, MESSAGES[locale])}
-        </Chip>
-        {currentRoom && (
-          <Chip tone="neutral">
-            {t(`rooms.${currentRoom}`)}
-          </Chip>
-        )}
-      </div>
-      <p className="ls-text-secondary">{t("subtitle")}</p>
-
-      {/* 3D Game Stage Viewport */}
-      <div
-        ref={containerRef}
-        aria-label={t("stageLabel")}
-        className="w-full aspect-square max-w-sm mx-auto flex items-center justify-center overflow-hidden rounded-xl border border-border bg-slate-950"
-      />
-
-      {/* Movement Controls (Joystick + WASD) */}
-      <div className="my-2">
-        <VirtualJoystick
-          onMove={(mov) => {
-            inputRef.current = mov;
-          }}
-          disabled={finished}
+    <div className="ls-stack w-full">
+      {inGame && socket ? (
+        <GameScene
+          socket={socket}
+          view={view}
+          role={effectiveRole}
+          locale={locale as Locale}
+          t={t}
+          onExit={onExit}
         />
-      </div>
+      ) : (
+        <Lobby
+          socket={socket}
+          connected={connected}
+          view={view}
+          character={character}
+          onCharacterChange={setCharacter}
+          error={error}
+          t={t}
+        />
+      )}
 
-      <div className="ls-row">
-        <Button onClick={() => setScore((s) => s + 1)}>{t("tap")}</Button>
-        <Button variant="secondary" onClick={finish} disabled={finished}>
-          {t("finish")}
-        </Button>
-        <Button variant="ghost" onClick={onExit}>
-          {t("exit")}
-        </Button>
-      </div>
+      {/* Credit layar (RT-44) — selalu bisa dibuka dari lobi */}
+      {!inGame ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            className="ls-text-secondary text-xs underline"
+            onClick={() => setShowCredits((v) => !v)}
+          >
+            {t("lobbyExtra.credits")}
+          </button>
+        </div>
+      ) : null}
+
+      {showCredits && !inGame ? <Credits locale={locale as Locale} t={t} /> : null}
+    </div>
+  );
+}
+
+function Credits({ locale, t }: { locale: Locale; t: (k: string) => string }) {
+  void locale;
+  return (
+    <div className="ls-card ls-stack text-sm">
+      <h2 className="ls-heading-3">{t("lobbyExtra.credits")}</h2>
+      <p>
+        <strong>Uproar on the Silent Station</strong> — game orisinal Low Stress.
+      </p>
+      <p>
+        Karakter Mochi dihasilkan secara prosedural oleh engine game ini.
+        Karakter Humanoid menggunakan aset "Mini Characters" oleh Kenney
+        (CC0, kenney.nl). Musik &amp; efek suara disintesis orisinal via
+        WebAudio. Tidak ada aset pihak ketiga yang dibatasi pakai.
+      </p>
+      <p className="ls-text-secondary">
+        Detail lisensi lengkap ada di games/riot/assets/LICENSES.md.
+      </p>
     </div>
   );
 }

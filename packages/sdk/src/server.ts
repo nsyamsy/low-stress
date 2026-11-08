@@ -23,6 +23,10 @@ export {
   ludoRooms,
   ludoPlayers,
   ludoMessages,
+  riotProfiles,
+  riotRooms,
+  riotRoomPlayers,
+  riotMatches,
 } from "@low-stress/db/client";
 
 export { eq, and, or, sql, desc, asc, inArray, like, lt, gt } from "drizzle-orm";

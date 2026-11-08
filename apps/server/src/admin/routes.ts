@@ -17,8 +17,11 @@ import { listAdminGames, updateAdminGame } from "../games/service";
 import { updateGameSchema } from "../games/validation";
 import {
   adminDeleteLudoRoom,
+  adminDeleteRiotRoom,
   adminKickLudoPlayer,
+  adminKickRiotPlayer,
   adminResetLudoRoom,
+  adminResetRiotRoom,
   bulkUpdateUsers,
   createBannedWord,
   deleteBannedWord,
@@ -26,8 +29,10 @@ import {
   deleteUserByAdmin,
   getAdminDashboard,
   getAdminLudoRoomDetail,
+  getAdminRiotRoomDetail,
   getAdminSettings,
   listAdminLudoRooms,
+  listAdminRiotRooms,
   listAuditLogs,
   listBannedWords,
   listGameRuns,
@@ -48,6 +53,8 @@ import {
   adminLoginBodySchema,
   adminLudoKickSchema,
   adminLudoRoomsQuerySchema,
+  adminRiotKickSchema,
+  adminRiotRoomsQuerySchema,
   adminMuteUserSchema,
   adminResetLeaderboardSchema,
   adminRunsQuerySchema,
@@ -383,7 +390,7 @@ export async function registerAdminRoutes(
     },
   );
 
-  // Moderasi Ludo (API_Spec §9)
+  // Moderasi Ludo (API_Spec §10)
   // GET /api/admin/ludo/rooms?status=
   app.get(
     "/api/admin/ludo/rooms",
@@ -438,6 +445,65 @@ export async function registerAdminRoutes(
     async (request, reply) => {
       const { id } = request.params as { id: string };
       await adminDeleteLudoRoom(db, request.admin!.id, id);
+      return reply.status(204).send();
+    },
+  );
+
+  // Moderasi Riot (RT-51, API_Spec §10)
+  // GET /api/admin/riot/rooms?status=
+  app.get(
+    "/api/admin/riot/rooms",
+    { preHandler: [requireAdminAuth] },
+    async (request) => {
+      const parseResult = adminRiotRoomsQuerySchema.safeParse(request.query);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+      return listAdminRiotRooms(db, parseResult.data.status);
+    },
+  );
+
+  // GET /api/admin/riot/rooms/:id
+  app.get(
+    "/api/admin/riot/rooms/:id",
+    { preHandler: [requireAdminAuth] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      return getAdminRiotRoomDetail(db, id);
+    },
+  );
+
+  // POST /api/admin/riot/rooms/:id/reset
+  app.post(
+    "/api/admin/riot/rooms/:id/reset",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      return adminResetRiotRoom(db, request.admin!.id, id);
+    },
+  );
+
+  // POST /api/admin/riot/rooms/:id/kick
+  app.post(
+    "/api/admin/riot/rooms/:id/kick",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const parseResult = adminRiotKickSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        throw new AppError("VALIDATION_FAILED", 400);
+      }
+      return adminKickRiotPlayer(db, request.admin!.id, id, parseResult.data.userId);
+    },
+  );
+
+  // DELETE /api/admin/riot/rooms/:id
+  app.delete(
+    "/api/admin/riot/rooms/:id",
+    { preHandler: [requireAdminAuth, verifyCsrf] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      await adminDeleteRiotRoom(db, request.admin!.id, id);
       return reply.status(204).send();
     },
   );

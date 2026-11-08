@@ -296,6 +296,82 @@ export const ludoMessages = pgTable(
   (table) => [index("idx_ludo_messages_room").on(table.roomId, table.id)],
 );
 
+// --- Tabel game Riot (prefix riot_, migrasi di games/riot/db) ---
+
+export const riotProfiles = pgTable("riot_profiles", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  character: jsonb("character").$type<Record<string, unknown>>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const riotRooms = pgTable(
+  "riot_rooms",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    hostId: uuid("host_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("lobby"),
+    options: jsonb("options").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("idx_riot_rooms_last_activity").on(table.lastActivityAt)],
+);
+
+export const riotRoomPlayers = pgTable(
+  "riot_room_players",
+  {
+    roomId: text("room_id")
+      .notNull()
+      .references(() => riotRooms.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("joined"),
+    character: jsonb("character").$type<Record<string, unknown>>(),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.roomId, table.userId] }),
+    index("idx_riot_room_players_user").on(table.userId),
+  ],
+);
+
+export const riotMatches = pgTable(
+  "riot_matches",
+  {
+    id: text("id").primaryKey(),
+    roomId: text("room_id")
+      .notNull()
+      .references(() => riotRooms.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    winner: text("winner"),
+    players: jsonb("players").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("idx_riot_matches_room").on(table.roomId)],
+);
+
 /** Daftar tabel inti, dipakai pemeriksa migrasi dan tes. */
 export const coreTables = [
   "users",

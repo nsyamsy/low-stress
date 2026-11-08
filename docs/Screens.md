@@ -17,6 +17,7 @@ Catatan berlaku untuk semua layar: mobile-first (360px), target ketuk ≥ 44px, 
 | `/games/:id` | Halaman game | Pemain `active` (gerbang status dan jadwal) |
 | `/games/ludo` | Lobi Ludo | idem |
 | `/games/ludo/:roomId` | Room Ludo | Anggota room |
+| `/games/riot` | Lobi + permainan Riot ("Uproar on the Silent Station") | Pemain `active` (gerbang status dan jadwal); game `inactive` sampai RT-54 ditandatangani |
 | `/leaderboard` | Leaderboard | Pemain `active` |
 | `/profile` | Profil | Pemain `active` |
 | `/admin/login` | Login admin | Tamu |
@@ -27,6 +28,7 @@ Catatan berlaku untuk semua layar: mobile-first (360px), target ketuk ≥ 44px, 
 | `/admin/leaderboard` | Moderasi skor | Admin |
 | `/admin/chat` | Moderasi chat | Admin |
 | `/admin/ludo` | Moderasi Ludo | Admin |
+| `/admin/riot` | Moderasi Riot (room, pemain, match) | Admin (RT-51; API tersedia, halaman admin menyusul) |
 | `/admin/settings` | Pengaturan | Admin |
 | `/admin/audit` | Audit log | Admin |
 

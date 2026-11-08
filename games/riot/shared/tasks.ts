@@ -44,6 +44,83 @@ export const STATION_TASKS: readonly StationTaskDefinition[] = [
     interactionRadius: 2.5,
     minDurationMs: 3000,
   },
+  {
+    id: "command_align",
+    name: {
+      id: "Sejajarkan Konsole Komando",
+      en: "Align Command Consoles",
+    },
+    roomId: "command",
+    location: { x: 0, y: 33 },
+    interactionRadius: 2.5,
+    minDurationMs: 2500,
+  },
+  {
+    id: "quarters_clean",
+    name: {
+      id: "Rapikan Kamar Kru",
+      en: "Tidy Crew Quarters",
+    },
+    roomId: "quarters",
+    location: { x: 0, y: -33 },
+    interactionRadius: 2.5,
+    minDurationMs: 2000,
+  },
+  {
+    id: "cooling_purge",
+    name: {
+      id: "Bersihkan Sistem Pendingin",
+      en: "Purge Cooling Loop",
+    },
+    roomId: "cooling",
+    location: { x: 32, y: -30 },
+    interactionRadius: 2.5,
+    minDurationMs: 3500,
+  },
+  {
+    id: "biolab_sample",
+    name: {
+      id: "Ambil Sampel Biolab",
+      en: "Collect Biolab Sample",
+    },
+    roomId: "biolab",
+    location: { x: 37, y: 25 },
+    interactionRadius: 2.5,
+    minDurationMs: 3000,
+  },
+  {
+    id: "observation_scan",
+    name: {
+      id: "Pindai Kubah Observasi",
+      en: "Scan Observation Dome",
+    },
+    roomId: "observation",
+    location: { x: 45, y: -5 },
+    interactionRadius: 2.5,
+    minDurationMs: 2500,
+  },
+  {
+    id: "power_balance",
+    name: {
+      id: "Seimbangkan Grid Daya",
+      en: "Balance Power Grid",
+    },
+    roomId: "power",
+    location: { x: 8, y: 8 },
+    interactionRadius: 2.5,
+    minDurationMs: 4000,
+  },
+  {
+    id: "tunnels_inspect",
+    name: {
+      id: "Periksa Terowongan",
+      en: "Inspect Maintenance Tunnels",
+    },
+    roomId: "tunnels",
+    location: { x: -20, y: 0 },
+    interactionRadius: 2.5,
+    minDurationMs: 2000,
+  },
 ] as const;
 
 export function getTaskById(taskId: string): StationTaskDefinition | undefined {

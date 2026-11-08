@@ -146,6 +146,13 @@ export async function registerGameRoutes(
     const loaded = games.find((g) => g.manifest.id === gameId);
     const manifest = loaded?.manifest;
 
+    // Game multiplayer bersifat server-otoritatif (Riot, Ludo): skor hanya
+    // boleh dicatat server dari hasil ronde (RT-50). Klien tidak dapat
+    // mengirim skor untuk game semacam ini.
+    if (manifest?.mode === "multiplayer") {
+      throw new AppError("SCORE_SERVER_AUTHORITATIVE", 403, { gameId });
+    }
+
     // Batas laju per pemain & game (API_Spec §6)
     const rateKey = `${userId}:${gameId}`;
     const nowMs = Date.now();

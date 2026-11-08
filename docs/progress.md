@@ -550,3 +550,100 @@ Database low_stress  -> UTUH dan TIDAK TERSENTUH (semua tes berjalan pada databa
 
 
 
+
+---
+
+## Fase 4 — Karakter, Tugas Lengkap, Audio & Kredit (RT-40 s.d. RT-44)
+
+Tanggal: 2026-11-08
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| RT-40 Generator Mochi prosedural | **Selesai** | `client/characters/mochi.ts`: 6 spesies (orb, moth, newt, puff, sprite, crab) dengan geometri per-bagian (body/accent/detail/face/accessory) sehingga bisa di-`InstancedMesh` dengan warna per-instance. Aksesori prosedural 8 jenis. `MochiCrowd` (`characters/crowd.ts`) me-render semuanya via `InstancedMesh` (bucket per spesies + per aksesori + per varian humanoid). Ekspor GLB orisinal ke `assets/models/mochi-*.glb` (6 berkas, masing-masing ~40–59 KB) lewat `tools/export-mochi-glb.ts`. Spike RT-14 kini me-render `MochiCrowd` agar anggaran R5 terukur dengan karakter asli. |
+| RT-41 Humanoid CC0 + profil | **Selesai** | 20 varian GLB "Mini Characters" Kenney (CC0, tercatat di `assets/LICENSES.md`) dimuat via `import.meta.glob` tanpa CDN; tekstur `colormap.png` dipetakan ulang via `LoadingManager`. Skema kustomisasi bersama di `shared/character.ts` (Mochi + Humanoid + sanitasi server). Migrasi `games/riot/db/0000_riot_tables.sql` berisi `riot_profiles` (+ `riot_rooms`, `riot_room_players`, `riot_matches`) dan skema Drizzle di `packages/db`. Rute `GET/PUT /api/games/riot/profile` di `server/profile.ts` (sanitasi Zod + `sanitizeCharacterCustomization`). `onUserDeleted` membersihkan data room; `riot_profiles` dibersihkan `ON DELETE CASCADE`. |
+| RT-42 Pemilih karakter lobi | **Selesai** | Klien Riot sekarang bisa dimainkan ujung-ke-ujung: `client/index.tsx` (orkestrasi socket `/riot`), `client/Lobby.tsx` (buat/gabung room, daftar pemain, opsi host, mulai), `client/CharacterPicker.tsx` (Mochi: spesies/warna/aksen/aksesori; Humanoid: 20 varian tubuh/palet/aksesoris), `client/GameScene.tsx` (viewport 3D + dinding dari `collision.json`, joystick WASD, prediksi + interpolasi remote, tugas, rapat/chat/voting, sabotase, hasil). Preview 3D per pilihan via `AvatarPreview` (Three.js lazy). Target ketuk ≥44px, `aria-pressed`/label teks sehingga tidak bergantung warna saja. Autentikasi socket diperketat: identitas dari cookie sesi via `ctx.resolvePrincipal`, `handshake.auth` tidak dipercaya; admin/anon ditolak. |
+| RT-43 10 tugas + denah + audio | **Selesai (denah level data)** | `STATION_TASKS` kini 10 tugas mencakup seluruh 10 ruangan (tiap lokasi divalidasi berada di dalam bounds ruangan oleh tes). Tugas kini diacak per pemain dan tidak bisa diulang (`TASK_NOT_ASSIGNED`/`TASK_ALREADY_DONE`). Audio orisinal disintesis WebAudio (`client/audio.ts`): click, taskDone, meetingStart, voteCast, ejected, win/lose — dengan tombol bisu yang tersimpan di `localStorage`. Denah final = `shared/collision.json` (10 ruangan, 13 dinding) dirender sebagai dinding greybox 3D; visual final masih greybox. |
+| RT-44 Kredit + lisensi | **Selesai** | Layar Kredit dapat dibuka dari lobi (istilah game tidak pernah "Riot" untuk pemain). `assets/LICENSES.md` mencatat semua aset: 6 GLB Mochi internal, 20 GLB + tekstur Kenney CC0, dan audio orisinal. `pnpm check:assets` hijau. |
+
+### Perubahan server/protokol penting
+
+- `RiotClientRoomView` (`shared/protocol.ts`) kini memuat `viewerId`, `myTasks`, `myCompletedTasks` agar klien tahu tugasnya tanpa membocorkan data orang lain.
+- Event socket baru: `room:leave`, `character:update`; `room:create`/`room:join` menerima `character` (disanitasi server).
+- `startGame` mengacak tugas per pemain (sebelumnya semua kru menerima 3 tugas yang sama).
+- Perbaikan keamanan: middleware `/riot` menolak koneksi tanpa sesi user dan menolak admin; identitas pemain selalu dari `resolvePrincipal`.
+
+### Pemeriksaan Akhir
+
+```
+pnpm lint              -> lolos (0 error)
+pnpm typecheck         -> lolos (seluruh monorepo)
+pnpm --filter @low-stress/game-riot test -> 15 berkas, 89 tes lolos
+pnpm i18n:check        -> lolos (id/en identik)
+pnpm check:assets      -> lolos
+pnpm check:migrations  -> lolos
+pnpm test (root)       -> games/riot & game non-DB lolos; tes ber-DB
+                          (server, ludo censor/expiration, create-admin)
+                          dilewati lokal karena DATABASE_URL tidak diatur;
+                          1 tes apps/web leaderboard gagal format angka
+                          (4.950 vs 4,950) — tidak terkait perubahan ini.
+```
+
+### Belum diverifikasi / catatan jujur
+
+- UI baru (lobi, peta 3D, rapat, voting) **belum diuji di browser nyata** — baru lolos typecheck/lint/unit test. Perlu uji manual 360px/desktop terang/gelap.
+- Denah masih greybox (box + pad ruangan); "denah final" berarti data kolisi final, bukan art final.
+- RT-14 uji ponsel nyata tetap tugas pemilik.
+- Game tetap `inactive`; Fase 5 (RT-50–55) belum dikerjakan.
+
+### Tambahan pasca-Fase 4 (perbaikan celah)
+
+- **Rematch**: `service.returnToLobby` + event `room:rematch` (host only) — ronde `finished` kembali ke `lobby` dengan pemain sama; tombol "Main lagi" di layar hasil, non-host melihat status menunggu.
+- **Reveal peran**: `RiotClientRoomView.ejectedRole` — peran pemain yang dikeluarkan baru terlihat setelah voting selesai (tidak bocor selama voting/playing).
+- **Persistensi**: socket menulis `riot_rooms` + `riot_room_players` (upsert, throttle 5 dtk/room via tick 15 Hz) dan `riot_matches` sekali saat `phase === "finished"`. Kegagalan DB tidak menjatuhkan gameplay.
+- **Build web**: `pnpm --filter @low-stress/web build` lolos; chunk Riot lazy-load (three ~679 kB, GLTFLoader ~45 kB, GLB humanoid ~240 kB per varian, diambil on-demand).
+- Tes baru: rematch & ejectedRole (2 tes; total riot 91 tes hijau).
+
+### Rehidrasi room & reconnect klien
+
+- `server/hydrate.ts`: saat `registerRealtime`, room berstatus `lobby` di `riot_rooms` + `riot_room_players` dibangun ulang ke `RiotGameService` (nama dari `users`, opsi & kustomisasi dari JSONB). Hanya fase lobby yang dipulihkan; ronde berjalan tetap ephemeral. Pemain hasil hidrasi ditandai offline sampai socket kembali.
+- Klien: pada event `connect`, bila masih memegang `view.roomId` klien emit `player:reconnect` — memperbaiki UX putus sambung socket (sebelumnya mapping socket hilang dan view tidak pernah pulih).
+- `games/riot/vitest.config.ts`: `testTimeout`/`hookTimeout` 30 dtk — import lazy klien (React + socket.io-client + grafik Three) bisa >5 dtk di mesin lambat.
+
+---
+
+## Fase 5 — Integrasi, QA, Rilis (RT-50 s.d. RT-55)
+
+Tanggal: 2026-11-08
+
+### Ringkasan
+
+| Tugas | Status | Bukti / catatan |
+|---|---|---|
+| RT-50 Poin ke leaderboard | **Selesai** | `games/riot/server/leaderboard.ts` (`buildLeaderboardScoreEntries`, `matchRecordKey` per `roundStartedAt` agar rematch tercatat); `service.ts` mencatat `roundStartedAt` saat `startGame`; `socket.ts` `recordMatch` memanggil `ctx.recordScore` per pemain berpoin saat `finished` (sekali per ronde). `POST /api/games/:id/scores` untuk game `multiplayer` kini ditolak `SCORE_SERVER_AUTHORITATIVE` (403) di `apps/server/src/games/routes.ts` — skor Riot hanya dari server. 3 tes unit di `games/riot/test/leaderboard-scoring.test.ts`. |
+| RT-51 Moderasi admin | **Selesai (API)** | `GET/GET/:id/POST reset/POST kick/DELETE /api/admin/riot/rooms` di `apps/server/src/admin/{service,routes,validation}.ts`, meniru pola Ludo; semua aksi menulis `audit_log` (`riot_reset_room`, `riot_kick_player`, `riot_delete_room`). Detail: room + pemain + riwayat match. **Batasan jujur:** chat rapat Riot ephemeral (tidak dipersist), jadi tidak dapat dilihat admin dari DB — menyimpang dari redaksi RT-51 "lihat chat", dicatat di API_Spec §10. Halaman UI admin belum dibuat (setara Ludo yang juga API-only). Tes `apps/server/test/riot-admin.test.ts` (5 tes) tertulis. |
+| RT-52 i18n & aksesibilitas | **Selesai** | `pnpm i18n:check` lolos (id/en identik). `games/riot/client/reduced-motion.ts` (helper murni + hook `usePrefersReducedMotion`); `MochiCrowd.reducedMotion` mematikan goyangan idle (bob) dan mengikuti perubahan preferensi live di `GameScene.tsx`. Kamera sudah kaku tanpa shake/kilat. Informasi tidak hanya lewat warna (nama + teks status + `aria-pressed`/label). 3 tes unit di `games/riot/test/reduced-motion.test.ts`. Audit manual browser belum dilakukan. |
+| RT-53 QA & E2E | **Sebagian** | E2E Vitest+Socket.IO `apps/server/test/riot-e2e.test.ts`: 4 konteks socket → buat/gabung → mulai → peran rahasia (tepat 1 penyusup) → skor klien ditolak 403 → rapat → voting → selesai → leaderboard `all` terisi (3 kru berpoin). Angka beban memakai hasil simulator RT-13 (20 klien: CPU 0,254 ms/tick, 2,74 KB/s per klien, 0 kebocoran; 32 klien: 0,244 ms/tick, 2,53 KB/s). Playwright belum terpasang di repo; uji iOS Safari/Android Chrome di ponsel nyata dan RT-14 tetap tugas pemilik — belum diverifikasi. |
+| RT-54 Tinjauan kemiripan & nama | **Draf, menunggu pemilik** | `docs/riot-similarity-review.md`: perbandingan denah/tugas/antar muka/suara/nama vs Among Us (semua ekspresi berbeda) dan pemeriksaan judul publik vs merek Riot Games. Belum ditandatangani; **game tetap `inactive`**. |
+| RT-55 Dokumentasi | **Selesai** | `docs/API_Spec.md` (§6 skor multiplayer, §9 Riot REST+soket, §10 admin Riot; Admin→§10, Versi→§11), `docs/Screens.md` (rute `/games/riot`, `/admin/riot`), `docs/Architecture.md` (realtime Riot, tabel `riot_*`, skor server-otoritatif), `docs/PRD.md` (baris game Riot, baris admin Riot, paragraf GAME), `AGENTS.md` (§1, status `inactive` sampai RT-54). |
+
+### Pemeriksaan akhir
+
+```
+pnpm lint              -> lolos (0 error)
+pnpm typecheck         -> lolos (seluruh workspace)
+pnpm --filter @low-stress/game-riot test -> 17 berkas, 97 tes lolos
+pnpm i18n:check        -> lolos (id/en identik)
+pnpm check:assets      -> lolos
+pnpm check:migrations  -> lolos
+pnpm --filter @low-stress/web build -> lolos (29 entri precache PWA)
+```
+
+### Belum diverifikasi / catatan jujur
+
+- **Tes ber-DB tidak dijalankan di mesin ini:** Postgres tidak tersedia (port 5432 tertutup, daemon Docker mati) dan `TEST_DATABASE_URL` tidak diatur, sehingga `apps/server/test/{riot-admin,riot-e2e}.test.ts` belum dieksekusi. Keduanya lolos typecheck dan mengikuti pola tes Ludo yang sudah terverifikasi; jalankan `pnpm test:db:up` lalu `pnpm --filter @low-stress/server test` saat DB uji tersedia.
+- Uji ponsel nyata (RT-14 & RT-53): fps/draw call/segitiga di iOS Safari & Android Chrome, lanskap dan potret — belum dilakukan.
+- UI Riot belum diuji di browser nyata (360px/desktop terang/gelap) — sama seperti catatan Fase 4.
+- Halaman UI admin Riot belum dibuat (API selesai).
+- Game tetap `inactive` sampai RT-54 ditandatangani pemilik; setelah itu baru aktifkan via admin.

@@ -205,6 +205,8 @@ Tabel inti (paket `db`). Semua ID memakai UUID, waktu memakai `timestamptz`.
 
 Tabel khusus game (contoh Ludo, dikelola di `games/ludo/db`): `ludo_rooms`, `ludo_players`, `ludo_messages`. Room memiliki `last_activity_at`; job menghapus room yang tidak aktif > 7 hari.
 
+Tabel khusus Riot (dikelola di `games/riot/db`): `riot_rooms`, `riot_room_players`, `riot_matches`, `riot_profiles`. Room lobby dipersist (throttle 5 dtk) dan direhidrasi saat restart; ronde berjalan bersifat ephemeral.
+
 Indeks penting: `game_runs (game_id, created_at)`, `game_scores (game_id, best_score desc)`, `sessions (expires_at)`, `users (status)`.
 
 ## 7. Autentikasi dan keamanan
@@ -217,11 +219,21 @@ Indeks penting: `game_runs (game_id, created_at)`, `game_scores (game_id, best_s
 - **Rate limit:** per IP dan per akun (register, login, kirim skor, chat). Mode Public memakai batas lebih ketat dan CAPTCHA proof-of-work self-hosted.
 - **Header:** CSP ketat (hanya asal sendiri), `X-Content-Type-Options`, `Referrer-Policy`, HSTS di mode Public.
 - **Input:** semua input divalidasi Zod; output chat disanitasi.
-- **Skor:** validasi kewajaran di server (batas skor, rasio skor per detik, batas laju). Skor dari browser tidak bisa dibuktikan sepenuhnya; run yang janggal ditandai `flagged` untuk ditinjau admin. Anti-cheat yang lebih kuat (replay input atau simulasi server) adalah pekerjaan lanjutan.
+- **Skor:** validasi kewajaran di server (batas skor, rasio skor per detik, batas laju). Skor dari browser tidak bisa dibuktikan sepenuhnya; run yang janggal ditandai `flagged` untuk ditinjau admin. Anti-cheat yang lebih kuat (replay input atau simulasi server) adalah pekerjaan lanjutan. Game `multiplayer` (Riot, Ludo) server-otoritatif: `POST /api/games/:id/scores` ditolak (`SCORE_SERVER_AUTHORITATIVE`), dan skor hanya dicatat server dari hasil ronde lewat `ctx.recordScore`.
 - **Pesan error** dikirim sebagai kode (`AUTH_INVALID_CREDENTIALS`) dan diterjemahkan di klien.
 - **Audit:** setiap aksi admin yang mengubah data dicatat.
 
-## 8. Realtime (Ludo)
+## 8. Realtime (Ludo & Riot)
+
+### Riot ("Uproar on the Silent Station")
+
+- Socket.IO namespace `/riot`, tick server 15 Hz, input klien 20 Hz. Otentikasi handshake via cookie sesi (`resolvePrincipal`); admin ditolak. Modul server di `games/riot/server` (`service.ts`, `socket.ts`), dimuat lewat registry.
+- **Server otoritatif:** peran, posisi di luar radius pandang, dan hasil tugas tidak pernah dipercaya dari klien dan tidak dikirim ke klien yang tidak berhak. Snapshot interest-managed per klien.
+- Persistensi throttle (5 dtk/room) ke `riot_rooms`/`riot_room_players`; `riot_matches` sekali per ronde saat `finished`. Hanya room `lobby` yang direhidrasi saat restart; ronde berjalan ephemeral.
+- Skor leaderboard: saat `finished`, server mencatat poin R8 per pemain lewat `ctx.recordScore` (sekali per ronde, kunci per `roundStartedAt` agar rematch tercatat). Klien tidak dapat mengirim skor.
+- Moderasi admin (RT-51) beroperasi di tabel DB (`/api/admin/riot/rooms`, setara pola Ludo) dan tercatat di `audit_log`. Chat rapat bersifat ephemeral sehingga tidak dapat dilihat admin dari DB.
+
+### Ludo
 
 - Socket.IO, diautentikasi dengan cookie sesi saat handshake. Satu room Socket.IO per room Ludo (`ludo:<roomId>`).
 - **Server otoritatif:** server melempar dadu, memvalidasi langkah, dan menyiarkan state. Klien hanya menggambar dan mengirim aksi (`roll`, `move`, `skip`, `chat`, dll).

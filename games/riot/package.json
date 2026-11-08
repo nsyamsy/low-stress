@@ -6,16 +6,20 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "spike": "vite --config spike/vite.config.ts spike --host 0.0.0.0 --port 5174"
+    "spike": "vite --config spike/vite.config.ts spike --host 0.0.0.0 --port 5174",
+    "export:mochi": "tsx tools/export-mochi-glb.ts"
   },
   "dependencies": {
     "@low-stress/i18n": "workspace:*",
     "@low-stress/sdk": "workspace:*",
     "@low-stress/ui": "workspace:*",
+    "fastify": "^5.12.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "socket.io": "^4.8.4",
-    "three": "^0.170.0"
+    "socket.io-client": "^4.8.4",
+    "three": "^0.170.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

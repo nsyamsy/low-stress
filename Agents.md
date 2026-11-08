@@ -20,7 +20,7 @@ Dokumen ini untuk agent (Claude Code, dll) yang bekerja di repositori **Low Stre
 
 ## 1. Ringkasan proyek
 
-**Low Stress** adalah situs game santai berumur panjang: pemain mendaftar, disetujui admin, memainkan game (Flappy Bird, Memory Match, Ludo), dan bersaing di leaderboard weekly, monthly, dan all time. Ada panel admin (Superadmin) terpisah. Dua bahasa (Indonesia dan English), mobile-first, PWA, dan bisa dideploy di LAN maupun Public.
+**Low Stress** adalah situs game santai berumur panjang: pemain mendaftar, disetujui admin, memainkan game (Flappy Bird, Memory Match, Ludo, Riot), dan bersaing di leaderboard weekly, monthly, dan all time. Ada panel admin (Superadmin) terpisah. Dua bahasa (Indonesia dan English), mobile-first, PWA, dan bisa dideploy di LAN maupun Public. Riot ("Uproar on the Silent Station") berstatus `inactive` sampai tinjauan kemiripan RT-54 ditandatangani pemilik (`docs/riot-similarity-review.md`).
 
 Pengguna dan skor dari aplikasi lama `performance_dash` **tidak** dimigrasi.
 

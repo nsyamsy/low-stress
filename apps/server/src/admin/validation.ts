@@ -92,6 +92,16 @@ export const adminLudoKickSchema = z.object({
   userId: z.string().uuid("ID pengguna harus berupa UUID"),
 });
 
+export const adminRiotRoomsQuerySchema = z.object({
+  status: z
+    .enum(["lobby", "playing", "meeting", "voting", "finished"])
+    .optional(),
+});
+
+export const adminRiotKickSchema = z.object({
+  userId: z.string().uuid("ID pengguna harus berupa UUID"),
+});
+
 export const adminChatQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),

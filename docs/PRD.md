@@ -17,6 +17,7 @@ Game awal (diporting dari menu Commercial aplikasi `performance_dash`, dengan na
 | **Flappy Bird** | Terbang melewati pipa, skor per pipa. Pilihan karakter, medali. | Solo |
 | **Memory Match** | Mencocokkan pasangan kartu 4x4, skor berdasarkan waktu dan langkah. | Solo |
 | **Ludo** | Papan Ludo 2–12 pemain, undangan, chat per room, autopilot. | Multiplayer realtime |
+| **Riot — "Uproar on the Silent Station"** | Deduksi sosial 3D di stasiun luar angkasa: Kru menyelesaikan tugas, Penyusup menyabotase, rapat & voting. Min. 4 pemain, tanpa batas atas tetap (batas admin + pengaman server). Status `inactive` sampai tinjauan RT-54 ditandatangani pemilik. | Multiplayer realtime |
 
 Pengguna lama aplikasi `performance_dash` **tidak** dimigrasi. Semua data dimulai dari nol.
 
@@ -92,6 +93,8 @@ Mode dapat diganti saat aplikasi berjalan, tanpa restart.
 
 **Ludo:** 2–12 pemain (aplikasi lama sampai 10; geometri papan sudah menyesuaikan jumlah lengan, tetapi 12 butuh dua warna tambahan, jumlah pion bawaan 2, simulasi panjang permainan, dan uji keterbacaan di layar ponsel); host membuat room dan mengundang pemain; pemain menerima atau menolak; aturan keluar kandang (`double`, `sixes`, `six`); server yang melempar dadu dan memeriksa setiap langkah; **chat per room** (terpisah dari chat publik, tersedia juga di mobile, dengan sensor kata kasar); autopilot untuk pemain yang terputus; host atau admin dapat mereset room; **room kedaluwarsa dan dihapus otomatis setelah 1 minggu tanpa aktivitas**; koneksi realtime (WebSocket) dengan penyambungan ulang otomatis.
 
+**Riot ("Uproar on the Silent Station" / "Gaduh di Stasiun Hening"):** deduksi sosial 3D di Stasiun Orbital Hening. Minimal 4 pemain, tanpa batas atas tetap (pengaturan admin `riot.maxPlayers` + pengaman server `RIOT_HARD_CAP`, bawaan 32). Kru menyelesaikan 10 tugas orisinal; Penyusup (`ceil(pemain/6)`) menyabotase dan menyingkirkan pemain (visual netral: hantu + penanda hologram); rapat darurat, diskusi chat tersensor server (≤300 karakter), dan voting menentukan pemenang. Server otoritatif (tick 15 Hz, snapshot interest-managed); poin leaderboard (menang +10, tugas +1, tebak benar +2) hanya dicatat server. Karakter Mochi prosedural + Humanoid CC0 dengan kustomisasi tersimpan; suara orisinal tersintesis. Kata "Riot" tidak tampil ke pemain. Detail tugas, keputusan pemilik, dan tinjauan kemiripan ada di `docs/concepts/riot.md` dan `docs/riot-similarity-review.md` (RT-54).
+
 **Perilaku saat game dimatikan:**
 - Ludo `Nonaktif` atau `Maintenance`: room yang berjalan **dibekukan** dan dilanjutkan saat game dinyalakan lagi (batas 1 minggu tanpa aktivitas tetap berlaku).
 - Leaderboard game nonaktif disembunyikan dari pemain; data tetap tersimpan.
@@ -119,6 +122,7 @@ Akses: `/admin`, login terpisah, hanya peran **Superadmin**. Akun admin tidak bi
 | Game | Status, jadwal, pesan maintenance, urutan tampil, label "baru". |
 | Leaderboard | Lihat run mencurigakan, hapus skor, reset papan periodik. |
 | Ludo | Daftar room, hapus atau reset room, kick pemain, moderasi chat. |
+| Riot | Daftar room, hapus atau reset room, kick pemain, lihat pemain & riwayat match (chat rapat ephemeral). |
 | Pengaturan | Mode pendaftaran, jadwal global, bahasa bawaan, konfigurasi email (SMTP). |
 | Audit log | Catatan siapa mengubah apa dan kapan. |
 
