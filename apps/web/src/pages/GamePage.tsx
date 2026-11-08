@@ -145,7 +145,7 @@ export function GamePage() {
         >
           ← {t("action.back")}
         </button>
-        <span className="text-sm font-extrabold text-[var(--text-primary)]">
+        <span className="text-sm font-medium text-[var(--text-primary)]">
           {manifest?.title[currentLocale] || id}
         </span>
         <div className="w-12" />

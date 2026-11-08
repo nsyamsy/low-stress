@@ -64,6 +64,7 @@ Komponen hanya memakai token (CSS variables), bukan hex.
 | `--border-strong` | `#CFC8B5` | `#44594F` |
 | `--primary` | `#2F5D55` | `#7FA88B` |
 | `--primary-hover` | `#3F7268` | `#98BFA3` |
+| `--sidebar-bg` / `--sidebar-hover` | `#2F5D55` / `#3F7268` | `#1C3530` / `#24483F` |
 | `--accent` | `#F2735B` | `#F2735B` |
 | `--accent-text` | `#B53D28` | `#F59A86` |
 | `--success-bg` / `--success-text` | `#D5EAD9` / `#1F4D2C` | `#24402D` / `#BFE3C8` |
@@ -165,7 +166,7 @@ Kolom: peringkat, nama, skor. Tiga peringkat teratas bernomor koral. Baris pemai
 
 ### 7.7 Panel admin
 
-Sidebar teal `#2F5D55` dengan item krem; item aktif memakai `#3F7268`. Konten di atas `--bg-page`. Kartu metrik: latar `--bg-surface`, label 12px, angka 20–24px. Kontrol segmen tiga posisi untuk status game (Aktif, Maintenance, Nonaktif); posisi aktif berwarna sesuai status.
+Sidebar teal dengan item krem: terang memakai `--sidebar-bg` `#2F5D55` (identitas brand); gelap memakai `#1C3530` yang lebih dalam dan tenang (kontras krem ~11:1) — tidak memakai sage terang `--primary` gelap agar tidak menyilaukan. Item aktif/hover memakai `--sidebar-hover` (`#3F7268` terang, `#24483F` gelap). Konten di atas `--bg-page`. Kartu metrik: latar `--bg-surface`, label 12px, angka 20–24px. Kontrol segmen tiga posisi untuk status game (Aktif, Maintenance, Nonaktif); posisi aktif berwarna sesuai status.
 
 ### 7.9 Panel chat publik (khusus desktop)
 

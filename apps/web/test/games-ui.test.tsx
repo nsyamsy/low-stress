@@ -226,7 +226,7 @@ describe("Games & Gateway UI (Phase 4: P4-03)", () => {
         </MemoryRouter>,
       );
 
-      expect(html).toContain("Pengelolaan Game");
+      expect(html).toContain("Kelola Game");
     });
   });
 });

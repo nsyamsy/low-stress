@@ -30,7 +30,7 @@ describe("P5-04: Leaderboard UI (Screens §8)", () => {
     );
 
     expect(html).toContain("Budi Santoso");
-    expect(html).toContain("4,950");
+    expect(html).toContain("4.950"); // Intl id-ID: pemisah ribuan titik
     expect(html).toContain("BS"); // Inisial
     expect(html).toContain("5× main");
     expect(html).toContain("play ke-3 dari 5");

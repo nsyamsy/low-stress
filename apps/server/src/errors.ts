@@ -67,7 +67,15 @@ export function createErrorHandler() {
         : statusCode === 400
           ? "BAD_REQUEST"
           : "INTERNAL";
-    void reply.status(statusCode).send(errorBody(code));
+    // Pembangun error rate-limit Fastify melempar { statusCode, code, params };
+    // teruskan params-nya agar retryAfterSec sampai ke klien.
+    const params =
+      "params" in error &&
+      typeof error.params === "object" &&
+      error.params !== null
+        ? (error.params as Record<string, unknown>)
+        : {};
+    void reply.status(statusCode).send(errorBody(code, params));
   };
 }
 

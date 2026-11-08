@@ -129,7 +129,7 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
         </div>
 
         {error && (
-          <p className="mb-3 rounded-[8px] bg-red-100 p-3 text-xs font-semibold text-red-800">
+          <p className="mb-3 rounded-[8px] bg-[var(--danger-bg)] p-3 text-xs font-semibold text-[var(--danger-text)]">
             {error}
           </p>
         )}
@@ -137,23 +137,23 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] md:items-start">
           <div className="space-y-4">
             {invitations.length > 0 && (
-              <div className="rounded-[12px] border border-white/20 bg-white/95 p-4 shadow-sm backdrop-blur-sm">
-                <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+              <div className="rounded-[12px] border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-sm backdrop-blur-sm">
+                <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                   {t("invitations")}
                 </h2>
                 <ul className="space-y-2">
                   {invitations.map((r) => (
                     <li
                       key={r.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] bg-blue-50 px-3 py-2 border border-blue-200"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] bg-[var(--primary)]/10 px-3 py-2 border border-[var(--border)]"
                     >
-                      <span className="text-xs font-semibold text-slate-800">
-                        {r.hostName} mengundang kamu ke {r.name}
+                      <span className="text-xs font-semibold text-[var(--text-primary)]">
+                        {t("inviteText", { host: r.hostName, room: r.name })}
                       </span>
                       <span className="flex gap-2">
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center rounded-[7px] bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                          className="inline-flex h-8 items-center rounded-[7px] bg-[var(--primary)] px-3 text-xs font-bold text-[var(--text-on-primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50"
                           disabled={busy}
                           onClick={() => respond(r.id, true)}
                         >
@@ -161,7 +161,7 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
                         </button>
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center rounded-[7px] border border-slate-300 px-3 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                          className="inline-flex h-8 items-center rounded-[7px] border border-[var(--border-strong)] px-3 text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--bg-inset)] disabled:opacity-50"
                           disabled={busy}
                           onClick={() => respond(r.id, false)}
                         >
@@ -174,16 +174,16 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
               </div>
             )}
 
-            <div className="rounded-[12px] border border-white/20 bg-white/95 p-4 shadow-sm backdrop-blur-sm">
-              <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+            <div className="rounded-[12px] border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-sm backdrop-blur-sm">
+              <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                 {t("rooms")}
               </h2>
               {rooms === null ? (
-                <div className="flex justify-center py-8 text-slate-500">
+                <div className="flex justify-center py-8 text-[var(--text-muted)]">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : mine.length === 0 ? (
-                <p className="py-6 text-center text-xs text-slate-500">
+                <p className="py-6 text-center text-xs text-[var(--text-muted)]">
                   {t("noRooms")}
                 </p>
               ) : (
@@ -193,13 +193,13 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
                       <button
                         type="button"
                         onClick={() => onOpenRoom(r.id)}
-                        className="flex w-full items-center justify-between gap-3 rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-50"
+                        className="flex w-full items-center justify-between gap-3 rounded-[8px] border border-[var(--border)] bg-[var(--bg-surface-raised)] px-3 py-2 text-left hover:bg-[var(--bg-inset)]"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate text-xs font-bold text-slate-900">
+                          <span className="block truncate text-xs font-bold text-[var(--text-primary)]">
                             {r.name}
                           </span>
-                          <span className="flex items-center gap-1 text-[11px] text-slate-500">
+                          <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
                             <Crown className="h-3 w-3 text-amber-500" />
                             {r.hostName} · {r.players} / {r.maxPlayers} {t("playersTitle")}
                           </span>
@@ -207,10 +207,10 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
                         <span
                           className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                             r.status === "playing"
-                              ? "bg-emerald-100 text-emerald-800"
+                              ? "bg-[var(--success-bg)] text-[var(--success-text)]"
                               : r.status === "finished"
-                                ? "bg-slate-200 text-slate-700"
-                                : "bg-blue-100 text-blue-800"
+                                ? "bg-[var(--bg-inset)] text-[var(--text-secondary)]"
+                                : "bg-[var(--primary)]/15 text-[var(--primary)]"
                           }`}
                         >
                           {r.status === "playing"
@@ -229,14 +229,14 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
 
           <form
             onSubmit={create}
-            className="rounded-[12px] border border-white/20 bg-white/95 p-4 shadow-sm backdrop-blur-sm"
+            className="rounded-[12px] border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-sm backdrop-blur-sm"
           >
-            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
               {t("create")}
             </h2>
             <label
               htmlFor="ludo-name"
-              className="mb-1 block text-xs font-bold text-slate-800"
+              className="mb-1 block text-xs font-bold text-[var(--text-primary)]"
             >
               {t("roomName")}
             </label>
@@ -246,12 +246,12 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
               onChange={(e) => setName(e.target.value)}
               maxLength={60}
               placeholder={t("roomNamePh")}
-              className="mb-3 h-9 w-full rounded-[7px] border border-slate-300 bg-white px-2.5 text-xs text-slate-900 outline-none focus:border-blue-500"
+              className="mb-3 h-9 w-full rounded-[7px] border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
             />
 
             <label
               htmlFor="ludo-max"
-              className="mb-1 block text-xs font-bold text-slate-800"
+              className="mb-1 block text-xs font-bold text-[var(--text-primary)]"
             >
               {t("maxPlayers")}
             </label>
@@ -259,7 +259,7 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
               id="ludo-max"
               value={maxPlayers}
               onChange={(e) => setMaxPlayers(Number(e.target.value))}
-              className="mb-3 h-9 w-full rounded-[7px] border border-slate-300 bg-white px-2.5 text-xs text-slate-900 outline-none focus:border-blue-500"
+              className="mb-3 h-9 w-full rounded-[7px] border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
             >
               {Array.from({ length: 11 }, (_, i) => i + 2).map((n) => (
                 <option key={n} value={n}>
@@ -268,19 +268,19 @@ export function Lobby({ onOpenRoom }: LobbyProps) {
               ))}
             </select>
 
-            <label className="mb-4 flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-800">
+            <label className="mb-4 flex cursor-pointer items-center gap-2 text-xs font-bold text-[var(--text-primary)]">
               <input
                 type="checkbox"
                 checked={play}
                 onChange={(e) => setPlay(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                className="h-4 w-4 rounded border-[var(--border-strong)] accent-[var(--primary)]"
               />
               {t("joinAsPlayer")}
             </label>
 
             <button
               type="submit"
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[7px] bg-blue-600 px-3 text-xs font-bold text-white shadow hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[7px] bg-[var(--primary)] px-3 text-xs font-bold text-[var(--text-on-primary)] shadow hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               disabled={busy || !name.trim()}
             >
               <Plus className="h-4 w-4" />

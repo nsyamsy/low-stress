@@ -642,7 +642,7 @@ pnpm --filter @low-stress/web build -> lolos (29 entri precache PWA)
 
 ### Belum diverifikasi / catatan jujur
 
-- **Tes ber-DB tidak dijalankan di mesin ini:** Postgres tidak tersedia (port 5432 tertutup, daemon Docker mati) dan `TEST_DATABASE_URL` tidak diatur, sehingga `apps/server/test/{riot-admin,riot-e2e}.test.ts` belum dieksekusi. Keduanya lolos typecheck dan mengikuti pola tes Ludo yang sudah terverifikasi; jalankan `pnpm test:db:up` lalu `pnpm --filter @low-stress/server test` saat DB uji tersedia.
+- ~~Tes ber-DB tidak dijalankan~~ **Sudah dijalankan 2026-11-08** setelah Postgres tersedia: `riot-admin` (5 tes) dan `riot-e2e` (1 tes) lolos; `pnpm test` seluruh monorepo hijau termasuk server 138 tes. Perbaikan kecil: `GameLeaderboard` kini memakai `Intl` sesuai locale aktif (`toLocaleString(i18n.language)`) dan tes P5-04 diselaraskan (`4.950` untuk id) — sebelumnya gagal di mesin ber-locale id.
 - Uji ponsel nyata (RT-14 & RT-53): fps/draw call/segitiga di iOS Safari & Android Chrome, lanskap dan potret — belum dilakukan.
 - UI Riot belum diuji di browser nyata (360px/desktop terang/gelap) — sama seperti catatan Fase 4.
 - Halaman UI admin Riot belum dibuat (API selesai).

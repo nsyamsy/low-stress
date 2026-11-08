@@ -357,6 +357,7 @@
   },
   "home": {
     "greeting": "Hello, {{name}}",
+    "fallbackName": "Player",
     "scheduleOpen": "Open {{windows}}",
     "scheduleClosed": "Closed, opens {{time}}",
     "scheduleAllDay": "Open all day",

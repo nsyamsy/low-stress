@@ -80,7 +80,7 @@ export function HomePage({
       {/* Sapaan & Baris Status Jadwal (Screens §5) */}
       <div className="ls-stack" style={{ gap: "var(--space-1)" }}>
         <h1 className="ls-heading-1">
-          {t("home.greeting", { name: user?.displayName ?? "Pemain" })}
+          {t("home.greeting", { name: user?.displayName ?? t("home.fallbackName") })}
         </h1>
         {scheduleSummary && (
           <p className="ls-text-secondary" style={{ fontSize: "var(--font-body)" }}>

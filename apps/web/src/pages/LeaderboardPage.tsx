@@ -41,7 +41,7 @@ export function LeaderboardPage() {
         <div className="inline-flex items-center justify-center p-2 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] mb-2">
           <Trophy className="h-6 w-6" />
         </div>
-        <h1 className="ls-heading-1 text-2xl font-black text-[var(--text-primary)]">
+        <h1 className="ls-heading-1 text-2xl font-medium text-[var(--text-primary)]">
           {t("leaderboard.title")}
         </h1>
         <p className="ls-text-secondary text-xs mt-1">

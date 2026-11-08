@@ -257,7 +257,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
   if (!room) {
     return (
-      <div className="flex min-h-[360px] items-center justify-center p-6 text-slate-600">
+      <div className="flex min-h-[360px] items-center justify-center p-6 text-[var(--text-secondary)]">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
@@ -352,9 +352,9 @@ export function Room({ roomId, onBack, user }: RoomProps) {
           <div className="flex flex-col items-center">
             {room.status === "lobby" ? (
               /* LOBBY VIEW */
-              <div className="w-full space-y-4 rounded-xl border border-white/20 bg-white/95 p-4 shadow-sm backdrop-blur-sm">
+              <div className="w-full space-y-4 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-sm backdrop-blur-sm">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                     {t("playersTitle")} ({acceptedPlayers.length}/{room.maxPlayers})
                   </h2>
                   {room.isHost && (
@@ -364,7 +364,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                         setInviteModalOpen(true);
                         void handleSearchUsers("");
                       }}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg bg-blue-600 px-2.5 text-xs font-bold text-white hover:bg-blue-700"
+                      className="inline-flex h-8 items-center gap-1 rounded-lg bg-[var(--primary)] px-2.5 text-xs font-bold text-[var(--text-on-primary)] hover:bg-[var(--primary-hover)]"
                     >
                       <UserPlus className="h-3.5 w-3.5" />
                       {t("invite")}
@@ -379,22 +379,22 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                       <div
                         key={p.userId}
                         className={`flex items-center justify-between rounded-lg border p-2.5 ${
-                          p.isMe ? "border-blue-300 bg-blue-50/60" : "border-slate-200 bg-white"
+                          p.isMe ? "border-[var(--border-strong)] bg-[var(--primary)]/10" : "border-[var(--border)] bg-white"
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <PawnIcon id={p.pawn} color={col.main} dark={col.dark} size={28} />
                           <div>
-                            <div className="flex items-center gap-1 text-xs font-bold text-slate-800">
+                            <div className="flex items-center gap-1 text-xs font-bold text-[var(--text-primary)]">
                               <span>{p.name}</span>
                               {p.isHost && <Crown className="h-3.5 w-3.5 text-amber-500" />}
                               {p.autopilot && (
-                                <span className="rounded bg-slate-200 px-1 text-[9px] font-bold text-slate-700">
+                                <span className="rounded bg-[var(--bg-inset)] px-1 text-[9px] font-bold text-[var(--text-secondary)]">
                                   {t("autopilotBadge")}
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-slate-500">
+                            <span className="text-[10px] text-[var(--text-muted)]">
                               {p.status === "accepted"
                                 ? t("pstatus.accepted")
                                 : p.status === "invited"
@@ -410,7 +410,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                           <button
                             type="button"
                             onClick={() => sendAction({ action: "kick", userId: p.userId })}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-800"
+                            className="text-xs font-semibold text-[var(--danger-text)] hover:text-[var(--danger-text)]"
                           >
                             {t("remove")}
                           </button>
@@ -421,8 +421,8 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                 </div>
 
                 {/* Pawn Shape Picker */}
-                <div className="border-t border-slate-200 pt-3">
-                  <h3 className="mb-2 text-xs font-bold text-slate-700">{t("pickPawn")}</h3>
+                <div className="border-t border-[var(--border)] pt-3">
+                  <h3 className="mb-2 text-xs font-bold text-[var(--text-secondary)]">{t("pickPawn")}</h3>
                   <div className="flex flex-wrap gap-2">
                     {PAWN_CHARACTERS.map((char) => {
                       const isCurrent = myPlayer?.pawn === char;
@@ -433,8 +433,8 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                           onClick={() => sendAction({ action: "pawn", pawn: char })}
                           className={`flex h-11 w-11 items-center justify-center rounded-lg border transition ${
                             isCurrent
-                              ? "border-blue-600 bg-blue-100 ring-2 ring-blue-500"
-                              : "border-slate-300 bg-white hover:bg-slate-50"
+                              ? "border-[var(--primary)] bg-[var(--primary)]/15 ring-2 ring-[var(--primary)]"
+                              : "border-[var(--border-strong)] bg-[var(--bg-surface-raised)] hover:bg-[var(--bg-inset)]"
                           }`}
                           title={t(`char.${char}`)}
                         >
@@ -447,19 +447,19 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
                 {/* Host Settings */}
                 {room.isHost && (
-                  <div className="space-y-3 border-t border-slate-200 pt-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <div className="space-y-3 border-t border-[var(--border)] pt-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                       Pengaturan Ruangan
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div>
-                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                        <label className="mb-1 block text-[11px] font-bold text-[var(--text-secondary)]">
                           {t("pawnsEach")}
                         </label>
                         <select
                           value={pawnsSetting}
                           onChange={(e) => setPawnsSetting(Number(e.target.value))}
-                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs"
+                          className="h-8 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2 text-xs"
                         >
                           {[1, 2, 3, 4].map((n) => (
                             <option key={n} value={n}>
@@ -470,13 +470,13 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                        <label className="mb-1 block text-[11px] font-bold text-[var(--text-secondary)]">
                           {t("exitTitle")}
                         </label>
                         <select
                           value={exitSetting}
                           onChange={(e) => setExitSetting(e.target.value as ExitRule)}
-                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs"
+                          className="h-8 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2 text-xs"
                         >
                           <option value="double">{t("exit.double")}</option>
                           <option value="sixes">{t("exit.sixes")}</option>
@@ -485,20 +485,20 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                        <label className="mb-1 block text-[11px] font-bold text-[var(--text-secondary)]">
                           {t("goalTitle")}
                         </label>
                         <select
                           value={goalSetting}
                           onChange={(e) => setGoalSetting(Number(e.target.value))}
-                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs"
+                          className="h-8 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2 text-xs"
                         >
                           {Array.from(
                             { length: Math.max(1, acceptedPlayers.length - 1) },
                             (_, i) => i + 1,
                           ).map((n) => (
                             <option key={n} value={n}>
-                              {n} juara
+                              {t("goalOption", { count: n })}
                             </option>
                           ))}
                         </select>
@@ -508,11 +508,11 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                 )}
 
                 {/* Start or Wait */}
-                <div className="border-t border-slate-200 pt-3">
+                <div className="border-t border-[var(--border)] pt-3">
                   {room.isHost ? (
                     <div className="space-y-2">
                       {acceptedPlayers.length < 2 && (
-                        <p className="text-xs text-amber-700">{t("needTwo")}</p>
+                        <p className="text-xs text-[var(--warning-text)]">{t("needTwo")}</p>
                       )}
                       <button
                         type="button"
@@ -525,14 +525,14 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                           })
                         }
                         disabled={busy || acceptedPlayers.length < 2}
-                        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-xs font-bold text-white shadow hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] px-4 text-xs font-bold text-[var(--text-on-primary)] shadow hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Dices className="h-4 w-4" />
                         {t("start")}
                       </button>
                     </div>
                   ) : (
-                    <p className="text-center text-xs font-semibold text-slate-600">
+                    <p className="text-center text-xs font-semibold text-[var(--text-secondary)]">
                       {t("waitHost")}
                     </p>
                   )}
@@ -542,30 +542,30 @@ export function Room({ roomId, onBack, user }: RoomProps) {
               /* PLAYING OR FINISHED VIEW */
               <div className="w-full space-y-3">
                 {/* Turn Header */}
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/20 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-2.5 shadow-sm backdrop-blur-sm">
                   <div>
                     {room.state?.winner !== null ? (
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--success-text)]">
                         <Trophy className="h-4 w-4 text-amber-500" />
                         {t("finishedNote")}
                       </span>
                     ) : isMyTurn ? (
-                      <span className="flex items-center gap-1.5 text-xs font-extrabold text-blue-700">
-                        <span className="h-2 w-2 rounded-full bg-blue-600 animate-ping" />
+                      <span className="flex items-center gap-1.5 text-xs font-extrabold text-[var(--primary)]">
+                        <span className="h-2 w-2 rounded-full bg-[var(--primary)] animate-ping" />
                         {t("yourTurn")}!
                       </span>
                     ) : (
-                      <span className="text-xs font-bold text-slate-700">
+                      <span className="text-xs font-bold text-[var(--text-secondary)]">
                         {t("theirTurn", {
                           name:
                             room.state && room.state.turn < room.players.length
-                              ? room.players.find((p) => p.seat === room.state?.turn)?.name ?? "Pemain"
-                              : "Pemain",
+                              ? room.players.find((p) => p.seat === room.state?.turn)?.name ?? t("playerFallback")
+                              : t("playerFallback"),
                         })}
                       </span>
                     )}
                     {isMyTurn && room.state?.phase === "move" && (
-                      <p className="text-[11px] text-slate-500">{t("tapPawn")}</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">{t("tapPawn")}</p>
                     )}
                   </div>
 
@@ -583,8 +583,8 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                           }
                           className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold ${
                             myPlayer?.autopilot
-                              ? "border-purple-300 bg-purple-100 text-purple-800"
-                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                              ? "border-[var(--border-strong)] bg-[var(--bg-inset)] text-[var(--text-primary)]"
+                              : "border-[var(--border-strong)] bg-[var(--bg-surface-raised)] text-[var(--text-secondary)] hover:bg-[var(--bg-inset)]"
                           }`}
                         >
                           <Bot className="h-3.5 w-3.5" />
@@ -595,7 +595,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                           <button
                             type="button"
                             onClick={() => sendAction({ action: "skip" })}
-                            className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                            className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2 text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--bg-inset)]"
                             title={t("skip")}
                           >
                             <SkipForward className="h-3.5 w-3.5" />
@@ -608,36 +608,36 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
                 {/* Event ticker feed */}
                 {lastEvent && (
-                  <div className="rounded-lg border border-blue-200/60 bg-blue-50/90 px-3 py-1.5 text-center text-xs font-medium text-blue-900 shadow-xs">
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--primary)]/10 px-3 py-1.5 text-center text-xs font-medium text-[var(--primary)] shadow-xs">
                     {lastEvent.kind === "roll" && lastEvent.dice
                       ? t("event.roll", {
                           name:
                             room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                            "Pemain",
+                            t("playerFallback"),
                           dice: `${lastEvent.dice[0]}+${lastEvent.dice[1]}`,
                         })
                       : lastEvent.kind === "capture"
                         ? t("event.capture", {
                             name:
                               room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                              "Pemain",
+                              t("playerFallback"),
                           })
                         : lastEvent.kind === "home"
                           ? t("event.home", {
                               name:
                                 room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                                "Pemain",
+                                t("playerFallback"),
                             })
                           : lastEvent.kind === "skip"
                             ? t("event.skip", {
                                 name:
                                   room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                                  "Pemain",
+                                  t("playerFallback"),
                               })
                             : t("event.move", {
                                 name:
                                   room.players.find((p) => p.seat === lastEvent.seat)?.name ??
-                                  "Pemain",
+                                  t("playerFallback"),
                               })}
                   </div>
                 )}
@@ -658,7 +658,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
                 {/* Dice Controls */}
                 {room.status === "playing" && (
-                  <div className="flex items-center justify-center gap-4 rounded-xl border border-white/20 bg-white/95 p-3 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center justify-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-sm backdrop-blur-sm">
                     <Die
                       value={room.state?.dice ? (room.state.dice as [number, number])[0] ?? null : null}
                       rollId={rollId}
@@ -673,7 +673,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                         type="button"
                         onClick={() => sendAction({ action: "roll" })}
                         disabled={busy}
-                        className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-md hover:bg-blue-700 disabled:opacity-50"
+                        className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-extrabold text-[var(--text-on-primary)] shadow-md hover:bg-[var(--primary-hover)] disabled:opacity-50"
                       >
                         <Dices className="h-5 w-5" />
                         {t("roll")}
@@ -684,14 +684,14 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
                 {/* Finished Winner Card */}
                 {room.status === "finished" && (
-                  <div className="rounded-xl border border-white/20 bg-white/95 p-4 text-center shadow-sm backdrop-blur-sm">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 text-center shadow-sm backdrop-blur-sm">
                     <Trophy className="mx-auto mb-2 h-8 w-8 text-amber-500" />
-                    <h2 className="text-base font-extrabold text-slate-900">
+                    <h2 className="text-base font-extrabold text-[var(--text-primary)]">
                       {room.state?.place?.[0] !== undefined
                         ? t("winner", {
                             name:
                               room.players.find((p) => p.seat === room.state?.place?.[0])?.name ??
-                              "Juara",
+                              t("winnerFallback"),
                           })
                         : t("finishedNote")}
                     </h2>
@@ -699,11 +699,11 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                     <div className="mt-3 flex justify-center gap-4">
                       {room.state?.place?.map((seatIdx: number, idx: number) => (
                         <div key={seatIdx} className="text-xs">
-                          <span className="block font-bold text-amber-700">
+                          <span className="block font-bold text-[var(--warning-text)]">
                             {t("rank", { rank: idx + 1 })}
                           </span>
-                          <span className="text-slate-600">
-                            {room.players.find((p) => p.seat === seatIdx)?.name ?? `Kursi ${seatIdx}`}
+                          <span className="text-[var(--text-secondary)]">
+                            {room.players.find((p) => p.seat === seatIdx)?.name ?? t("seatFallback", { seat: seatIdx })}
                           </span>
                         </div>
                       ))}
@@ -717,7 +717,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                             sendAction({ action: "reset" });
                           }
                         }}
-                        className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white hover:bg-blue-700"
+                        className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-4 text-xs font-bold text-[var(--text-on-primary)] hover:bg-[var(--primary-hover)]"
                       >
                         <RotateCcw className="h-4 w-4" />
                         {t("newGame")}
@@ -733,17 +733,17 @@ export function Room({ roomId, onBack, user }: RoomProps) {
           <div
             className={`flex flex-col gap-3 ${
               chatOpen
-                ? "fixed inset-x-2 bottom-2 z-40 max-h-[75vh] rounded-2xl border border-slate-300 bg-white p-3 shadow-2xl md:static md:max-h-none md:border-0 md:bg-transparent md:p-0 md:shadow-none"
+                ? "fixed inset-x-2 bottom-2 z-40 max-h-[75vh] rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] p-3 shadow-2xl md:static md:max-h-none md:border-0 md:bg-transparent md:p-0 md:shadow-none"
                 : "hidden md:flex"
             }`}
           >
             {/* Header when open as mobile drawer */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2 md:hidden">
-              <span className="text-xs font-bold text-slate-800">{t("chat")}</span>
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-2 md:hidden">
+              <span className="text-xs font-bold text-[var(--text-primary)]">{t("chat")}</span>
               <button
                 type="button"
                 onClick={() => setChatOpen(false)}
-                className="text-slate-500 hover:text-slate-700"
+                className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -751,8 +751,8 @@ export function Room({ roomId, onBack, user }: RoomProps) {
 
             {/* In-Game Players List */}
             {room.status !== "lobby" && (
-              <div className="rounded-xl border border-white/20 bg-white/95 p-3 shadow-sm backdrop-blur-sm">
-                <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-sm backdrop-blur-sm">
+                <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                   {t("playersTitle")}
                 </h3>
                 <div className="space-y-1.5">
@@ -763,7 +763,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                       <div
                         key={p.userId}
                         className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs ${
-                          isTurn ? "bg-blue-100 font-bold text-blue-900" : "bg-slate-50 text-slate-700"
+                          isTurn ? "bg-[var(--primary)]/15 font-bold text-[var(--primary)]" : "bg-[var(--bg-inset)] text-[var(--text-secondary)]"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -772,11 +772,11 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                         </div>
                         <div className="flex items-center gap-1">
                           {p.autopilot && (
-                            <span className="rounded bg-slate-200 px-1 text-[9px] font-bold text-slate-700">
+                            <span className="rounded bg-[var(--bg-inset)] px-1 text-[9px] font-bold text-[var(--text-secondary)]">
                               {t("autopilotBadge")}
                             </span>
                           )}
-                          {isTurn && <span className="h-2 w-2 rounded-full bg-blue-600" />}
+                          {isTurn && <span className="h-2 w-2 rounded-full bg-[var(--primary)]" />}
                         </div>
                       </div>
                     );
@@ -786,15 +786,15 @@ export function Room({ roomId, onBack, user }: RoomProps) {
             )}
 
             {/* Chat Box */}
-            <div className="flex flex-1 flex-col rounded-xl border border-white/20 bg-white/95 p-3 shadow-sm backdrop-blur-sm md:min-h-[300px]">
-              <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+            <div className="flex flex-1 flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-sm backdrop-blur-sm md:min-h-[300px]">
+              <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                 {t("chat")}
               </h3>
 
               {/* Chat Message Stream */}
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 text-xs max-h-[220px] md:max-h-[340px]">
                 {room.messages.length === 0 ? (
-                  <p className="py-6 text-center text-[11px] text-slate-400">
+                  <p className="py-6 text-center text-[11px] text-[var(--text-muted)]">
                     {t("chatEmpty")}
                   </p>
                 ) : (
@@ -805,12 +805,12 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                         key={m.id}
                         className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
                       >
-                        <span className="text-[10px] text-slate-500">{m.name}</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{m.name}</span>
                         <div
                           className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs ${
                             isMine
-                              ? "bg-blue-600 text-white"
-                              : "bg-slate-100 text-slate-800"
+                              ? "bg-[var(--primary)] text-[var(--text-on-primary)]"
+                              : "bg-[var(--bg-inset)] text-[var(--text-primary)]"
                           }`}
                         >
                           {m.text}
@@ -823,18 +823,18 @@ export function Room({ roomId, onBack, user }: RoomProps) {
               </div>
 
               {/* Chat Input */}
-              <form onSubmit={sendChat} className="mt-2 flex gap-1.5 border-t border-slate-200 pt-2">
+              <form onSubmit={sendChat} className="mt-2 flex gap-1.5 border-t border-[var(--border)] pt-2">
                 <input
                   value={chatDraft}
                   onChange={(e) => setChatDraft(e.target.value)}
                   maxLength={300}
                   placeholder={t("chatPh")}
-                  className="h-8 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-800 outline-none focus:border-blue-500"
+                  className="h-8 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
                 />
                 <button
                   type="submit"
                   disabled={!chatDraft.trim()}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary)] text-[var(--text-on-primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50"
                   aria-label={t("chatSend")}
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -847,15 +847,15 @@ export function Room({ roomId, onBack, user }: RoomProps) {
         {/* Invite Modal */}
         {inviteModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl">
+            <div className="w-full max-w-sm rounded-xl bg-[var(--bg-surface-raised)] p-4 shadow-xl">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
                   {t("invitePick")}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setInviteModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -865,23 +865,23 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                 value={searchQuery}
                 onChange={(e) => void handleSearchUsers(e.target.value)}
                 placeholder="Cari nama atau username..."
-                className="mb-3 h-8 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-800 outline-none focus:border-blue-500"
+                className="mb-3 h-8 w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-raised)] px-2.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
               />
 
               <div className="max-h-48 overflow-y-auto space-y-1.5">
                 {searchResults.length === 0 ? (
-                  <p className="py-4 text-center text-xs text-slate-400">
+                  <p className="py-4 text-center text-xs text-[var(--text-muted)]">
                     {t("noInvitable")}
                   </p>
                 ) : (
                   searchResults.map((u) => (
                     <div
                       key={u.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-2 text-xs"
+                      className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] p-2 text-xs"
                     >
                       <div>
-                        <span className="block font-bold text-slate-800">{u.displayName}</span>
-                        <span className="text-[10px] text-slate-400">@{u.username}</span>
+                        <span className="block font-bold text-[var(--text-primary)]">{u.displayName}</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">@{u.username}</span>
                       </div>
                       <button
                         type="button"
@@ -889,7 +889,7 @@ export function Room({ roomId, onBack, user }: RoomProps) {
                           sendAction({ action: "invite", userIds: [u.id] });
                           setInviteModalOpen(false);
                         }}
-                        className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700"
+                        className="rounded-lg bg-[var(--primary)] px-2.5 py-1 text-xs font-bold text-[var(--text-on-primary)] hover:bg-[var(--primary-hover)]"
                       >
                         {t("invite")}
                       </button>

@@ -45,7 +45,7 @@ export function LeaderboardRow({
   entry: LeaderboardEntry;
   isMeLabel: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isPodium = entry.rank >= 1 && entry.rank <= 3;
   const podiumClass = isPodium ? PODIUM_COLORS[entry.rank - 1] : "";
 
@@ -61,7 +61,7 @@ export function LeaderboardRow({
       {/* Rank badge */}
       <span
         className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black border",
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium border",
           isPodium
             ? podiumClass
             : "border-transparent bg-black/5 dark:bg-white/5 text-[var(--text-secondary)]",
@@ -108,8 +108,8 @@ export function LeaderboardRow({
       </div>
 
       {/* Skor */}
-      <span className="shrink-0 text-sm font-extrabold tabular-nums text-[var(--text-primary)]">
-        {entry.score.toLocaleString()}
+      <span className="shrink-0 text-sm font-medium tabular-nums text-[var(--text-primary)]">
+        {entry.score.toLocaleString(i18n.language)}
       </span>
     </li>
   );

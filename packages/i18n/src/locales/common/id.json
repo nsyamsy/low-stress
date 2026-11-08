@@ -54,7 +54,7 @@
     "inputError": "Nama tampilan terlalu pendek.",
     "chip": "Chip dan badge",
     "chipActive": "Aktif",
-    "chipMaintenance": "Maintenance",
+    "chipMaintenance": "Pemeliharaan",
     "chipDanger": "Ditolak",
     "chipNeutral": "Nonaktif",
     "segmented": "Kontrol segmen",
@@ -112,7 +112,7 @@
     },
     "pending": {
       "title": "Menunggu persetujuan",
-      "chip": "Pending",
+      "chip": "Menunggu",
       "description": "Admin akan meninjau pendaftaranmu. Kamu bisa masuk setelah disetujui.",
       "accountLabel": "Akun: {{username}}",
       "backToLogin": "Kembali ke login"
@@ -220,7 +220,7 @@
       "title": "Manajemen Pengguna",
       "searchPlaceholder": "Cari username, nama, email…",
       "all": "Semua",
-      "pending": "Pending",
+      "pending": "Menunggu",
       "active": "Aktif",
       "suspended": "Ditangguhkan",
       "banned": "Diblokir",
@@ -242,7 +242,7 @@
     "settings": {
       "title": "Pengaturan Sistem",
       "registration": "Mode Pendaftaran",
-      "regApproval": "Approval admin",
+      "regApproval": "Persetujuan admin",
       "regOpen": "Terbuka",
       "regClosed": "Ditutup",
       "defaultLocale": "Bahasa Bawaan",
@@ -261,7 +261,7 @@
       "smtpNotice": "Diisi lewat .env. Saat aktif: verifikasi email, lupa password, notifikasi.",
       "testEmail": "Kirim email uji",
       "testEmailPrompt": "Masukkan email tujuan uji:",
-      "saveSuccess": "Pengaturan berhasil diperbarui."
+      "saveSuccess": "Pengaturan disimpan."
     },
     "audit": {
       "title": "Audit Log",
@@ -283,7 +283,7 @@
       "close": "Tutup"
     },
     "games": {
-      "title": "Pengelolaan Game",
+      "title": "Kelola Game",
       "colName": "Game",
       "colStatus": "Status",
       "colSchedule": "Jadwal",
@@ -336,9 +336,9 @@
     "leaderboard": {
       "title": "Moderasi Skor & Leaderboard",
       "selectGame": "Pilih Game",
-      "filterFlagged": "Janggal saja (flagged)",
-      "allRuns": "Semua Run",
-      "deleteRun": "Hapus Run",
+      "filterFlagged": "Janggal saja",
+      "allRuns": "Semua permainan",
+      "deleteRun": "Hapus permainan",
       "resetWeek": "Reset Papan Mingguan",
       "resetMonth": "Reset Papan Bulanan",
       "colPlayer": "Pemain",
@@ -349,14 +349,15 @@
       "colActions": "Aksi",
       "flagged": "Janggal",
       "normal": "Wajar",
-      "emptyRuns": "Belum ada catatan run permainan.",
-      "confirmDeleteRun": "Hapus catatan run ini dan hitung ulang skor terbaik pemain?",
-      "confirmResetWeek": "Apakah Anda yakin ingin mereset papan mingguan untuk game ini? Tindakan ini akan menghapus semua run pada minggu berjalan.",
-      "confirmResetMonth": "Apakah Anda yakin ingin mereset papan bulanan untuk game ini? Tindakan ini akan menghapus semua run pada bulan berjalan."
+      "emptyRuns": "Belum ada catatan permainan.",
+      "confirmDeleteRun": "Hapus catatan permainan ini dan hitung ulang skor terbaik pemain?",
+      "confirmResetWeek": "Apakah kamu yakin ingin mereset papan mingguan untuk game ini? Tindakan ini akan menghapus semua permainan pada minggu berjalan.",
+      "confirmResetMonth": "Apakah kamu yakin ingin mereset papan bulanan untuk game ini? Tindakan ini akan menghapus semua permainan pada bulan berjalan."
     }
   },
   "home": {
     "greeting": "Halo, {{name}}",
+    "fallbackName": "Pemain",
     "scheduleOpen": "Buka {{windows}}",
     "scheduleClosed": "Tutup, dibuka kembali {{time}}",
     "scheduleAllDay": "Buka sepanjang hari",
@@ -368,7 +369,7 @@
     "status": {
       "active": "Aktif",
       "closed": "Tutup",
-      "maintenance": "Maintenance",
+      "maintenance": "Pemeliharaan",
       "inactive": "Nonaktif"
     },
     "action": {

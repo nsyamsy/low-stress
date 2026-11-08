@@ -20,6 +20,16 @@ const KEYFRAMES = `
 @keyframes ludo-confetti { 0% { transform: translateY(-30px) rotate(0deg); opacity: 1; } 100% { transform: translateY(560px) rotate(720deg); opacity: 0.9; } }
 @keyframes ludo-pop { 0% { transform: scale(0.8); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ludo-anim { animation: none !important; } }
+.ludo-backdrop {
+  background-color: #1e3a8a;
+  background-image: radial-gradient(rgba(255,255,255,0.08) 1.5px, transparent 1.5px), linear-gradient(135deg, #1e3a8a 0%, #4338ca 55%, #0f766e 100%);
+  background-size: 24px 24px, auto;
+}
+[data-theme="dark"] .ludo-backdrop {
+  background-color: #0b1e3a;
+  background-image: radial-gradient(rgba(255,255,255,0.07) 1.5px, transparent 1.5px), linear-gradient(135deg, #0b1e3a 0%, #1b2a56 55%, #0a2e29 100%);
+  background-size: 24px 24px, auto;
+}
 `;
 
 /**
@@ -34,15 +44,7 @@ export function LudoBackdrop({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-[16px] p-3 md:p-5 shadow-sm ${className}`}
-      style={{
-        backgroundColor: "#1e3a8a",
-        backgroundImage: [
-          "radial-gradient(rgba(255,255,255,0.08) 1.5px, transparent 1.5px)",
-          "linear-gradient(135deg, #1e3a8a 0%, #4338ca 55%, #0f766e 100%)",
-        ].join(", "),
-        backgroundSize: "24px 24px, auto",
-      }}
+      className={`ludo-backdrop relative overflow-hidden rounded-[16px] p-3 md:p-5 shadow-sm ${className}`}
     >
       <style>{KEYFRAMES}</style>
       <span

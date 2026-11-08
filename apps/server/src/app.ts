@@ -16,7 +16,7 @@ import { initBannedWords } from "./chat/profanity-service";
 export type AutopilotOptions = Record<string, unknown>;
 
 import type { Env } from "./env";
-import { createErrorHandler, errorBody, notFoundHandler } from "./errors";
+import { createErrorHandler, notFoundHandler } from "./errors";
 
 import { scanGameManifests, loadGameServerModules, type LoadedGame } from "./registry/games";
 import { checkGameGate } from "./games/service";
@@ -95,10 +95,13 @@ export async function buildApp({
   await app.register(rateLimit, {
     max: env.NODE_ENV === "test" ? 10000 : 120,
     timeWindow: "1 minute",
-    errorResponseBuilder: (_request, context) =>
-      errorBody("RATE_LIMITED", {
-        retryAfterSec: Math.max(1, Math.ceil(context.ttl / 1000)),
-      }),
+    errorResponseBuilder: (_request, context) => ({
+      // Plugin melempar nilai ini sebagai error; handler membacanya sebagai
+      // { statusCode, code, params } (tanpa statusCode, handler menganggap 500).
+      statusCode: 429,
+      code: "RATE_LIMITED",
+      params: { retryAfterSec: Math.max(1, Math.ceil(context.ttl / 1000)) },
+    }),
   });
 
   app.get("/healthz", async () => ({ ok: true }));
