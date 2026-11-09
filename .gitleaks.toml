@@ -1,0 +1,11 @@
+title = "Low Stress Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow documentation examples and test placeholders"
+paths = [
+  '''^\.env\.example$''',
+  '''^docs/.*\.md$''',
+]

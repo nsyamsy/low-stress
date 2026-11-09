@@ -62,8 +62,8 @@ Low Stress menggunakan basis kode monorepo yang sama untuk semua skenario deploy
    POSTGRES_PASSWORD=GantiDenganPasswordSangatKuatDanAman123!
    POSTGRES_DB=low_stress
 
-   # Kunci Rahasia Sesi (isi dengan hasil openssl rand)
-   SESSION_SECRET=a8b3c4d5e6f7a8b3c4d5e6f7a8b3c4d5e6f7a8b3c4d5e6f7a8b3c4d5e6f7a8b3
+   # Kunci Rahasia Sesi (isi dengan hasil openssl rand -hex 32)
+   SESSION_SECRET=<isi-dengan-hasil-openssl-rand-hex-32>
 
    # Asal Publik Aplikasi (Origin)
    # Untuk LAN: http://<ip-server>:8080 (misal: http://<ip-server>:8080)

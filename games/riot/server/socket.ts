@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Server as SocketIOServer, Socket } from "socket.io";
 import { censorProfanity } from "@low-stress/sdk";
 import {
@@ -228,7 +229,7 @@ export function setupRiotSocket(
     void (async () => {
       try {
         await db.insert(riotMatches).values({
-          id: `match_${room.id}_${Date.now()}`,
+          id: randomUUID(),
           roomId: room.id,
           winner: room.winner,
           endedAt: new Date(),
