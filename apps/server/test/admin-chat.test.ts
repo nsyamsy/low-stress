@@ -40,18 +40,6 @@ interface ChatStatusEvent {
   enabled: boolean;
 }
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P8-04: Admin Chat Moderation, Mute, Banned Words, and Audit Log", () => {

@@ -8,9 +8,18 @@ export interface JoystickMovement {
 export interface VirtualJoystickProps {
   onMove: (movement: JoystickMovement) => void;
   disabled?: boolean;
+  ariaLabel?: string;
+  knobLabel?: string;
+  hintLabel?: string;
 }
 
-export function VirtualJoystick({ onMove, disabled = false }: VirtualJoystickProps) {
+export function VirtualJoystick({
+  onMove,
+  disabled = false,
+  ariaLabel = "Virtual Joystick",
+  knobLabel = "Stick",
+  hintLabel = "WASD / Stick",
+}: VirtualJoystickProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [knobPos, setKnobPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -115,7 +124,7 @@ export function VirtualJoystick({ onMove, disabled = false }: VirtualJoystickPro
       {/* Joystick base circle: 120px (touch area exceeds 44px minimum) */}
       <div
         ref={containerRef}
-        aria-label="Virtual Joystick"
+        aria-label={ariaLabel}
         role="slider"
         aria-valuenow={Math.round(Math.hypot(knobPos.x, knobPos.y))}
         tabIndex={0}
@@ -132,10 +141,10 @@ export function VirtualJoystick({ onMove, disabled = false }: VirtualJoystickPro
             transform: `translate3d(${knobPos.x}px, ${knobPos.y}px, 0)`,
           }}
         >
-          <span className="sr-only">Stick</span>
+          <span className="sr-only">{knobLabel}</span>
         </div>
       </div>
-      <span className="text-xs text-muted-foreground mt-2">WASD / Stick</span>
+      <span className="text-xs text-muted-foreground mt-2">{hintLabel}</span>
     </div>
   );
 }

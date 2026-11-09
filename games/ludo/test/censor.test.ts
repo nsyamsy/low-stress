@@ -16,14 +16,14 @@ if (typeof process.loadEnvFile === "function") {
     process.loadEnvFile("../../.env.test");
   } catch {
     try {
-      process.loadEnvFile("../../.env");
+      process.loadEnvFile(".env.test");
     } catch {
       // Abaikan
     }
   }
 }
 
-const dbUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
+const dbUrl = process.env.TEST_DATABASE_URL;
 
 describe("T-04 & T-05: Ludo Server Security & Censor Injection", () => {
   it("setLudoCensor memungkinkan injeksi fungsi sensor kustom dari ctx.censorText", () => {

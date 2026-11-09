@@ -40,18 +40,6 @@ interface RoomView {
   [key: string]: unknown;
 }
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P7-04: Autopilot and Client Reconnection", () => {

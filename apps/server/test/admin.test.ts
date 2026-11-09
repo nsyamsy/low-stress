@@ -19,18 +19,6 @@ import {
 } from "../src/auth/session";
 import { LogAdapter } from "../src/email/adapter";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("Admin API (Phase 3: P3-02 .. P3-08)", () => {

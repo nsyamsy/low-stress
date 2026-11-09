@@ -241,8 +241,8 @@ export function MemoryMatch({
   return (
     <div className="flex flex-col items-center w-full max-w-md mx-auto">
       {/* Top Header Card */}
-      <div className="flex w-full items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-xs mb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap w-full items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 shadow-xs mb-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-1.5 text-xs">
             <Timer className="h-4 w-4 text-[var(--primary)]" />
             <span className="sr-only">{t("time")}</span>

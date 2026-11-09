@@ -12,18 +12,6 @@ import { eq } from "drizzle-orm";
 import { hashPassword } from "../src/auth/password";
 import { readEnv } from "../src/env";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P7-02: Ludo Database Schema & Migrations", () => {

@@ -75,11 +75,22 @@ jobs:
       - name: i18n keys
         run: pnpm i18n:check
 
-      - name: Migration table prefixes
+      - name: Migration table prefixes & secret scan
         run: pnpm check:migrations
 
       - name: Asset ledger & licenses
         run: pnpm check:assets
 
+      - name: Secret scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build
         run: pnpm build
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E (Playwright)
+        run: pnpm test:e2e

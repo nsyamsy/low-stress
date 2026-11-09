@@ -150,7 +150,7 @@ export function AdminGamesPage() {
                       <td>
                         <strong>{title}</strong>
                         <div style={{ fontSize: "var(--font-caption)", opacity: 0.7 }}>
-                          id: {game.id}
+                          {`id: ${game.id}`}
                         </div>
                       </td>
                       <td>

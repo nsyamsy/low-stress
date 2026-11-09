@@ -51,7 +51,7 @@ export function MiniLeaderboard({
   return (
     <div className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-xs">
       <div className="flex items-center gap-2 mb-3">
-        <Trophy className="h-4 w-4 text-amber-500" />
+        <Trophy className="h-4 w-4 text-[var(--accent-text)]" />
         <h2 className="text-sm font-bold text-[var(--text-primary)]">
           {t("leaderboard")}
         </h2>
@@ -185,7 +185,7 @@ export default function FlappyBirdGame(props: GameProps) {
 
           <div className="mt-5 rounded-lg bg-[var(--bg-inset)] p-3 border border-[var(--border)] text-xs text-[var(--text-secondary)]">
             <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)] mb-1">
-              <Trophy className="h-3.5 w-3.5 text-amber-500" />
+              <Trophy className="h-3.5 w-3.5 text-[var(--accent-text)]" />
               <span>{t("leaderboard")}</span>
             </div>
             {t("bestNote")}

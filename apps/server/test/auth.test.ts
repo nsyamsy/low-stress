@@ -29,18 +29,6 @@ import {
 import { createJobRunner } from "../src/jobs";
 import { createHmac } from "node:crypto";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan bila .env belum disiapkan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("Auth and Profile API (Phase 2)", () => {

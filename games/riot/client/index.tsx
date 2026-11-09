@@ -186,18 +186,9 @@ function Credits({ locale, t }: { locale: Locale; t: (k: string) => string }) {
   return (
     <div className="ls-card ls-stack text-sm">
       <h2 className="ls-heading-3">{t("lobbyExtra.credits")}</h2>
-      <p>
-        <strong>Uproar on the Silent Station</strong> — game orisinal Low Stress.
-      </p>
-      <p>
-        Karakter Mochi dihasilkan secara prosedural oleh engine game ini.
-        Karakter Humanoid menggunakan aset "Mini Characters" oleh Kenney
-        (CC0, kenney.nl). Musik &amp; efek suara disintesis orisinal via
-        WebAudio. Tidak ada aset pihak ketiga yang dibatasi pakai.
-      </p>
-      <p className="ls-text-secondary">
-        Detail lisensi lengkap ada di games/riot/assets/LICENSES.md.
-      </p>
+      <p>{t("lobbyExtra.creditsIntro")}</p>
+      <p>{t("lobbyExtra.creditsBody")}</p>
+      <p className="ls-text-secondary">{t("lobbyExtra.creditsFooter")}</p>
     </div>
   );
 }

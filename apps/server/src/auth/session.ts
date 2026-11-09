@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import { eq, and, gt, lt } from "drizzle-orm";
 import type { Database } from "@low-stress/db";
-import { admins, sessions, users, type userStatus } from "@low-stress/db";
+import { admins, sessions, users } from "@low-stress/db";
+import type { Me } from "@low-stress/sdk";
 import { censorServerText } from "../chat/profanity-service";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Env } from "../env";
@@ -11,17 +12,7 @@ export const ADMIN_COOKIE_NAME = "ls_admin";
 export const CSRF_COOKIE_NAME = "ls_csrf";
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 hari
 
-export interface Me {
-  id: string;
-  username: string;
-  displayName: string;
-  email: string;
-  emailVerified: boolean;
-  status: (typeof userStatus.enumValues)[number];
-  locale: "auto" | "id" | "en";
-  theme: "system" | "light" | "dark";
-  createdAt: string;
-}
+export type { Me };
 
 export function hashToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");

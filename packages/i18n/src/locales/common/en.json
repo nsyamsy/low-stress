@@ -35,7 +35,9 @@
     "notFoundDesc": "The page you are looking for is unavailable or has been moved.",
     "backHome": "Back to home",
     "forbidden": "Access denied. Admin accounts cannot play games.",
-    "networkError": "Failed to connect to server. Check your network connection."
+    "networkError": "Failed to connect to server. Check your network connection.",
+    "updateAvailable": "A new version of the app is available.",
+    "updateAction": "Update now"
   },
   "theme": {
     "label": "Theme",

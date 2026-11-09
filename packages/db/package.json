@@ -11,6 +11,7 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "seed:dev": "tsx --env-file-if-exists=../../.env src/seed-dev.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

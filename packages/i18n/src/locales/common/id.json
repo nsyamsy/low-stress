@@ -35,7 +35,9 @@
     "notFoundDesc": "Halaman yang kamu cari tidak tersedia atau sudah dipindahkan.",
     "backHome": "Ke beranda",
     "forbidden": "Akses ditolak. Akun admin tidak dapat bermain game.",
-    "networkError": "Gagal terhubung ke server. Periksa koneksi jaringanmu."
+    "networkError": "Gagal terhubung ke server. Periksa koneksi jaringanmu.",
+    "updateAvailable": "Versi baru aplikasi tersedia.",
+    "updateAction": "Perbarui sekarang"
   },
   "theme": {
     "label": "Tema",

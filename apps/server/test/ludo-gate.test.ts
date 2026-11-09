@@ -38,18 +38,6 @@ interface RoomView {
   [key: string]: unknown;
 }
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P7-07: Ludo Game Gate / Maintenance Freezing & Resuming", () => {

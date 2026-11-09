@@ -689,3 +689,41 @@ Lihat bagian **§0A. Panduan Serah-Terima (Handoff 2026-11-08)** di awal [`docs/
 1. Tambahkan berkas tes unit regresi web (`D-02e..i`, `D-04`, `D-05`, `D-07`) di `apps/web/test/`.
 2. Jalankan tes server ber-DB (`pnpm test:db:up && pnpm test`) terhadap `low_stress_test`.
 3. Lanjutkan sisa refactor & QA: pemeriksa otomatis teks literal JSX (`D-06`), update flow Service Worker & banner offline (`D-11`), pemecahan berkas besar (`R-06`), skema tipe API bersama (`R-08`), Playwright E2E (`D-15`), dan QA visual lintas viewport/tema (`D-09`, `D-10`).
+
+---
+
+## 2026-11-09 — Penyelesaian Tuntas TASKS_DEBUG_REFACTOR (Langkah 1–3, E2E Playwright & QA Visual)
+
+Lingkup: Eksekusi seluruh sisa tugas di [`docs/TASKS_DEBUG_REFACTOR.md`](TASKS_DEBUG_REFACTOR.md) §0A hingga tuntas dan terverifikasi.
+
+### Ringkasan Pekerjaan yang Selesai
+
+| Butir | Status | Bukti / Catatan |
+|---|---|---|
+| **D-01 (penguatan)** Isolasi penuh `.env.test` di seluruh paket uji | **Selesai** | `apps/server/test/setup.ts`, `tools/create-admin/test/create-admin.test.ts`, dan `games/ludo/test/{censor,expiration}.test.ts` diperketat agar hanya memuat `.env.test` (`TEST_DATABASE_URL` wajib berakhiran `_test`) dan tidak pernah membaca `.env` pengembangan. |
+| **D-02e..i, D-04, D-05, D-07** Tes regresi web | **Selesai** | Berkas `apps/web/test/regressions.test.tsx` (15 tes) menguji `AdminLoginPage` `AUTH_LOCKED`, prioritas cookie `ls_csrf` & retry `apiFetch`, `applyUserPreferences`, `ProfilePage` (ubah nama, galat password salah/lemah, modal hapus akun, keluar), `getGameThumbnail` & fallback inisial, `formatNextOpenWib` lintas zona waktu (`America/New_York`, `Asia/Tokyo`, `UTC`), serta keadaan galat/kosong di `HomePage`, `LeaderboardPage`, dan `GameLeaderboard`. Dibuktikan gagal saat perbaikan `formatNextOpenWib` dicabut sementara. |
+| **D-06 & R-05** Pemeriksa otomatis ESLint (`no-jsx-literal` & warna palet Tailwind) | **Selesai** | Aturan ESLint `low-stress/no-jsx-literal` (`tools/eslint-config/rules/no-jsx-literal.js`) dibuat untuk menolak teks literal berhuruf di JSX dan atribut aksesibilitas; aturan `low-stress/no-raw-design-values` diperluas menolak kelas palet warna Tailwind mentah. Teks literal di `VirtualJoystick.tsx`, `games/riot/client/index.tsx` (`Credits`), dan `AdminGamesPage.tsx` dipindahkan ke i18n; `Lobby.tsx` dan `Room.tsx` Ludo dibersihkan dari nilai mentah sehingga tidak lagi membutuhkan `eslint-disable`. 12 tes unit di `tools/eslint-config/test/rules.test.js` lolos. |
+| **D-11** Service Worker `onNeedRefresh` & banner offline | **Selesai** | Modul `apps/web/src/features/pwa/swState.ts` dan komponen `PwaStatusBanner.tsx` terhubung ke `registerSW` di `main.tsx` dan `App.tsx`, menampilkan banner luring (`state.offline`) serta notifikasi versi baru (`state.updateAvailable` + tombol `state.updateAction`). Diuji di `apps/web/test/regressions.test.tsx`. |
+| **R-08** Satu sumber skema & tipe kontrak API (`@low-stress/sdk`) | **Selesai** | Skema Zod bersama (`meSchema`, `publicConfigSchema`, `gameItemSchema`, `adminGameItemSchema`, `adminMeSchema`, `adminDashboardDataSchema`, `adminUserItemSchema`, `adminSettingsSchema`, `auditLogItemSchema`, `leaderboardDataSchema`) ditempatkan di `packages/sdk/src/api-contracts.ts` dan dipakai bersama oleh server serta web. Diuji di `packages/sdk/test/api-contracts.test.ts` dan tes kontrak live endpoint `apps/server/test/api-contracts.test.ts`. |
+| **R-06** Pemecahan berkas besar menjadi sub-modul terfokus | **Selesai** | `apps/server/src/admin/service.ts` dipecah ke `admin/services/{audit,users,settings,runs,rooms}.ts`; `apps/server/src/admin/routes.ts` dipecah ke `admin/routes/{rooms,chat}.ts`; `apps/server/src/games/scores.ts` dipecah ke `games/{leaderboard,plausibility,scores}.ts`; `AdminChatPage.tsx` dipecah ke `pages/admin/chat/{ChatMessagesTab,ChatMutesTab,BannedWordsTab}.tsx`; `games/ludo/client/Room.tsx` dipecah ke `client/room/{types,RoomLobbyView,RoomChatDrawer,InviteModal}.tsx`. Seluruh tes lama lolos tanpa diubah. |
+| **D-13 & D-14** Skrip `pnpm db:seed:dev`, pembaruan dokumen & secret scan CI | **Selesai** | Skrip idempoten `packages/db/src/seed-dev.ts` (`pnpm db:seed:dev`) mengaktifkan `flappy-bird`, `memory-match`, dan `ludo` tanpa membuat pengguna palsu (diuji di `api-contracts.test.ts`). Pemindaian rahasia git ditambahkan di `tools/check-migrations` dan `gitleaks/gitleaks-action@v2` di `.github/workflows/ci.yml`. `README.md`, `docs/operations.md`, dan `docs/HANDOFF_RIOT.md` diperbarui. |
+| **D-15, D-09 & D-10** Playwright E2E & QA Visual Multi-Viewport | **Selesai** | Konfigurasi `playwright.config.ts`, server uji terisolasi `e2e/server.ts` (wajib `TEST_DATABASE_URL` berakhiran `_test`), dan `e2e/flow.spec.ts` (`pnpm test:e2e`). Menguji alur lengkap daftar → pending → admin menyetujui → login → beranda menampilkan game → profil ubah tema → keluar pada 360px (`id`) dan 1280px (`en`), serta QA visual 0 overflow horizontal di seluruh 10 halaman `/admin/*` dan 6 halaman pemain/game pada viewport 360px, 390px, 768px, dan 1280px (terang & gelap). Memperbaiki regresi overflow `.ls-segmented` pada `/admin/leaderboard` (360px) dan `.ls-memory-layout` pada `/games/memory-match` (360px & 768px). |
+
+### Pemeriksaan Akhir Menyeluruh
+
+```
+pnpm lint              -> lolos (0 error, 0 warning)
+pnpm typecheck         -> lolos (seluruh 19 proyek workspace)
+pnpm test              -> lolos (seluruh 18 proyek bertes: server 25 berkas/153 tes, web 6 berkas/42 tes, riot 17 berkas/100 tes, ludo 5 berkas/26 tes, flappy-bird 4 berkas/23 tes, memory-match 5 tes, sdk 5 berkas/29 tes, i18n 14 tes, ui 10 tes, eslint-config 12 tes, check-i18n 5 tes, check-migrations 5 tes, check-assets 5 tes, create-admin 6 tes, new-game 1 tes)
+pnpm i18n:check        -> lolos (semua kunci id dan en cocok)
+pnpm check:migrations  -> lolos (tabel game berawalan benar & 0 rahasia bocor)
+pnpm check:assets      -> lolos
+pnpm build             -> lolos
+pnpm test:e2e          -> lolos (3 suite Playwright E2E & QA visual multi-viewport)
+```
+
+### Yang Menunggu Keputusan / Tindakan Pemilik Proyek
+
+- **D-16:** Keputusan kebijakan apakah cookie pemain (`ls_session`) dan admin (`ls_admin`) dalam satu browser tetap dibiarkan berdampingan dengan prioritas pemain di gerbang game, atau saling menghapus saat login.
+- **R-11:** Persetujuan pemilik untuk mengarsipkan/menghapus folder acuan `reference/performance_dash-games/`.
+- **RT-14 & RT-54 (Riot):** Pengujian performa fisik di perangkat ponsel nyata (`pnpm spike:riot`) dan penandatanganan dokumen tinjauan kemiripan `docs/riot-similarity-review.md` oleh pemilik sebelum mengubah status game `riot` menjadi `active`.

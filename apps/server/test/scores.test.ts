@@ -18,18 +18,6 @@ import {
   recordScore,
 } from "../src/games/scores";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P5-01: Generic Score System & Plausibility", () => {

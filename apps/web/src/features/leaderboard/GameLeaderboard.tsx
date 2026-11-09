@@ -3,29 +3,14 @@ import { Crown, Medal, Trophy } from "lucide-react";
 import { Button, cn } from "@low-stress/ui";
 import { translateErrorCode } from "@low-stress/i18n";
 import { useTranslation } from "react-i18next";
+import type {
+  LeaderboardData,
+  LeaderboardEntry,
+  LeaderboardPeriod,
+} from "@low-stress/sdk";
 import { apiFetch, type ApiError } from "../../lib/apiFetch";
 
-export type LeaderboardPeriod = "all" | "week" | "month";
-
-export interface LeaderboardEntry {
-  rank: number;
-  userId: string;
-  name: string;
-  score: number;
-  plays: number;
-  bestPlay: number | null;
-  at: string;
-  isMe: boolean;
-}
-
-export interface LeaderboardData {
-  period: LeaderboardPeriod;
-  periodStart: string | null;
-  periodEnd: string | null;
-  entries: LeaderboardEntry[];
-  me: LeaderboardEntry | null;
-  mine: LeaderboardEntry | null;
-}
+export type { LeaderboardData, LeaderboardEntry, LeaderboardPeriod };
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -117,48 +102,58 @@ export function LeaderboardRow({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function mapLeaderboardFetchError(
+  err: unknown,
+  t: (key: string) => string,
+): string {
+  const typed = err as { status?: number; apiError?: ApiError };
+  const code = typed?.apiError?.code;
+  if (code === "FORBIDDEN" || code === "ADMIN_CANNOT_PLAY") {
+    return t("state.forbidden");
+  }
+  if (code === "GAME_CLOSED") {
+    return t("errors.GAME_CLOSED");
+  }
+  if (code === "GAME_MAINTENANCE") {
+    return t("errors.GAME_MAINTENANCE");
+  }
+  if (typed?.status === 403) {
+    return t("state.forbidden");
+  }
+  if (code) {
+    return translateErrorCode(code, typed?.apiError?.params);
+  }
+  return t("state.error");
+}
+
 export function GameLeaderboard({
   gameId,
   refreshKey = 0,
   className,
+  initialData = null,
+  initialError = null,
 }: {
   gameId: string;
   refreshKey?: number;
   className?: string;
+  initialData?: LeaderboardData | null;
+  initialError?: string | null;
 }) {
   const { t } = useTranslation();
   const [period, setPeriod] = useState<LeaderboardPeriod>("all");
-  const [data, setData] = useState<LeaderboardData | null>(null);
+  const [data, setData] = useState<LeaderboardData | null>(initialData);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [retryCount, setRetryCount] = useState(0);
 
   const mapFetchError = useCallback(
-    (err: unknown): string => {
-      const typed = err as { status?: number; apiError?: ApiError };
-      const code = typed?.apiError?.code;
-      if (code === "FORBIDDEN" || code === "ADMIN_CANNOT_PLAY") {
-        return t("state.forbidden");
-      }
-      if (code === "GAME_CLOSED") {
-        return t("errors.GAME_CLOSED");
-      }
-      if (code === "GAME_MAINTENANCE") {
-        return t("errors.GAME_MAINTENANCE");
-      }
-      if (typed?.status === 403) {
-        return t("state.forbidden");
-      }
-      if (code) {
-        return translateErrorCode(code, typed?.apiError?.params);
-      }
-      return t("state.error");
-    },
+    (err: unknown): string => mapLeaderboardFetchError(err, t),
     [t],
   );
 
   useEffect(() => {
-    if (!gameId) {
+    if (!gameId || initialData !== null || initialError !== null) {
       return;
     }
 
@@ -184,7 +179,7 @@ export function GameLeaderboard({
     return () => {
       mounted = false;
     };
-  }, [gameId, period, refreshKey, retryCount, mapFetchError]);
+  }, [gameId, period, refreshKey, retryCount, initialData, initialError, mapFetchError]);
 
   return (
     <div

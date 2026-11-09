@@ -87,7 +87,10 @@ Untuk mengubah kata sandi database tanpa merusak data:
    ```
    Respons harus `HTTP/1.1 200 OK`.
 
-### 2.3 Rotasi Kata Sandi Admin
+### 2.3 Rotasi Kata Sandi Admin & Kebijakan Kredensial Lingkungan Bersama
+
+> [!CAUTION]
+> **Jangan pernah menggunakan kata sandi bawaan atau lemah (seperti `admin123` atau `low_stress`) pada lingkungan bersama (LAN kantor maupun Public).** Gunakan kata sandi unik minimal 12 karakter untuk akun Superadmin dan database PostgreSQL.
 
 Bila kata sandi akun admin perlu direset:
 - **Jika admin masih bisa login:** Ubah langsung lewat menu profil admin.

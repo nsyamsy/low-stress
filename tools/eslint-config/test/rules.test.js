@@ -4,7 +4,9 @@ import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 
 import gameWorkspaceImports from "../rules/game-workspace-imports.js";
+import noJsxLiteral from "../rules/no-jsx-literal.js";
 import noRawDesignValues from "../rules/no-raw-design-values.js";
+import tseslint from "typescript-eslint";
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
 
@@ -12,6 +14,12 @@ function configFor(ruleName, rule) {
   const [namespace, name] = ruleName.split("/");
   return {
     files: ["**/*.{js,ts,tsx}"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
     plugins: { [namespace]: { rules: { [name]: rule } } },
     rules: { [ruleName]: "error" },
     settings: { "low-stress/project-root": PROJECT_ROOT },
@@ -21,6 +29,10 @@ function configFor(ruleName, rule) {
 const rawValues = configFor(
   "low-stress/no-raw-design-values",
   noRawDesignValues,
+);
+const jsxLiterals = configFor(
+  "low-stress/no-jsx-literal",
+  noJsxLiteral,
 );
 const gameImports = configFor(
   "low-stress/game-workspace-imports",
@@ -63,9 +75,70 @@ describe("no-raw-design-values", () => {
   it("membiarkan kelas token dan angka biasa", async () => {
     const messages = await lint(
       rawValues,
-      'const className = "ls-button ls-button--primary";\nconst size = 320;\n',
+      'const className = "ls-button ls-button--primary bg-primary text-secondary";\nconst size = 320;\n',
       "a.ts",
     );
+    expect(messages).toEqual([]);
+  });
+
+  it("menolak kelas palet warna Tailwind mentah (R-05)", async () => {
+    const messages = await lint(
+      rawValues,
+      'const cls1 = "bg-slate-800 text-amber-500";\nconst cls2 = `border-red-400/50`;\n',
+      "a.ts",
+    );
+    expect(messages).toHaveLength(2);
+    expect(
+      messages.every(
+        (message) =>
+          message.ruleId === "low-stress/no-raw-design-values" &&
+          message.message.includes("raw Tailwind color class"),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("no-jsx-literal (D-06)", () => {
+  it("menolak teks literal berhuruf di dalam elemen JSX (kasus D-06: Leaderboard, Memory Match, Pemain)", async () => {
+    const code = [
+      "export function Sample() {",
+      "  return (",
+      "    <div>",
+      "      <h2>Leaderboard</h2>",
+      "      <span>Memory Match</span>",
+      "      <p>Pemain</p>",
+      "    </div>",
+      "  );",
+      "}",
+    ].join("\n");
+    const messages = await lint(jsxLiterals, code, "Sample.tsx");
+    expect(messages).toHaveLength(3);
+    expect(messages.every((m) => m.ruleId === "low-stress/no-jsx-literal")).toBe(true);
+  });
+
+  it("menolak atribut aksesibilitas literal (aria-label, title, placeholder)", async () => {
+    const code = [
+      "export function Sample() {",
+      '  return <button aria-label="Virtual Joystick" title="Klik di sini" />;',
+      "}",
+    ].join("\n");
+    const messages = await lint(jsxLiterals, code, "Sample.tsx");
+    expect(messages).toHaveLength(2);
+  });
+
+  it("mengizinkan ekspresi i18n, tanda baca, dan satuan teknis singkat", async () => {
+    const code = [
+      "export function Sample({ t }: { t: (k: string) => string }) {",
+      "  return (",
+      "    <div aria-label={t('game.label')}>",
+      "      <h2>{t('leaderboard.title')}</h2>",
+      "      <span>15 Hz · 320 ms (WIB)</span>",
+      "      <span>×</span>",
+      "    </div>",
+      "  );",
+      "}",
+    ].join("\n");
+    const messages = await lint(jsxLiterals, code, "Sample.tsx");
     expect(messages).toEqual([]);
   });
 });

@@ -16,18 +16,6 @@ import { hashPassword } from "../src/auth/password";
 import { createSession } from "../src/auth/session";
 import { readEnv } from "../src/env";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P8-06: Sensor diterapkan pada chat Ludo dan nama tampilan di semua jalur", () => {

@@ -17,18 +17,6 @@ import { readEnv } from "../src/env";
 import { calculateMemoryMatchScore } from "../src/games/scores";
 import type { LoadedGame } from "../src/registry/games";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P5-04: Leaderboard E2E & Player Row Highlight", () => {

@@ -55,7 +55,7 @@ export function MiniLeaderboard({
   return (
     <div className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-xs">
       <div className="flex items-center gap-2 mb-3">
-        <Trophy className="h-4 w-4 text-amber-500" />
+        <Trophy className="h-4 w-4 text-[var(--accent-text)]" />
         <h2 className="text-sm font-bold text-[var(--text-primary)]">
           {t("leaderboard")}
         </h2>
@@ -144,7 +144,7 @@ export default function MemoryMatchGame(props: GameProps) {
   );
 
   return (
-    <div className="p-4 md:p-6 w-full max-w-6xl mx-auto">
+    <div className="py-2 md:py-4 w-full max-w-6xl mx-auto">
       {/* Phone: game, leaderboard, rules. Tablet: leaderboard | game, rules below. Desktop: all three in a row. */}
       <div className="ls-memory-layout">
         {/* Left: Mini Leaderboard */}
@@ -187,7 +187,7 @@ export default function MemoryMatchGame(props: GameProps) {
 
           <div className="mt-5 rounded-lg bg-[var(--bg-inset)] p-3 border border-[var(--border)] text-xs text-[var(--text-secondary)]">
             <div className="flex items-center gap-1.5 font-bold text-[var(--text-primary)] mb-1">
-              <Trophy className="h-3.5 w-3.5 text-amber-500" />
+              <Trophy className="h-3.5 w-3.5 text-[var(--accent-text)]" />
               <span>{t("leaderboard")}</span>
             </div>
             {t("leaderboardNote")}

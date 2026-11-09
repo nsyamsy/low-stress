@@ -179,7 +179,7 @@ export function AdminLeaderboardPage() {
     <div className="ls-admin-page">
       <div className="ls-admin-page-header">
         <h1 className="ls-admin-page-title">{t("admin.leaderboard.title")}</h1>
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
           <Button variant="secondary" onClick={() => setResetPeriod("week")}>
             {t("admin.leaderboard.resetWeek")}
           </Button>

@@ -7,15 +7,26 @@ import "@low-stress/ui/styles.css";
 import { App } from "./App";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { AdminProvider } from "./features/admin/AdminContext";
+import {
+  notifySwNeedRefresh,
+  notifySwOfflineReady,
+} from "./features/pwa/swState";
 import "./i18n";
 import { applyTheme, readThemePreference } from "./theme";
 
 // Terapkan tema tersimpan sebelum render pertama agar tidak berkedip.
 applyTheme(readThemePreference());
 
-// Service worker hanya meng-cache aset statis. Tanpa `onNeedRefresh` otomatis,
-// pembaruan diterapkan pada kunjungan berikutnya.
-registerSW({ immediate: true });
+// Service worker meng-cache aset statis dan memberi tahu pengguna bila ada versi baru (D-11).
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    notifySwNeedRefresh(updateSW);
+  },
+  onOfflineReady() {
+    notifySwOfflineReady();
+  },
+});
 
 const container = document.getElementById("root");
 

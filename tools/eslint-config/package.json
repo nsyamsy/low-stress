@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./index.js",
-    "./rules/no-raw-design-values": "./rules/no-raw-design-values.js"
+    "./rules/no-raw-design-values": "./rules/no-raw-design-values.js",
+    "./rules/no-jsx-literal": "./rules/no-jsx-literal.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

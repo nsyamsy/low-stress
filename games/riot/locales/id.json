@@ -125,7 +125,13 @@
     "sabotage_critical_alarm": "ALARM KRITIS!",
     "roleCrew": "Kamu Kru. Selesaikan tugas dan cari penyusup.",
     "roleInfiltrator": "Kamu Penyusup. Sabotase dan tetap tersembunyi.",
-    "credits": "Kredit"
+    "credits": "Kredit",
+    "creditsIntro": "Gaduh di Stasiun Hening — game orisinal Low Stress.",
+    "creditsBody": "Karakter Mochi dihasilkan secara prosedural oleh engine game ini. Karakter Humanoid menggunakan aset \"Mini Characters\" oleh Kenney (CC0, kenney.nl). Musik & efek suara disintesis orisinal via WebAudio. Tidak ada aset pihak ketiga yang dibatasi pakai.",
+    "creditsFooter": "Detail lisensi lengkap ada di games/riot/assets/LICENSES.md.",
+    "joystickAriaLabel": "Joystick virtual",
+    "joystickKnob": "Stik",
+    "joystickHint": "WASD / Stik"
   },
   "spike": {
     "title": "Uji Performa Ponsel (RT-14)",

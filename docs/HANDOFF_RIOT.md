@@ -11,8 +11,8 @@ Tanggal: 2026-11-06 · Untuk agent yang melanjutkan pekerjaan. Baca dokumen ini 
 | Fase 1 (RT-10 sampai RT-13) | Selesai. **RT-14 (uji ponsel nyata) belum dilakukan** |
 | Fase 2 (RT-20 sampai RT-24) | Selesai (logika dan server) |
 | Fase 3 (RT-30 sampai RT-33) | Selesai (logika dan server) |
-| **Fase 4 (RT-40 sampai RT-44)** | **Belum dimulai. Mulai dari sini** |
-| Fase 5 (RT-50 sampai RT-55) | Belum dimulai |
+| Fase 4 (RT-40 sampai RT-44) | Selesai (Mochi 6 spesies, Humanoid CC0, 10 tugas, audio WebAudio, kredit, migrasi `riot_*`) |
+| Fase 5 (RT-50 sampai RT-55) | Selesai (poin leaderboard, moderasi admin API + UI `/admin/riot`, i18n/reduced-motion, E2E Socket.IO, draf tinjauan RT-54, dokumentasi). **Menunggu uji ponsel fisik RT-14 dan tanda tangan pemilik pada RT-54** |
 
 Bukti per tugas ada di [progress.md](progress.md). Game berstatus `inactive` dan harus tetap begitu sampai RT-54 ditandatangani pemilik.
 

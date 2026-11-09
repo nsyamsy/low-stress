@@ -7,6 +7,7 @@ import path from "node:path";
 import tseslint from "typescript-eslint";
 
 import gameWorkspaceImports from "./rules/game-workspace-imports.js";
+import noJsxLiteral from "./rules/no-jsx-literal.js";
 import noRawDesignValues from "./rules/no-raw-design-values.js";
 
 const projectRoot = path.resolve(import.meta.dirname, "../..");
@@ -20,6 +21,7 @@ const BOUNDARY_ELEMENTS = [
   { type: "app", pattern: "apps/*", capture: ["app"] },
   { type: "tool", pattern: "tools/*", capture: ["tool"] },
   { type: "package", pattern: "packages/*", capture: ["package"] },
+  { type: "e2e", pattern: "e2e" },
 ];
 
 const BOUNDARY_POLICIES = [
@@ -30,6 +32,7 @@ const BOUNDARY_POLICIES = [
   { from: { element: { type: "game" } }, allow: [{ to: { element: { type: ["sdk", "ui", "i18n"] } } }] },
   { from: { element: { type: "tool" } }, allow: [{ to: { element: { type: ["sdk", "ui", "i18n", "db", "package"] } } }] },
   { from: { element: { type: "package" } }, allow: [{ to: { element: { type: ["sdk", "ui", "i18n", "db", "package"] } } }] },
+  { from: { element: { type: "e2e" } }, allow: [{ to: { element: { type: ["sdk", "ui", "i18n", "db", "package", "app", "tool"] } } }] },
 ];
 
 export default tseslint.config(
@@ -44,6 +47,8 @@ export default tseslint.config(
       "packages/db/migrations/**",
       "apps/web/public/**",
       "reference/**",
+      "playwright-report/**",
+      "test-results/**",
     ],
   },
   js.configs.recommended,
@@ -59,6 +64,7 @@ export default tseslint.config(
       "low-stress": {
         rules: {
           "no-raw-design-values": noRawDesignValues,
+          "no-jsx-literal": noJsxLiteral,
           "game-workspace-imports": gameWorkspaceImports,
         },
       },
@@ -105,17 +111,39 @@ export default tseslint.config(
     },
   },
   {
-    // Larangan nilai desain mentah berlaku untuk kode UI. Aset logo adalah
-    // pengecualian yang didokumentasikan: warnanya adalah bagian dari merek.
+    // Larangan nilai desain mentah berlaku untuk kode UI.
+    // Pengecualian sah (Agents.md §5.1, Porting_Guide.md §0, R-05):
+    // - Aset logo merek (`packages/ui/src/components/Logo.tsx`)
+    // - Visual asli di dalam kanvas/papan/dadu/pion/kartu game yang diporting.
     files: [
       "apps/web/src/**/*.{ts,tsx}",
       "packages/ui/src/**/*.{ts,tsx}",
       "games/*/client/**/*.{ts,tsx}",
       "games/*/shared/**/*.{ts,tsx}",
     ],
-    ignores: ["packages/ui/src/components/Logo.tsx"],
+    ignores: [
+      "packages/ui/src/components/Logo.tsx",
+      "games/memory-match/client/MemoryMatch.tsx",
+      "games/memory-match/client/deck.ts",
+      "games/riot/client/characters/**",
+      "games/riot/spike/**",
+    ],
     rules: {
       "low-stress/no-raw-design-values": "error",
+    },
+  },
+  {
+    // Larangan teks UI literal di JSX (Agents.md §5.2 & D-06).
+    files: [
+      "apps/web/src/**/*.tsx",
+      "games/*/client/**/*.tsx",
+    ],
+    ignores: [
+      "apps/web/src/pages/ShowcasePage.tsx",
+      "games/riot/spike/**",
+    ],
+    rules: {
+      "low-stress/no-jsx-literal": "error",
     },
   },
   {

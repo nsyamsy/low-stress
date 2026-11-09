@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { checkRoot, extractTableNames } from "../src/index";
+import { checkRoot, extractTableNames, scanSecretContent } from "../src/index";
 
 const tempDirs: string[] = [];
 
@@ -51,5 +51,11 @@ describe("checkRoot", () => {
     const problems = checkRoot(root);
     expect(problems).toHaveLength(1);
     expect(problems[0]?.table).toBe("scores");
+  });
+
+  it("detects leaked private keys in tracked file content (D-14)", () => {
+    const fakeKey = ["-----BEGIN RSA", "PRIVATE KEY-----"].join(" ");
+    expect(scanSecretContent("config.ts", fakeKey)).toHaveLength(1);
+    expect(scanSecretContent("config.ts", "const safe = true;")).toEqual([]);
   });
 });

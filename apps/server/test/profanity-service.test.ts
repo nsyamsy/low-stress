@@ -10,18 +10,6 @@ import {
   reloadBannedWordsCache,
 } from "../src/chat/profanity-service";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P8-01: profanity-service with banned_words table", () => {

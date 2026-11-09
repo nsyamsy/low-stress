@@ -10,17 +10,17 @@ import {
 
 if (typeof process.loadEnvFile === "function") {
   try {
-    process.loadEnvFile("../../.env");
+    process.loadEnvFile("../../.env.test");
   } catch {
     try {
-      process.loadEnvFile(".env");
+      process.loadEnvFile(".env.test");
     } catch {
       // Abaikan
     }
   }
 }
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.TEST_DATABASE_URL;
 
 describe("tools/create-admin", () => {
   describe("validateAdminInput", () => {
@@ -56,8 +56,10 @@ describe("tools/create-admin", () => {
     const testPassword = "securePassword123!";
 
     beforeAll(() => {
-      if (!databaseUrl) {
-        throw new Error("DATABASE_URL diperlukan untuk pengujian integrasi create-admin.");
+      if (!databaseUrl || !new URL(databaseUrl).pathname.endsWith("_test")) {
+        throw new Error(
+          "TEST_DATABASE_URL (berakhiran _test) diperlukan untuk pengujian integrasi create-admin.",
+        );
       }
       dbHandle = createDb(databaseUrl, { max: 1 });
       db = dbHandle.db;

@@ -26,18 +26,6 @@ import { readEnv } from "../src/env";
 import type { LoadedGame } from "../src/registry/games";
 import type { GameProps } from "@low-stress/sdk";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("Game Gateway, Status & Schedule (Phase 4: P4-01 .. P4-04)", () => {

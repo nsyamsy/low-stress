@@ -27,6 +27,7 @@ import { GameStatusPage } from "./pages/GameStatusPage";
 import { GamePage } from "./pages/GamePage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { PublicChatPanel } from "./features/chat/PublicChatPanel";
+import { PwaStatusBanner } from "./features/pwa/PwaStatusBanner";
 import { applyTheme, readThemePreference, type ThemePreference } from "./theme";
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemePreference; key: string }> = [
@@ -156,6 +157,8 @@ export function App() {
           </div>
         </div>
       </header>
+
+      <PwaStatusBanner />
 
       <main id="main-content" className="ls-container ls-app-main">
         <Routes>

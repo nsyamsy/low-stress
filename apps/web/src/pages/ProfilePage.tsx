@@ -33,9 +33,37 @@ const LOCALE_OPTIONS: ReadonlyArray<{ value: LocalePreference; key: string }> = 
 const apiCode = (err: unknown): string | undefined =>
   (err as { apiError?: ApiError })?.apiError?.code;
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function mapPasswordChangeError(
+  err: unknown,
+  t: (key: string) => string,
+): string {
+  const code = apiCode(err);
+  if (code === "AUTH_INVALID_CREDENTIALS") {
+    return t("profile.password.wrongCurrent");
+  }
+  if (code === "PASSWORD_TOO_WEAK" || code === "VALIDATION_FAILED") {
+    return t("profile.password.weak");
+  }
+  if (code) {
+    return translateErrorCode(code);
+  }
+  return t("profile.saveFailed");
+}
+
 type Notice = { tone: "success" | "danger"; text: string } | null;
 
-export function ProfilePage() {
+export function ProfilePage({
+  initialNameNotice = null,
+  initialPasswordNotice = null,
+  initialDeleteOpen = false,
+  initialDeleteError = null,
+}: {
+  initialNameNotice?: Notice;
+  initialPasswordNotice?: Notice;
+  initialDeleteOpen?: boolean;
+  initialDeleteError?: string | null;
+} = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, setUser, logout } = useAuth();
@@ -43,19 +71,19 @@ export function ProfilePage() {
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [savingName, setSavingName] = useState(false);
-  const [nameNotice, setNameNotice] = useState<Notice>(null);
+  const [nameNotice, setNameNotice] = useState<Notice>(initialNameNotice);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordNotice, setPasswordNotice] = useState<Notice>(null);
+  const [passwordNotice, setPasswordNotice] = useState<Notice>(initialPasswordNotice);
 
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
 
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(initialDeleteOpen);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(initialDeleteError);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.addEventListener !== "function") {
@@ -104,17 +132,9 @@ export function ProfilePage() {
       setNewPassword("");
       setPasswordNotice({ tone: "success", text: t("profile.password.success") });
     } catch (err) {
-      const code = apiCode(err);
       setPasswordNotice({
         tone: "danger",
-        text:
-          code === "AUTH_INVALID_CREDENTIALS"
-            ? t("profile.password.wrongCurrent")
-            : code === "PASSWORD_TOO_WEAK" || code === "VALIDATION_FAILED"
-              ? t("profile.password.weak")
-              : code
-                ? translateErrorCode(code)
-                : t("profile.saveFailed"),
+        text: mapPasswordChangeError(err, t),
       });
     } finally {
       setSavingPassword(false);

@@ -106,12 +106,12 @@ Database baru kosong: belum ada pemain dan semua game berstatus **Nonaktif**.
 | Lupa password admin | `pnpm create-admin` menolak username yang sudah ada. | Ubah hash lewat database, atau hapus baris admin lalu jalankan `pnpm create-admin` lagi. |
 
 > [!IMPORTANT]
-> - `SESSION_SECRET` minimal 32 karakter acak. Jangan memakai nilai contoh.
+> - `SESSION_SECRET` minimal 32 karakter acak. Jangan memakai nilai contoh atau kata sandi bawaan seperti `admin123` di lingkungan bersama/produksi.
 > - `DATABASE_URL` berformat `postgres://user:password@host:port/nama_db`. Karakter khusus di password harus di-URL-encode.
-> - `.env` tidak masuk repositori.
+> - `.env` dan `.env.test` tidak masuk repositori (dipindai otomatis di CI).
 
 > [!WARNING]
-> Tes integrasi server (`apps/server/test/auth.test.ts`) membaca `.env` dan menulis ke database yang ditunjuk `DATABASE_URL`. Jalankan tes hanya terhadap database uji sekali pakai, bukan database berisi data nyata.
+> Tes integrasi server (`apps/server/test/*.test.ts`) **wajib** memakai `TEST_DATABASE_URL` (dari `.env.test`) yang nama databasenya berakhiran `_test`. Tes akan gagal cepat (*fast-fail*) bila `TEST_DATABASE_URL` tidak diatur, demi melindungi database pengembangan.
 
 ## Perintah
 
@@ -119,14 +119,17 @@ Database baru kosong: belum ada pemain dan semua game berstatus **Nonaktif**.
 |---|---|
 | `pnpm dev` | Web dan server (mode pengembangan) |
 | `pnpm build` | Build semua paket |
-| `pnpm lint` | ESLint, termasuk aturan isolasi game dan larangan nilai desain mentah |
+| `pnpm lint` | ESLint, termasuk aturan isolasi game, larangan nilai desain mentah, dan larangan teks literal JSX |
 | `pnpm typecheck` | Pemeriksaan tipe |
-| `pnpm test` | Vitest (memerlukan database uji untuk server) |
+| `pnpm test` | Vitest (memerlukan database uji `low_stress_test` untuk server) |
+| `pnpm test:e2e` | Playwright E2E di viewport mobile (360px) dan desktop (1280px) |
 | `pnpm test:db:up` | Menyiapkan database uji `low_stress_test` dan migrasi |
 | `pnpm test:db:clean` | Membersihkan tabel data pada database uji |
 | `pnpm i18n:check` | Kunci `id` dan `en` harus identik |
-| `pnpm check:migrations` | Tabel game wajib berawalan `<id>_` |
+| `pnpm check:migrations` | Tabel game wajib berawalan `<id>_` & pemindaian rahasia git |
+| `pnpm check:assets` | Validasi buku besar lisensi aset game (`LICENSES.md`) |
 | `pnpm db:migrate` | Menjalankan migrasi |
+| `pnpm db:seed:dev` | Menyalakan game awal (`flappy-bird`, `memory-match`, `ludo`) secara idempoten tanpa membuat akun palsu |
 | `pnpm new-game <slug>` | Membuat folder game baru dari template |
 | `pnpm create-admin [username] [password]` | Membuat akun Superadmin (tanpa argumen, akan ditanya) |
 | `pnpm generate:icons` | Membuat ulang ikon PWA dari logo |

@@ -603,7 +603,7 @@ export function GameScene({ socket, view, role, locale, t, onExit }: GameScenePr
       <div
         ref={containerRef}
         aria-label={t("stageLabel")}
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-slate-950"
+        className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-[var(--bg-inset)]"
       />
 
       {/* Panel aksi terdekat */}
@@ -688,6 +688,9 @@ export function GameScene({ socket, view, role, locale, t, onExit }: GameScenePr
             inputRef.current = mov;
           }}
           disabled={myStatus !== "alive"}
+          ariaLabel={t("lobbyExtra.joystickAriaLabel")}
+          knobLabel={t("lobbyExtra.joystickKnob")}
+          hintLabel={t("lobbyExtra.joystickHint")}
         />
       ) : null}
       <p className="ls-text-secondary text-center text-xs">{t("joystickHelp")}</p>

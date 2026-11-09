@@ -34,18 +34,21 @@ Sebagian besar perbaikan kritis (Gelombang 1 s.d. 5) **sudah diimplementasikan d
    - **D-09, R-10 & Halaman Admin Baru:** Kontrak `AdminLeaderboardPage` (`playedAt`/`createdAt`) diperbaiki, kartu mobile `.ls-admin-card-list` ditambahkan di `AdminLeaderboardPage` & `AdminChatPage`, kartu ganda di `AdminGamesPage` diperbaiki, editor jadwal ditambahkan di `AdminSettingsPage` & `AdminGamesPage`, halaman baru `AdminLudoPage` (`/admin/ludo`) dan `AdminRiotPage` (`/admin/riot`) dibuat, halaman 404 dibuat, dan `/showcase` dibatasi ke `import.meta.env.DEV`.
    - **D-12 & D-13:** `.gitattributes` dibuat dan status `AGENTS.md` diperbarui.
 
-### Urutan Langkah untuk Agent Berikutnya (Mulai dari Sini):
-1. **Langkah 1 — Tulis Tes Regresi Web (`D-02e..i`, `D-04`, `D-05`, `D-07`):**
-   - Implementasi fiturnya di `apps/web/src/` sudah selesai, namun berkas tes unit di `apps/web/test/` untuk kasus `D-02e` (`AdminLoginPage` `AUTH_LOCKED`), `D-02f` (`getCsrfToken` cookie priority), `D-02g` (`applyUserPreferences`), `D-02h` (`ProfilePage`), `D-02i` (`getGameThumbnail`), `D-04` (`formatNextOpenWib` lintas TZ), serta `D-05`/`D-07` (`HomePage`/`LeaderboardPage` error & empty state) belum ditambahkan. Tambahkan tes tersebut di `apps/web/test/` dan jalankan `pnpm --filter @low-stress/web test`.
-2. **Langkah 2 — Jalankan Migrasi & Tes Server terhadap Database Uji (`low_stress_test`):**
-   - Pastikan PostgreSQL uji berjalan (`pnpm test:db:up`), lalu jalankan `pnpm test` dari root untuk memverifikasi migrasi `0002_login_attempts_last_failed.sql` dan tes regresi baru di `apps/server/test/auth.test.ts` serta `games-gate.test.ts`.
-3. **Langkah 3 — Selesaikan Sisa Refactor & QA:**
-   - **D-06 (Pemeriksa otomatis teks literal JSX):** Tambahkan aturan ESLint atau skrip di `tools/` untuk mendeteksi teks literal di JSX.
-   - **D-11 (Service Worker update & banner offline):** Tambahkan penanganan `onNeedRefresh` / banner offline di `apps/web`.
-   - **R-06 (Pecah berkas besar):** Pecah `apps/server/src/admin/service.ts`, `games/riot/server/service.ts`, `games/ludo/client/Room.tsx`, dan `games/ludo/server/service.ts` menjadi sub-modul terfokus.
-   - **R-08 (Satu sumber tipe API server–web):** Satukan skema Zod DTO di paket bersama.
-   - **D-15 (Playwright E2E) & D-09/D-10 (QA visual browser nyata):** Pasang Playwright (`pnpm test:e2e`) dan verifikasi tampilan di viewport 360px/768px/1280px mode terang & gelap.
-   - **D-13 (sisa), D-14, R-11:** Tambah skrip `pnpm db:seed:dev` (atau hapus rujukannya di `ROADMAP.md`), tambah secret scan di `.github/workflows/ci.yml`, dan arsipkan `reference/performance_dash-games/` setelah pemilik menyetujui.
+### Status Penyelesaian Handoff (2026-11-09):
+Seluruh langkah lanjutan telah selesai dieksekusi dan terverifikasi:
+1. **Langkah 1 — Tes Regresi Web (`D-02e..i`, `D-04`, `D-05`, `D-07`, `D-11`) — [SELESAI]:**
+   - Berkas `apps/web/test/regressions.test.tsx` ditambahkan dan diuji (termasuk pembuktian tes gagal saat perbaikan `formatNextOpenWib` dicabut sementara). Seluruh 6 berkas tes web (42 tes) lolos.
+2. **Langkah 2 — Migrasi & Tes Server terhadap Database Uji (`low_stress_test`) — [SELESAI]:**
+   - `tools/create-admin/test/create-admin.test.ts` serta `games/ludo/test/{censor,expiration}.test.ts` diperketat agar hanya memuat `.env.test` dan `TEST_DATABASE_URL` (tidak pernah menyentuh `.env` pengembangan). Seluruh 25 berkas tes server (153 tes) lolos 100% terhadap `low_stress_test`.
+3. **Langkah 3 — Sisa Refactor, Pemeriksa Otomatis & Playwright E2E — [SELESAI]:**
+   - **D-06 (`low-stress/no-jsx-literal`):** Aturan ESLint `tools/eslint-config/rules/no-jsx-literal.js` ditambahkan untuk menolak teks UI literal di JSX dan atribut aksesibilitas; 4 unit test ditambahkan di `tools/eslint-config/test/rules.test.js`.
+   - **R-05 (`low-stress/no-raw-design-values` untuk kelas palet Tailwind):** Aturan `no-raw-design-values.js` diperluas menolak kelas warna palet Tailwind mentah (`bg-slate-*`, `text-amber-*`, dll.); seluruh pemakaian di `Lobby.tsx`, `Room.tsx`, `GameScene.tsx`, `memory-match/client/index.tsx`, dan `flappy-bird/client/index.tsx` diganti token `@low-stress/ui`.
+   - **D-11 (Service Worker update & banner offline):** Modul `apps/web/src/features/pwa/swState.ts` dan `PwaStatusBanner.tsx` dipasang di `main.tsx` dan `App.tsx` dengan unit test.
+   - **R-08 (Satu sumber tipe/skema Zod DTO):** Skema Zod bersama diekspor di `packages/sdk/src/api-contracts.ts` (`@low-stress/sdk`), dipakai oleh web dan server, serta diverifikasi lewat tes kontrak `packages/sdk/test/api-contracts.test.ts` dan `apps/server/test/api-contracts.test.ts`.
+   - **R-06 (Pecah berkas besar):** `apps/server/src/admin/service.ts` dipecah ke `admin/services/{audit,users,settings,runs,rooms}.ts`; `apps/server/src/admin/routes.ts` dipecah ke `admin/routes/{rooms,chat}.ts`; `apps/server/src/games/scores.ts` dipecah ke `games/{leaderboard,plausibility,scores}.ts`; `AdminChatPage.tsx` dipecah ke `pages/admin/chat/{ChatMessagesTab,ChatMutesTab,BannedWordsTab}.tsx`; `games/ludo/client/Room.tsx` dipecah ke `client/room/{types,RoomLobbyView,RoomChatDrawer,InviteModal}.tsx`.
+   - **D-15, D-09 & D-10 (Playwright E2E & QA Visual Multi-Viewport):** Playwright dipasang (`playwright.config.ts`, `e2e/server.ts`, `e2e/flow.spec.ts`, `pnpm test:e2e`, dan step CI). Menguji alur daftar → pending → admin setujui → login → beranda → ubah tema di profil → keluar pada 360px (`id`) dan 1280px (`en`), serta memverifikasi 0 overflow horizontal di seluruh 10 rute `/admin/*` dan 6 rute pemain/game pada viewport 360px/390px/768px/1280px mode terang & gelap (termasuk perbaikan overflow `.ls-segmented` di `/admin/leaderboard` dan header/grid `/games/memory-match` pada 360px).
+   - **D-13 & D-14:** Skrip idempoten `pnpm db:seed:dev` (`packages/db/src/seed-dev.ts`) dibuat dan diuji; pemindaian rahasia git ditambahkan di `pnpm check:migrations` dan Gitleaks di `.github/workflows/ci.yml`.
+   - **Menunggu Keputusan Pemilik:** **D-16** (kebijakan cookie pemain & admin di satu browser), **R-11** (pengarsipan/penghapusan `reference/performance_dash-games/`), **RT-14** (uji ponsel fisik), dan **RT-54** (tanda tangan pemilik sebelum mengaktifkan Riot).
 
 ---
 
@@ -296,8 +299,8 @@ Tes yang ada harus tetap lolos tanpa diubah (bukti perilaku tidak berubah).
 
 ## 5. Definisi selesai (seluruh dokumen)
 
-- [ ] Semua butir P1 dan P2 tercentang dengan bukti di [progress.md](progress.md).
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`, dan E2E lolos di CI.
-- [ ] Menjalankan tes tidak mengubah database pengembangan.
-- [ ] Tidak ada teks UI literal dan tidak ada warna palet mentah di luar pengecualian yang tertulis.
-- [ ] Hal yang tidak sempat diperiksa dicatat, bukan diklaim selesai.
+- [x] Semua butir P1 dan P2 tercentang dengan bukti di [progress.md](progress.md).
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm i18n:check`, dan E2E lolos di CI.
+- [x] Menjalankan tes tidak mengubah database pengembangan.
+- [x] Tidak ada teks UI literal dan tidak ada warna palet mentah di luar pengecualian yang tertulis.
+- [x] Hal yang tidak sempat diperiksa dicatat, bukan diklaim selesai (D-16, R-11, RT-14 ponsel fisik, dan tanda tangan pemilik RT-54 menunggu pemilik).

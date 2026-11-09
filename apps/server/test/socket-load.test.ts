@@ -12,18 +12,6 @@ import { hashPassword } from "../src/auth/password";
 import { createSession } from "../src/auth/session";
 import { readEnv } from "../src/env";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P9-04: Uji beban ringan (200 koneksi Socket.IO bersamaan)", () => {

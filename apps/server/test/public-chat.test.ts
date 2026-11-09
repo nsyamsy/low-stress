@@ -13,18 +13,6 @@ import { createSession } from "../src/auth/session";
 import { readEnv } from "../src/env";
 import { purgeOldChatMessages } from "../src/chat/service";
 
-if (typeof process.loadEnvFile === "function") {
-  try {
-    process.loadEnvFile("../../.env");
-  } catch {
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // Abaikan
-    }
-  }
-}
-
 const env = readEnv();
 
 describe("P8-02: Public chat with Socket.IO, history, rate limit, server censor, and purge", () => {

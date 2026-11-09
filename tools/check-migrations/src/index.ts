@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
@@ -5,6 +6,62 @@ export interface MigrationProblem {
   file: string;
   table?: string;
   message: string;
+}
+
+const PRIVATE_KEY_HEADER = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/;
+
+/**
+ * Memindai berkas yang dilacak git (D-14) agar tidak ada berkas `.env`/`.env.test`
+ * atau kunci privat yang tidak sengaja masuk repositori.
+ */
+export function scanSecretContent(file: string, content: string): MigrationProblem[] {
+  const problems: MigrationProblem[] = [];
+  if (PRIVATE_KEY_HEADER.test(content)) {
+    problems.push({
+      file,
+      message: `${file}: terdeteksi header kunci privat (PRIVATE KEY) di dalam repositori.`,
+    });
+  }
+  return problems;
+}
+
+export function checkTrackedSecrets(root: string): MigrationProblem[] {
+  const problems: MigrationProblem[] = [];
+  try {
+    const out = execSync("git ls-files", { cwd: root, encoding: "utf8" });
+    const files = out
+      .split(/\r?\n/)
+      .map((f) => f.trim())
+      .filter(Boolean);
+
+    for (const rel of files) {
+      const base = rel.split("/").pop() ?? rel;
+      if (
+        (base === ".env" || base.startsWith(".env.")) &&
+        base !== ".env.example"
+      ) {
+        problems.push({
+          file: rel,
+          message: `${rel}: berkas rahasia lingkungan (.env) tidak boleh dilacak di git.`,
+        });
+        continue;
+      }
+
+      if (/\.(png|jpg|jpeg|webp|woff2|glb|ico|mp3|ogg|wav)$/i.test(rel)) {
+        continue;
+      }
+
+      try {
+        const content = readFileSync(join(root, rel), "utf8");
+        problems.push(...scanSecretContent(rel, content));
+      } catch {
+        // Abaikan bila berkas tidak dapat dibaca sebagai UTF-8
+      }
+    }
+  } catch {
+    // Abaikan bila dijalankan di direktori temp non-git
+  }
+  return problems;
 }
 
 const CREATE_TABLE =
@@ -87,12 +144,12 @@ export function checkRoot(root: string): MigrationProblem[] {
 }
 
 export function runCheck(root: string): number {
-  const problems = checkRoot(root);
+  const problems = [...checkRoot(root), ...checkTrackedSecrets(root)];
   if (problems.length === 0) {
-    console.log("migrations: semua tabel game memakai awalan yang benar.");
+    console.log("migrations & secrets: semua tabel game memakai awalan yang benar dan tidak ada rahasia bocor.");
     return 0;
   }
-  console.error(`migrations: ditemukan ${problems.length} masalah.`);
+  console.error(`migrations & secrets: ditemukan ${problems.length} masalah.`);
   for (const problem of problems) console.error(`- ${problem.message}`);
   return 1;
 }
