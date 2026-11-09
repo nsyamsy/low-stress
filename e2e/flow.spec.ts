@@ -253,19 +253,24 @@ test.describe("D-15, D-09 & D-10: End-to-End & Multi-Viewport Visual QA", () => 
     await qaPage.getByLabel("Email").fill(`${username}@example.test`);
     await qaPage.getByLabel("Password", { exact: true }).fill(password);
     await qaPage.getByRole("button", { name: "Daftar" }).click();
+    await expect(qaPage).toHaveURL(/\/pending$/);
 
     // Setujui via konteks admin singkat
-    const approveCtx = await browser.newContext({ locale: "id-ID" });
+    const approveCtx = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      locale: "id-ID",
+    });
     const approvePage = await approveCtx.newPage();
     await approvePage.goto("/admin/login");
     await approvePage.getByLabel("Username admin").fill(E2E_ADMIN_USERNAME);
     await approvePage.getByLabel("Password").fill(E2E_ADMIN_PASSWORD);
     await approvePage.getByRole("button", { name: "Masuk sebagai admin" }).click();
+    await expect(approvePage).toHaveURL(/\/admin$/);
     await approvePage.goto("/admin/approvals");
-    await approvePage
-      .locator("tr", { hasText: username })
-      .getByRole("button", { name: "Setujui" })
-      .click();
+    const approveRow = approvePage.locator("tr", { hasText: username });
+    await expect(approveRow).toBeVisible();
+    await approveRow.getByRole("button", { name: "Setujui" }).click();
+    await expect(approvePage.locator("tr", { hasText: username })).toHaveCount(0);
     await approveCtx.close();
 
     // Muat ulang pemain untuk masuk ke beranda
